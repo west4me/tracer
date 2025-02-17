@@ -1,0 +1,138 @@
+Core Features:
+
+Browser Simulation & Navigation
+
+Embeds a web browser view that can load and display HTML pages
+Supports back navigation and page refresh
+Has a URL input bar for direct navigation to websites
+Maintains a persistent window state (size/position) between sessions
+
+Viewport Control
+
+Offers preset viewport sizes for:
+
+Desktop (default 1280px)
+Tablet (default 768px)
+Mobile (default 375px)
+
+Allows custom viewport size adjustments via draggable handles
+Displays current viewport dimensions in real-time
+Supports responsive design testing with a reset to full width
+Lets users save custom breakpoint sizes for different devices
+
+Interaction Recording
+
+Captures and logs various user interactions:
+
+Mouse clicks
+Keyboard input
+Form submissions
+File uploads
+Tab navigation
+Element selection
+Audio/video media interactions
+
+Element Inspection
+For each interaction, it captures detailed information about:
+
+Element type and properties
+ARIA labels and accessibility information
+Form field values (with password redaction)
+Image details (dimensions, alt text, src)
+Link destinations
+Button states
+Input validation states
+Element context within the page
+XPath locations
+Parent/child relationships
+
+Screenshot Capabilities
+
+Can take full-page screenshots
+Supports element-specific captures
+Includes annotation tools:
+
+Arrow drawing
+Rectangle shapes
+Circle shapes
+Color selection for annotations
+Undo/redo functionality
+
+Allows saving and managing screenshots within the log
+
+Action Logging
+
+Maintains a chronological log of all interactions
+Shows timestamps for each action
+Allows adding comments to logged events
+Supports editing and deleting log entries
+Provides export options:
+
+Markdown format
+HTML report
+JIRA-compatible format with custom fields
+CSV export
+
+Error Tracking
+
+Captures JavaScript errors and console messages
+Maintains a separate error log drawer
+Shows error count and details
+Allows error log export
+Supports clearing error history
+
+Layout Features
+
+Collapsible sidebar for log viewing
+Adjustable panel sizes
+Keyboard shortcuts for common actions
+Dark/light UI elements
+Responsive layout adaptation
+
+Export & Integration
+
+Can export test logs in multiple formats
+Supports JIRA integration with:
+
+Custom field mapping
+Issue type selection
+Summary fields
+Saved field templates
+
+Generates formatted HTML reports with:
+
+Visual timelines
+Test session statistics
+Screenshot galleries
+Detailed interaction logs
+
+Developer Tools
+
+Built-in DevTools access
+Console error monitoring
+Network request tracking
+Performance monitoring
+File system access for saving/loading
+
+Accessibility Features
+
+Records ARIA attributes
+Tracks keyboard navigation
+Monitors focus states
+Captures screen reader relevant information
+
+Media Interaction Tracking
+
+Monitors video playback states
+Tracks audio player interactions
+Records volume changes
+Captures media loading states
+
+Form Interaction Logging
+
+Detailed form field tracking
+Input validation state monitoring
+Select/dropdown interaction logging
+Radio/checkbox state tracking
+
+This is a comprehensive QA/testing tool that combines browser testing, interaction recording, and documentation generation into a single desktop application.

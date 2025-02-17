@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>tracer Documentation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" />
+    <style>
+        :root {
+            --color-primary: #1a1a1a;
+            --color-secondary: #757575;
+            --color-accent: #AF4F41;
+            --color-background: #ffffff;
+            --color-surface: #f8f8f8;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.5;
+            color: var(--color-primary);
+            background: var(--color-background);
+        }
+
+        .skip-link {
+            position: absolute;
+            left: -9999px;
+            z-index: 999;
+            padding: 1em;
+            background-color: white;
+            color: black;
+            opacity: 0;
+        }
+
+        .skip-link:focus {
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 1;
+        }
+
+        .code-block {
+            background: var(--color-primary);
+            color: #ffffff;
+            padding: 1rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+
+        .feature-card {
+            transition: transform 0.2s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+
+<body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <header class="relative bg-[--color-primary] text-white py-20">
+        <div class="container mx-auto px-6 max-w-6xl">
+            <h1 class="text-4xl md:text-5xl font-semibold mb-4">tracer Documentation</h1>
+            <p class="text-xl text-gray-300 max-w-2xl">A modern testing tool for capturing and documenting user
+                interactions
+                with precision and clarity.</p>
+        </div>
+    </header>
+
+    <main id="main-content" class="py-16">
+        <div class="container mx-auto px-6 max-w-6xl grid grid-cols-12 gap-8">
+            <!-- Sidebar Navigation -->
+            <nav class="col-span-12 lg:col-span-3">
+                <div class="sticky top-8">
+                    <h2 class="text-xl font-semibold mb-4">Contents</h2>
+                    <ul class="space-y-3">
+                        <li>
+                            <a href="#overview"
+                                class="flex items-center gap-2 text-lg hover:text-[--color-accent] transition-colors">
+                                <svg data-lucide="eye" class="w-5 h-5"></svg>
+                                Overview
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#features"
+                                class="flex items-center gap-2 text-lg hover:text-[--color-accent] transition-colors">
+                                <svg data-lucide="layout-list" class="w-5 h-5"></svg>
+                                Features
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#interaction-tracking"
+                                class="flex items-center gap-2 text-lg hover:text-[--color-accent] transition-colors">
+                                <svg data-lucide="mouse-pointer-click" class="w-5 h-5"></svg>
+                                Interaction Tracking
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#keyboard-shortcuts"
+                                class="flex items-center gap-2 text-lg hover:text-[--color-accent] transition-colors">
+                                <svg data-lucide="keyboard" class="w-5 h-5"></svg>
+                                Keyboard Shortcuts
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#export-formats"
+                                class="flex items-center gap-2 text-lg hover:text-[--color-accent] transition-colors">
+                                <svg data-lucide="file-text" class="w-5 h-5"></svg>
+                                Export Formats
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <div class="col-span-12 lg:col-span-9 space-y-12">
+                <!-- Overview Section -->
+                <section id="overview" class="space-y-6">
+                    <h2 class="text-3xl font-semibold">Overview</h2>
+                    <p class="text-lg text-gray-600">tracer is a specialized tool designed for QA professionals and
+                        developers to capture, document, and analyze user interactions within web applications. It
+                        provides
+                        detailed logging of user actions, accessibility information, and technical details in real-time.
+                    </p>
+
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="feature-card bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                            <svg data-lucide="target" class="w-8 h-8 text-[--color-accent] mb-4"></svg>
+                            <h3 class="text-xl font-semibold mb-2">Precision Tracking</h3>
+                            <p class="text-gray-600">Captures every interaction with exact timestamps, element details,
+                                and
+                                context.</p>
+                        </div>
+                        <div class="feature-card bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                            <svg data-lucide="file-text" class="w-8 h-8 text-[--color-accent] mb-4"></svg>
+                            <h3 class="text-xl font-semibold mb-2">Smart Documentation</h3>
+                            <p class="text-gray-600">Automatically generates comprehensive logs in multiple formats for
+                                easy
+                                sharing.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Features Section -->
+                <section id="features" class="space-y-6">
+                    <h2 class="text-3xl font-semibold">Features</h2>
+                    <div class="grid gap-6">
+                        <div class="feature-card bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                            <h3 class="text-xl font-semibold mb-4">Real-time Action Logging</h3>
+                            <ul class="space-y-3 ml-6">
+                                <li class="flex items-start gap-2">
+                                    <svg data-lucide="check" class="w-5 h-5 text-[--color-accent] mt-1"></svg>
+                                    <span>Captures clicks, form inputs, navigation, and keyboard interactions</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <svg data-lucide="check" class="w-5 h-5 text-[--color-accent] mt-1"></svg>
+                                    <span>Records element properties, states, and accessibility attributes</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <svg data-lucide="check" class="w-5 h-5 text-[--color-accent] mt-1"></svg>
+                                    <span>Tracks form submissions and validation states</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="feature-card bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                            <h3 class="text-xl font-semibold mb-4">Error Tracking</h3>
+                            <ul class="space-y-3 ml-6">
+                                <li class="flex items-start gap-2">
+                                    <svg data-lucide="check" class="w-5 h-5 text-[--color-accent] mt-1"></svg>
+                                    <span>Automatic console error capture with stack traces</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <svg data-lucide="check" class="w-5 h-5 text-[--color-accent] mt-1"></svg>
+                                    <span>Network error monitoring and reporting</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Interaction Tracking Section -->
+                <section id="interaction-tracking" class="space-y-6">
+                    <h2 class="text-3xl font-semibold">Interaction Tracking</h2>
+                    <p class="text-lg text-gray-600">tracer captures detailed information about various types of user
+                        interactions:</p>
+
+                    <div class="space-y-6">
+                        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                            <h3 class="text-xl font-semibold mb-4">Click Events</h3>
+                            <pre class="code-block">
+{
+    "type": "click",
+    "element": "button.submit-form",
+    "timestamp": "2025-02-11T14:23:42",
+    "context": "checkout-form",
+    "details": {
+        "text": "Submit Order",
+        "aria-label": "Complete purchase",
+        "disabled": false
+    }
+}</pre>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                            <h3 class="text-xl font-semibold mb-4">Form Interactions</h3>
+                            <pre class="code-block">
+{
+    "type": "input-change",
+    "element": "input[type='email']",
+    "timestamp": "2025-02-11T14:23:45",
+    "details": {
+        "value": "user@example.com",
+        "valid": true,
+        "required": true
+    }
+}</pre>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Keyboard Shortcuts Section -->
+                <!-- In the keyboard shortcuts section of docs.html -->
+                <section id="keyboard-shortcuts" class="space-y-6">
+                    <h2 class="text-3xl font-semibold">Keyboard Shortcuts</h2>
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                        <div class="grid gap-4">
+                            <div class="flex items-center justify-between p-2 hover:bg-gray-50">
+                                <span class="font-medium">Toggle Sidebar</span>
+                                <kbd class="px-2 py-1 bg-gray-100 rounded text-sm">Ctrl + T</kbd>
+                            </div>
+                            <div class="flex items-center justify-between p-2 hover:bg-gray-50">
+                                <span class="font-medium">Take Screenshot</span>
+                                <kbd class="px-2 py-1 bg-gray-100 rounded text-sm">Ctrl + S</kbd>
+                            </div>
+                            <div class="flex items-center justify-between p-2 hover:bg-gray-50">
+                                <span class="font-medium">Clear Log</span>
+                                <kbd class="px-2 py-1 bg-gray-100 rounded text-sm">Ctrl + L</kbd>
+                            </div>
+                            <div class="flex items-center justify-between p-2 hover:bg-gray-50">
+                                <span class="font-medium">Export Log</span>
+                                <kbd class="px-2 py-1 bg-gray-100 rounded text-sm">Ctrl + E</kbd>
+                            </div>
+                            <div class="flex items-center justify-between p-2 hover:bg-gray-50">
+                                <span class="font-medium">Toggle DevTools</span>
+                                <kbd class="px-2 py-1 bg-gray-100 rounded text-sm">Ctrl + Shift + I</kbd>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Export Formats Section -->
+                <section id="export-formats" class="space-y-6">
+                    <h2 class="text-3xl font-semibold">Export Formats</h2>
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="feature-card bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                            <svg data-lucide="file-text" class="w-8 h-8 text-[--color-accent] mb-4"></svg>
+                            <h3 class="text-xl font-semibold mb-2">Markdown</h3>
+                            <p class="text-gray-600">Clean, readable format perfect for documentation and GitHub.</p>
+                        </div>
+                        <div class="feature-card bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                            <svg data-lucide="file-code" class="w-8 h-8 text-[--color-accent] mb-4"></svg>
+                            <h3 class="text-xl font-semibold mb-2">HTML Report</h3>
+                            <p class="text-gray-600">Rich, interactive reports with full detail and screenshots.</p>
+                        </div>
+                        <div class="feature-card bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                            <svg data-lucide="trello" class="w-8 h-8 text-[--color-accent] mb-4"></svg>
+                            <h3 class="text-xl font-semibold mb-2">JIRA Format</h3>
+                            <p class="text-gray-600">Ready-to-paste format for JIRA tickets and comments.</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-[--color-primary] text-white py-12">
+        <div class="container mx-auto px-6 max-w-6xl text-center">
+            <p>&copy; 2025 tracer. All rights reserved.</p>
+        </div>
+    </footer>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        lucide.createIcons();
+    });
+</script>
+</body>
+
+</html>

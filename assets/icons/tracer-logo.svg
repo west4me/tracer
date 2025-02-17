@@ -1,0 +1,36 @@
+<svg class="eye-logo absolute" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="240" height="240">
+    <defs>
+        <!-- Inner Shadow Filter -->
+        <filter id="inner-shadow" x="-50%" y="-50%" width="200%" height="200%">
+            <!-- Create a red flood fill -->
+            <feFlood flood-color="red" result="flood" />
+            
+            <!-- Apply the red flood only to the shape -->
+            <feComposite in="flood" in2="SourceAlpha" operator="in" result="flooded"/>
+
+            <!-- Blur the shadow effect -->
+            <feGaussianBlur in="flooded" stdDeviation="1.8" result="blurredShadow"/>
+
+            <!-- Clip the shadow inside the original circle -->
+            <feComposite in="blurredShadow" in2="SourceAlpha" operator="in" />
+
+            <!-- Merge the shadow with the original graphic -->
+            <feMerge>
+                <feMergeNode class="eye-shadow"/>  <!-- Apply animation here -->
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+        </filter>
+    </defs>
+
+    <!-- Background circle for inner shadow animation
+    <circle cx="8" cy="8" r="8" fill="#FF8A65" filter="url(#inner-shadow)" class="eye-shadow"/>
+    -->
+    <!-- Static eyelid -->
+    <circle cx="8" cy="8" r="7" fill="#FF8A65" stroke="#1a1a1a" stroke-width="1.2"/>
+
+    <!-- Moving pupil with highlight -->
+    <g class="eye-movement">
+        <circle cx="8" cy="8" r="3" fill="#1a1a1a"/>
+        <circle cx="9" cy="7" r="1" fill="white"/>
+    </g>
+</svg>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Welcome to tracer</title>
+    <style>
+      /* 
+      Minimalistic, mid-century vibe with a Dieter Rams nod:
+      - Subtle color blocks
+      - Clean lines
+      - Emphasis on clarity
+    */
+
+      :root {
+        --bg: #faf9f7;
+        --primary: #ff8a65; /* Matching your logo's salmon/hot orange */
+        --text: #333;
+        --heading-font: "Helvetica Neue", Arial, sans-serif;
+        --body-font: "Open Sans", sans-serif;
+        --radius: 6px;
+        --transition-speed: 0.3s;
+        --main-width: 580px;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--body-font);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      main {
+        width: var(--main-width);
+        max-width: 96%;
+        background: #fff;
+        border-radius: var(--radius);
+        box-shadow: 0 2px 14px rgba(0, 0, 0, 0.12);
+        padding: 2.5rem 2rem;
+        text-align: center;
+        position: relative;
+      }
+
+      .logo-wrap {
+        width: 100px;
+        height: 100px;
+        margin: 0 auto 1.5rem;
+      }
+
+      .eye-logo {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      h1 {
+        font-family: var(--heading-font);
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        letter-spacing: 0.02em;
+        color: #1a1a1a;
+      }
+
+      .subhead {
+        color: var(--primary);
+        font-size: 1.15rem;
+        margin-bottom: 1.5rem;
+      }
+
+      p {
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+        color: #555;
+      }
+
+      button {
+        display: inline-block;
+        background: var(--primary);
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background var(--transition-speed),
+          transform var(--transition-speed);
+      }
+      button:hover {
+        background: #e26a46;
+        transform: translateY(-1px);
+      }
+
+      .footer-note {
+        font-size: 0.8rem;
+        color: #aaa;
+        margin-top: 2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <!-- Inline SVG Logo -->
+      <div class="logo-wrap">
+        <svg
+          class="eye-logo"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 16 16"
+        >
+          <defs>
+            <!-- Inner Shadow Filter (not actively used here, but preserved) -->
+            <filter
+              id="inner-shadow"
+              x="-50%"
+              y="-50%"
+              width="200%"
+              height="200%"
+            >
+              <feFlood flood-color="red" result="flood" />
+              <feComposite
+                in="flood"
+                in2="SourceAlpha"
+                operator="in"
+                result="flooded"
+              />
+              <feGaussianBlur
+                in="flooded"
+                stdDeviation="1.8"
+                result="blurredShadow"
+              />
+              <feComposite in="blurredShadow" in2="SourceAlpha" operator="in" />
+              <feMerge>
+                <feMergeNode class="eye-shadow" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <!-- Eyelid -->
+          <circle
+            cx="8"
+            cy="8"
+            r="7"
+            fill="#FF8A65"
+            stroke="#1a1a1a"
+            stroke-width="1.2"
+          />
+          <!-- Pupil -->
+          <g class="eye-movement">
+            <circle cx="8" cy="8" r="3" fill="#1a1a1a" />
+            <circle cx="9" cy="7" r="1" fill="white" />
+          </g>
+        </svg>
+      </div>
+
+      <h1>Welcome to tracer</h1>
+      <div class="subhead">Your new best friend in QA</div>
+
+      <p>
+        tracer is an Electron-based action recorder that automatically tracks
+        clicks, form entries, keyboard events, and more – all while letting you
+        annotate screenshots for thorough bug reports.
+      </p>
+      <p>
+        Ready for a test drive? Click below to jump right in and start capturing
+        those interactions. If you're new, don't worry: tracer will log your
+        every move so you can review or export them afterward.
+      </p>
+
+      <button onclick="launchTracer()">Get Started</button>
+
+      <div class="footer-note">
+        Minimally designed with a nod to Dieter Rams and the spirit of
+        mid-century modern.
+      </div>
+    </main>
+
+    <script>
+      function launchTracer() {
+        // In your Electron app, you might switch windows or send an IPC event:
+        // window.location.href = 'index.html';  // or
+        // electron.ipcRenderer.send('open-main-window');
+        alert(
+          "tracer is now launching! (Implement real navigation in Electron.)"
+        );
+      }
+    </script>
+  </body>
+</html>
