@@ -25,7 +25,7 @@ let currentIssueType = 'Defect'; // or whatever default you want
 let typedIssueType = '';
 let typedSummary = 'Make this a good default summary';
 
-let loggingEnabled = true;
+let loggingEnabled = false;
 
 
 // Load or initialize an empty array for storing previously used issue types
@@ -94,10 +94,23 @@ function showModalImage(src, eventTimestamp) {
 
 document.getElementById('toggle-logging').addEventListener('click', () => {
     loggingEnabled = !loggingEnabled;
-    // Update button text
-    document.getElementById('toggle-logging').textContent = loggingEnabled
-        ? 'Stop Logging'
-        : 'Start Logging';
+    const button = document.getElementById('toggle-logging');
+    const icon = button.querySelector('svg');
+
+    if (loggingEnabled) {
+        // Switch to stop icon
+        icon.setAttribute('data-lucide', 'square');
+        button.setAttribute('title', 'Stop Logging');
+        showToast('Logging Started');
+    } else {
+        // Switch to play icon
+        icon.setAttribute('data-lucide', 'play');
+        button.setAttribute('title', 'Start Logging');
+        showToast('Logging Stopped');
+    }
+
+    // Re-render the Lucide icons
+    lucide.createIcons();
 });
 
 // Add this to your initialization code
@@ -761,6 +774,13 @@ document.head.appendChild(linkStyle);
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log(window.electron);
+    const loggingButton = document.getElementById('toggle-logging');
+    if (loggingButton) {
+        const icon = loggingButton.querySelector('svg');
+        icon.setAttribute('data-lucide', 'play');
+        loggingButton.setAttribute('title', 'Start Logging');
+        lucide.createIcons();
+    }
     webview = document.getElementById('my-webview');
     
     let previousUrl = webview.src; // store the initial URL
