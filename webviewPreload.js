@@ -661,5 +661,21 @@ window.addEventListener('load', () => {
     });
 });
 
+document.addEventListener('mousemove', (e) => {
+    // Send the local (webview) coordinates to the parent (renderer)
+    ipcRenderer.sendToHost('webview-mousemove', {
+        x: e.clientX,
+        y: e.clientY
+    });
+});
+
+
+document.addEventListener('keydown', (event) => {
+    // Check if user pressed Ctrl+Space
+    if (event.ctrlKey && event.code === 'Space') {
+        event.preventDefault(); // Prevent default space behavior
+        ipcRenderer.sendToHost('toggle-logging');
+    }
+});
 // End of snippet
 

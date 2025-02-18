@@ -86,38 +86,6 @@ app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) { }
 });
 
-// In main.js, replace the existing ipcMain.on('take-screenshot'...) handler:
-
-ipcMain.on('take-screenshot', async (event) => {
-    // Get all windows
-    const windows = BrowserWindow.getAllWindows();
-    if (windows.length === 0) return;
-
-    const win = windows[0];
-
-    try {
-        // Send message to renderer to get webview bounds
-        const webviewBounds = await win.webContents.executeJavaScript(`
-            (function() {
-                const myWebview = document.getElementById('my-webview');
-                const bounds = myWebview.getBoundingClientRect();
-                return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
-            })();
-        `);
-
-        // Capture just the webview area
-        const image = await win.webContents.capturePage({
-            x: Math.round(webviewBounds.x),
-            y: Math.round(webviewBounds.y),
-            width: Math.round(webviewBounds.width),
-            height: Math.round(webviewBounds.height)
-        });
-
-        event.reply('screenshot-taken', image.toPNG().toString('base64'));
-    } catch (error) {
-        console.error('Screenshot failed:', error);
-    }
-});
 
 
 ipcMain.on("shortcut-triggered", (event, shortcut) => {
@@ -138,6 +106,9 @@ ipcMain.on('reset-log', (event) => {
 // In main.js, add this new IPC handler:
 
 // In main.js, replace both screenshot handlers with these fixed versions:
+
+// Remove the first duplicate 'take-screenshot' handler
+// and just keep these two handlers at the bottom:
 
 ipcMain.on('take-screenshot', async (event) => {
     // Get all windows

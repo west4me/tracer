@@ -5,6 +5,8 @@ let webview;
 let webviewContainer;
 let activeScreenshotEvent = null;
 let isResetting = false;
+let emptyStateMessage = null;
+let isFirstLog = true;
 
 // Annotation state
 let isDrawing = false;
@@ -30,6 +32,158 @@ let loggingEnabled = false;
 
 // Load or initialize an empty array for storing previously used issue types
 let storedIssueTypes = JSON.parse(localStorage.getItem('issueTypesHistory') || '[]');
+
+function showEmptyState() {
+    const logArea = document.getElementById('log-area');
+    if (!logArea) return;
+
+    // Clear any existing content
+    logArea.innerHTML = '';
+
+    // Create empty state message
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'flex flex-col items-center justify-center h-full text-center p-8';
+    messageDiv.innerHTML = `
+  <svg id="tracking-eye" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="w-16 h-16">
+      <circle cx="8" cy="8" r="7" fill="#FF8A65" stroke="#1a1a1a" stroke-width="1.2"/>
+      <circle id="eye-pupil" cx="8" cy="8" r="3" fill="#1a1a1a"/>
+      <circle id="eye-highlight" cx="9" cy="7" r="1" fill="white"/>
+  </svg>
+  <h3 class="text-xl font-semibold text-gray-700 mb-2">Ready to Start Logging</h3>
+  <p class="text-gray-500 mb-6">Click the button below to begin tracking interactions</p>
+  <button id="start-logging-btn" class="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors">
+      <svg data-lucide="play" class="w-5 h-5"></svg>
+      Start Logging
+  </button>`;
+
+    logArea.appendChild(messageDiv);
+
+    
+
+
+
+    // Initialize Lucide icons
+    lucide.createIcons(messageDiv);
+
+    // Add click handler to the button
+    const startButton = messageDiv.querySelector('#start-logging-btn');
+    startButton.addEventListener('click', () => {
+        document.getElementById('toggle-logging').click();
+    });
+
+    emptyStateMessage = messageDiv;
+}
+
+// Make the pupil and its highlight subtly follow the mouse
+function updateEyePosition(mouseX, mouseY) {
+    const svg = document.getElementById('tracking-eye');
+    const pupil = document.getElementById('eye-pupil');
+    const highlight = document.getElementById('eye-highlight');
+    if (!svg || !pupil || !highlight) return;
+
+    // 1) Eye center in page coords
+    const rect = svg.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    // 2) Horizontal distance from eye center to mouse
+    const dx = mouseX - centerX;
+    // Decide the max horizontal distance to left or right edge
+    let maxDistX = (dx < 0) ? centerX : (window.innerWidth - centerX);
+    // Prevent divide-by-zero if center is near edge
+    if (maxDistX < 1) maxDistX = 1;
+
+    // 3) ratioX in [-1, +1] => how far along the left-right span
+    let ratioX = dx / maxDistX;
+    // Optionally clamp if mouse goes “off” screen
+    if (ratioX < -1) ratioX = -1;
+    if (ratioX > 1) ratioX = 1;
+
+    // 4) Vertical distance
+    const dy = mouseY - centerY;
+    let maxDistY = (dy < 0) ? centerY : (window.innerHeight - centerY);
+    if (maxDistY < 1) maxDistY = 1;
+
+    let ratioY = dy / maxDistY;
+    if (ratioY < -1) ratioY = -1;
+    if (ratioY > 1) ratioY = 1;
+
+    // 5) Decide how far pupil can move (in SVG units).
+    // e.g. if outer circle is radius 7, pupil is radius 3 => max = 4
+    const maxOffset = 3;
+
+    // Convert ratio -> offset in SVG coordinates
+    const offsetX = ratioX * maxOffset;
+    const offsetY = ratioY * maxOffset;
+
+    // Move pupil (original center at 8,8)
+    pupil.setAttribute('cx', 8 + offsetX);
+    pupil.setAttribute('cy', 8 + offsetY);
+
+    // Move highlight (originally at 9,7)
+    highlight.setAttribute('cx', 9 + offsetX);
+    highlight.setAttribute('cy', 7 + offsetY);
+}
+
+
+document.addEventListener('mousemove', (e) => {
+    updateEyePosition(e.clientX, e.clientY);
+});
+
+function addInitialPageLoad() {
+    const logArea = document.getElementById('log-area');
+    if (!logArea || !webview) return;
+
+    const timeStr = formatTimestamp(new Date().toISOString());
+    const logData = {
+        action: 'page-loaded',
+        timestamp: new Date().toISOString(),
+        title: webview.getTitle() || 'Untitled',
+        url: webview.getURL()
+    };
+
+    // Create the log entry
+    const entry = document.createElement('div');
+    entry.className = "p-3 rounded bg-gray-100 relative flex flex-col";
+    entry.dataset.timestamp = logData.timestamp;
+
+    entry.innerHTML = `
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+                <span class="tag bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-semibold">
+                    PAGE LOADED
+                </span>
+                <span class="text-sm text-gray-500">#1</span>
+            </div>
+            <time class="text-sm text-gray-500">${timeStr}</time>
+        </div>
+        <div class="space-y-4">
+            <div class="details-grid">
+                <span class="font-medium">Page Title:</span>
+                <span class="break-words">"${logData.title}"</span>
+                <span class="font-medium">URL:</span>
+                <span class="break-words">${logData.url}</span>
+            </div>
+        </div>
+    `;
+
+    // Add to event log array
+    eventLog.push(logData);
+
+    // Add to UI
+    logArea.appendChild(entry);
+
+    // Scroll to bottom
+    logArea.scrollTop = logArea.scrollHeight;
+}
+
+function createScreenshotEvent(targetElement) {
+    return {
+        action: 'screenshot',
+        timestamp: new Date().toISOString(),
+        details: getElementDetails(targetElement || document.body)
+    };
+}
 
 // Format ISO timestamp to MM/DD/YYYY HH:MM:SS AM/PM (12-hour format)
 function formatTimestamp(isoString) {
@@ -92,26 +246,61 @@ function showModalImage(src, eventTimestamp) {
     modal.classList.add('flex');
 }
 
-document.getElementById('toggle-logging').addEventListener('click', () => {
+function toggleLogging() {
+    // Flip the boolean
     loggingEnabled = !loggingEnabled;
+
     const button = document.getElementById('toggle-logging');
     const icon = button.querySelector('svg');
 
     if (loggingEnabled) {
-        // Switch to stop icon
-        icon.setAttribute('data-lucide', 'square');
+        // Switch to stop icon with animation
+        icon.setAttribute('data-lucide', 'pause');
         button.setAttribute('title', 'Stop Logging');
         showToast('Logging Started');
+
+        // Add animation class
+        icon.classList.add('icon-pulse');
+        // Remove animation class after it completes
+        setTimeout(() => {
+            icon.classList.remove('icon-pulse');
+        }, 400);
+
+        // Only clear empty state if first time starting
+        if (isFirstLog && emptyStateMessage) {
+            emptyStateMessage.remove();
+            emptyStateMessage = null;
+            isFirstLog = false;
+            // Add initial page load entry only on first start
+            addInitialPageLoad();
+        }
     } else {
-        // Switch to play icon
+        // Switch to play icon with animation
         icon.setAttribute('data-lucide', 'play');
         button.setAttribute('title', 'Start Logging');
-        showToast('Logging Stopped');
+        showToast('Logging Paused');
+
+        // Add animation class
+        icon.classList.add('icon-pulse');
+        // Remove animation class after it completes
+        setTimeout(() => {
+            icon.classList.remove('icon-pulse');
+        }, 400);
+
+        // Do NOT show empty state when pausing
     }
 
-    // Re-render the Lucide icons
+    // Re-render Lucide icons
     lucide.createIcons();
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.code === 'Space') {
+        e.preventDefault();
+        toggleLogging();
+    }
 });
+
 
 // Add this to your initialization code
 document.addEventListener('DOMContentLoaded', () => {
@@ -129,7 +318,7 @@ window.showModalImage = showModalImage;
 
 function showToast(message) {
     const toast = document.createElement('div');
-    toast.className = 'fixed bottom-4 right-4 bg-cyan-600 text-white px-4 py-2 rounded shadow-lg text-sm z-50';
+    toast.className = 'fixed bottom-4 left-4 bg-cyan-600 text-white px-4 py-2 rounded shadow-lg text-sm z-50';
     toast.textContent = message;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2000);
@@ -618,6 +807,15 @@ ipcRenderer.on('reset-listeners', () => {
 });
 
 
+
+document.addEventListener('keydown', (event) => {
+    if (event.ctrlKey && event.code === 'Space') {
+        event.preventDefault();
+        toggleLogging();
+    }
+});
+
+
 const linkStyle = document.createElement('style');
 linkStyle.textContent = `
     .comment-editor a {
@@ -767,18 +965,29 @@ linkStyle.textContent = `
   background: #999;        /* darken on hover so it’s discoverable */
 }
 
+@keyframes pulseScale {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); }
+    }
 
+    .icon-pulse {
+        animation: pulseScale 0.4s ease-in-out;
+    }
 
 `;
 document.head.appendChild(linkStyle);
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log(window.electron);
-    const loggingButton = document.getElementById('toggle-logging');
-    if (loggingButton) {
-        const icon = loggingButton.querySelector('svg');
+    const toggleBtn = document.getElementById('toggle-logging');
+    toggleBtn.addEventListener('click', () => {
+        toggleLogging();
+    });
+    if (toggleBtn) {
+        const icon = toggleBtn.querySelector('svg');
         icon.setAttribute('data-lucide', 'play');
-        loggingButton.setAttribute('title', 'Start Logging');
+        toggleBtn.setAttribute('title', 'Start Logging');
         lucide.createIcons();
     }
     webview = document.getElementById('my-webview');
@@ -801,7 +1010,11 @@ document.addEventListener('DOMContentLoaded', () => {
         previousUrl = newUrl;
     });
 
-
+    webview.addEventListener('ipc-message', (e) => {
+        if (e.channel === 'toggle-logging') {
+            toggleLogging();
+        }
+    });
     // ----- Helper Functions -----
 
     // Truncates long URLs and appends ellipsis if needed
@@ -938,14 +1151,36 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.channel === 'webview-error') {
             window.electron.ipcRenderer.send('webview-error', event.args[0]);
         } if (event.channel === 'log-event') {
-            // If logging is off, do nothing. 
-            if (!loggingEnabled) return;
-
             const logData = event.args[0];
-            // Now that we know logging is on, store it in the array
+            console.log('Log event data:', logData);
+
+            // Always allow screenshots, regardless of logging state
+            if (logData.screenshot || logData.elementCapture) {
+                console.log('Processing screenshot/element capture event');
+                eventLog.push(logData);
+                updateLogUI(logData);
+                return;
+            }
+
+            // For non-screenshot events, respect the logging state
+            if (!loggingEnabled) {
+                console.log('Logging disabled, event ignored');
+                return;
+            }
+
             eventLog.push(logData);
-            // Also update the UI
             updateLogUI(logData);
+        } else if (event.channel === 'webview-mousemove') {
+            // event.args[0] is {x, y} in the webview’s local coordinate system
+            const { x, y } = event.args[0];
+
+            // Convert to parent's coordinate system by adding webview's bounding rect
+            const rect = webview.getBoundingClientRect();
+            const parentX = rect.left + x;
+            const parentY = rect.top + y;
+
+            // Now move the pupil
+            updateEyePosition(parentX, parentY);
         }
     });
 
@@ -978,11 +1213,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Replace the existing screenshot IPC handler
     window.electron.ipcRenderer.on('screenshot-taken', (ipcEvent, base64Data) => {
-        if (!loggingEnabled) {
-            // If you want to skip adding new screenshots while logging is paused, just return.
-            return;
-        }
-
         if (!activeScreenshotEvent) {
             console.warn("No active event to attach screenshot to!");
             return;
@@ -1105,7 +1335,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Create success toast
         const toast = document.createElement('div');
-        toast.className = 'fixed bottom-4 right-4 bg-cyan-600 text-white px-4 py-2 rounded shadow-lg text-sm z-50';
+        toast.className = 'fixed bottom-4 left-4 bg-cyan-600 text-white px-4 py-2 rounded shadow-lg text-sm z-50';
         toast.textContent = activeScreenshotEvent.isElementCapture ? 'Element capture!' : 'Screenshot captured!';
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 2000);
@@ -1670,7 +1900,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Toast notification
                 const toast = document.createElement('div');
-                toast.className = 'fixed bottom-4 right-4 bg-cyan-600 text-white px-4 py-2 rounded shadow-lg text-sm';
+                toast.className = 'fixed bottom-4 left-4 bg-cyan-600 text-white px-4 py-2 rounded shadow-lg text-sm';
                 toast.textContent = 'URL copied to clipboard!';
                 document.body.appendChild(toast);
                 setTimeout(() => toast.remove(), 2000);
@@ -1711,7 +1941,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Adds the comment button and editing functionality to a log entry
     function setupCommentFeature(entry, logData) {
-        if (!loggingEnabled) return;
+        // Create the Screenshot button (middle icon)
+        // Create the Screenshot button (middle icon)
+        const screenshotButton = document.createElement('button');
+        screenshotButton.innerHTML = '<svg data-lucide="camera" width="16" height="16"></svg>';
+        screenshotButton.title = 'CTRL + Click for Element';
+        screenshotButton.className = 'absolute top-2 right-8 text-gray-500 hover:text-gray-700 p-1 hover:bg-gray-50 rounded';
+
+        // Remove the logging state check here - screenshots should work regardless
+        screenshotButton.addEventListener('click', async (e) => {
+            console.log('Screenshot button clicked from setupCommentFeature');
+
+            // Find the closest log entry container
+            const targetEntry = e.target.closest('[data-timestamp]');
+            if (!targetEntry) {
+                console.warn("Could not find parent log entry!");
+                return;
+            }
+
+            // Always use the existing logData
+            activeScreenshotEvent = logData;
+            activeScreenshotEvent.isElementCapture = e.ctrlKey;
+
+            // Find and remove existing screenshot row if it exists
+            const existingRow = targetEntry.querySelector('.screenshot-row');
+            if (existingRow) {
+                existingRow.remove();
+            }
+
+            // Take new screenshot based on type
+            if (e.ctrlKey) {
+                window.electron.ipcRenderer.send('take-element-screenshot', {
+                    xpath: activeScreenshotEvent.details.xpath
+                });
+            } else {
+                window.electron.ipcRenderer.send('take-screenshot');
+            }
+        });
+        entry.appendChild(screenshotButton);
+
+        if (!loggingEnabled) {
+            lucide.createIcons(entry);
+            return;
+        }
+        
         // Create the Delete Event button (will be the far right icon)
         const deleteEventButton = document.createElement('button');
         deleteEventButton.innerHTML = '<svg data-lucide="trash" width="16" height="16"></svg>';
@@ -1732,39 +2005,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         entry.appendChild(deleteEventButton);
 
-        // Create the Screenshot button (middle icon)
-        const screenshotButton = document.createElement('button');
-        screenshotButton.innerHTML = '<svg data-lucide="camera" width="16" height="16"></svg>';
-        screenshotButton.title = 'CTRL + Click for Element';
-        screenshotButton.className = 'absolute top-2 right-8 text-gray-500 hover:text-gray-700 p-1 hover:bg-gray-50 rounded';
-        screenshotButton.addEventListener('click', async (e) => {
-            // First find the closest log entry container
-            const targetEntry = e.target.closest('[data-timestamp]');
-            if (!targetEntry) {
-                console.warn("Could not find parent log entry!");
-                return;
-            }
-
-            // Save reference to current event
-            activeScreenshotEvent = logData;
-            activeScreenshotEvent.isElementCapture = e.ctrlKey;
-
-            // Find and remove existing screenshot row if it exists
-            const existingRow = targetEntry.querySelector('.screenshot-row');
-            if (existingRow) {
-                existingRow.remove();
-            }
-
-            // Take new screenshot based on type
-            if (e.ctrlKey) {
-                window.electron.ipcRenderer.send('take-element-screenshot', {
-                    xpath: logData.details.xpath
-                });
-            } else {
-                window.electron.ipcRenderer.send('take-screenshot');
-            }
-        });
-        entry.appendChild(screenshotButton);
+        
 
         // Create the Comment button (leftmost icon)
         const commentButton = document.createElement('button');
@@ -4156,7 +4397,7 @@ ${errorData.stack}
 
                 // Show feedback toast
                 const toast = document.createElement('div');
-                toast.className = 'fixed bottom-4 right-4 bg-cyan-600 text-white px-4 py-2 rounded shadow-lg text-sm z-50';
+                toast.className = 'fixed bottom-4 left-4 bg-cyan-600 text-white px-4 py-2 rounded shadow-lg text-sm z-50';
                 toast.textContent = 'Copied to clipboard!';
                 document.body.appendChild(toast);
 
@@ -4470,6 +4711,7 @@ ${errorData.stack}
         });
 
         // Save button handler
+        // Save button handler
         document.getElementById('save-annotation').addEventListener('click', () => {
             // 1) Ensure we actually have an active event
             if (!activeScreenshotEvent || !activeScreenshotEvent.timestamp) {
@@ -4480,13 +4722,23 @@ ${errorData.stack}
                 return;
             }
 
-            // 2) Otherwise, proceed with the save
+            // 2) Save the annotated image
             const base64Data = saveAnnotatedImage();
             const activeEntry = document.querySelector(`[data-timestamp="${activeScreenshotEvent.timestamp}"]`);
 
             if (activeEntry && base64Data) {
                 // Update the event object
                 activeScreenshotEvent.screenshot = base64Data;
+
+                // Make sure the event is in our eventLog array, regardless of logging state
+                const existingEventIndex = eventLog.findIndex(e => e.timestamp === activeScreenshotEvent.timestamp);
+                if (existingEventIndex === -1) {
+                    // Event doesn't exist in log yet, add it
+                    eventLog.push(activeScreenshotEvent);
+                } else {
+                    // Update existing event with new screenshot
+                    eventLog[existingEventIndex] = activeScreenshotEvent;
+                }
 
                 // Update the preview <img> if it exists
                 const previewImg = activeEntry.querySelector('.screenshot-row img');
@@ -4497,7 +4749,6 @@ ${errorData.stack}
                 // Also update the anchor link if it exists
                 const screenshotLink = activeEntry.querySelector('.screenshot-row a');
                 if (screenshotLink) {
-                    // Point the link to the newly annotated base64
                     screenshotLink.href = 'data:image/png;base64,' + base64Data;
                 }
 
@@ -4993,8 +5244,8 @@ ${errorData.stack}
         });
     }
 
-    // Call it right after defining it
     setupViewportSwitcher();
     window.addEventListener('resize', updateViewportSize);
+    showEmptyState();
 });
 
