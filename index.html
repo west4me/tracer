@@ -427,6 +427,24 @@
         <button class="annotation-tool p-2 hover:bg-gray-100 rounded" data-tool="circle" title="Draw Circle (C)">
           <svg data-lucide="circle" width="20" height="20"></svg>
         </button>
+        <div class="relative"> <!-- Wrap in relative div for positioning -->
+          <button class="annotation-tool p-2 hover:bg-gray-100 rounded" data-tool="stamp" title="Add Stamp (W)">
+            <svg data-lucide="stamp" width="20" height="20"></svg>
+          </button>
+        
+          <!-- Add the stamp selector panel -->
+          <div id="stamp-selector"
+            class="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-lg p-2 flex flex-col gap-2 z-50 hidden">
+            <button class="stamp-option p-2 hover:bg-gray-100 rounded flex items-center gap-2 w-full" data-stamp="pass">
+              <span
+                class="inline-block px-2 py-1 text-xs font-bold rounded bg-green-500 text-white border-2 border-green-600 w-full text-center">PASS</span>
+            </button>
+            <button class="stamp-option p-2 hover:bg-gray-100 rounded flex items-center gap-2 w-full" data-stamp="fail">
+              <span
+                class="inline-block px-2 py-1 text-xs font-bold rounded bg-red-500 text-white border-2 border-red-600 w-full text-center">FAIL</span>
+            </button>
+          </div>
+        </div>
         <div class="h-6 w-px bg-gray-200"></div>
         <button id="annotation-undo" class="p-2 hover:bg-gray-100 rounded" title="Undo (Ctrl+Z)" disabled>
           <svg data-lucide="undo-2" width="20" height="20"></svg>
@@ -438,6 +456,7 @@
         <input type="color" id="annotation-color" value="#FF0000" class="w-8 h-8 rounded cursor-pointer"
           title="Annotation Color" />
         <div class="h-6 w-px bg-gray-200"></div>
+        
         <button id="save-annotation" class="p-2 hover:bg-gray-100 rounded" title="Save Annotations (Ctrl+S)">
           <svg data-lucide="save" width="20" height="20"></svg>
         </button>
@@ -445,38 +464,43 @@
         <button id="show-shortcuts" class="p-2 hover:bg-gray-100 rounded relative group"
           title="Show Keyboard Shortcuts">
           <svg data-lucide="keyboard" width="20" height="20"></svg>
+          
           <!-- Shortcuts tooltip -->
           <div
-            class="hidden group-hover:block absolute top-full left-0 mt-2 p-3 bg-white rounded-lg shadow-lg border border-gray-200 whitespace-nowrap z-50">
-            <div class="text-sm font-medium mb-2">Keyboard Shortcuts</div>
-            <div class="space-y-1 text-xs text-gray-600">
-              <div>
-                <span class="font-mono bg-gray-100 px-1 rounded">A</span>
-                Arrow tool
+            class="hidden group-hover:block absolute bottom-full left-0 mb-2 p-3 bg-white rounded-lg shadow-lg border border-gray-200 whitespace-nowrap z-50">
+            <div class="text-sm font-medium mb-2 text-left">Annotation Shortcuts</div>
+            <div class="space-y-2 text-xs text-gray-600">
+              <div class="grid grid-cols-[80px,1fr] gap-2">
+                <span class="font-mono bg-gray-100 px-2 rounded text-center">A</span>
+                <span>Arrow tool</span>
               </div>
-              <div>
-                <span class="font-mono bg-gray-100 px-1 rounded">R</span>
-                Rectangle tool
+              <div class="grid grid-cols-[80px,1fr] gap-2">
+                <span class="font-mono bg-gray-100 px-2 rounded text-center">R</span>
+                <span>Rectangle tool</span>
               </div>
-              <div>
-                <span class="font-mono bg-gray-100 px-1 rounded">C</span>
-                Circle tool
+              <div class="grid grid-cols-[80px,1fr] gap-2">
+                <span class="font-mono bg-gray-100 px-2 rounded text-center">C</span>
+                <span>Circle tool</span>
               </div>
-              <div>
-                <span class="font-mono bg-gray-100 px-1 rounded">Ctrl+Z</span>
-                Undo
+              <div class="grid grid-cols-[80px,1fr] gap-2">
+                <span class="font-mono bg-gray-100 px-2 rounded text-center">W</span>
+                <span>Stamp tool</span>
               </div>
-              <div>
-                <span class="font-mono bg-gray-100 px-1 rounded">Ctrl+Shift+Z</span>
-                Redo
+              <div class="grid grid-cols-[80px,1fr] gap-2">
+                <span class="font-mono bg-gray-100 px-2 rounded text-center">Ctrl+Z</span>
+                <span>Undo</span>
               </div>
-              <div>
-                <span class="font-mono bg-gray-100 px-1 rounded">Ctrl+S</span>
-                Save
+              <div class="grid grid-cols-[80px,1fr] gap-2">
+                <span class="font-mono bg-gray-100 px-2 rounded text-center">Ctrl+Shift+Z</span>
+                <span>Redo</span>
               </div>
-              <div>
-                <span class="font-mono bg-gray-100 px-1 rounded">Esc</span>
-                Close
+              <div class="grid grid-cols-[80px,1fr] gap-2">
+                <span class="font-mono bg-gray-100 px-2 rounded text-center">Ctrl+S</span>
+                <span>Save</span>
+              </div>
+              <div class="grid grid-cols-[80px,1fr] gap-2">
+                <span class="font-mono bg-gray-100 px-2 rounded text-center">Esc</span>
+                <span>Close</span>
               </div>
             </div>
           </div>
@@ -595,6 +619,60 @@
         </button>
       </div>
     </div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div id="keyboard-shortcuts-modal" class="hidden bg-white rounded-lg shadow-lg p-6 max-w-xl w-full mx-4">
+      <!-- Close X button -->
+      <button id="close-shortcuts-x" class="absolute top-2 right-2 text-gray-600 hover:text-gray-800">
+        <svg data-lucide="x" width="24" height="24"></svg>
+      </button>
+      <h3 class="text-xl font-semibold text-gray-900 mb-4">Keyboard Shortcuts</h3>
+      <div class="overflow-y-auto max-h-[70vh]">
+        <ul class="space-y-4">
+          <li>
+            <strong>Global Shortcuts:</strong>
+            <ul class="list-disc list-inside mt-2">
+              <li>F1: Open Keyboard Shortcuts Help</li>
+              <li>Ctrl+Space: Toggle Logging</li>
+              <li>Ctrl+T: Toggle Sidebar</li>
+              <li>Escape: Close modals</li>
+            </ul>
+          </li>
+          <li>
+            <strong>Comment Editor:</strong>
+            <ul class="list-disc list-inside mt-2">
+              <li>Ctrl+K: Insert/Edit Link</li>
+              <li>Ctrl+Enter: Save Comment</li>
+              <li>Shift+Enter: Insert Line Break</li>
+            </ul>
+          </li>
+          <li>
+            <strong>Annotation:</strong>
+            <ul class="list-disc list-inside mt-2">
+              <li>A: Select Arrow Tool</li>
+              <li>R: Select Rectangle Tool</li>
+              <li>C: Select Circle Tool</li>
+              <li>Ctrl+Z: Undo</li>
+              <li>Ctrl+Shift+Z: Redo</li>
+              <li>Ctrl+S: Save Annotation</li>
+            </ul>
+          </li>
+          <li>
+            <strong>Viewport Controls:</strong>
+            <ul class="list-disc list-inside mt-2">
+              <li>Drag handles in responsive mode to adjust viewport size</li>
+              <li>Preset buttons for Desktop, Tablet, Mobile</li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+      <div class="flex justify-end mt-4">
+        <button id="close-shortcuts-modal" class="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-900">
+          Close
+        </button>
+      </div>
+    </div>
+
 
     <!-- JIRA Settings Modal Container -->
     <div id="jira-settings-modal"

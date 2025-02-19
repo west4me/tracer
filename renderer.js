@@ -19,6 +19,20 @@ let currentImage = null;
 let undoStack = [];
 let redoStack = [];
 let initialCanvasState = null;
+let currentStamp = null;
+const stamps = {
+    pass: {
+        text: 'PASS',
+        color: '#22c55e', // Green
+        borderColor: '#16a34a'
+    },
+    fail: {
+        text: 'DEFECT',
+        color: '#ef4444', // Red
+        borderColor: '#dc2626'
+    }
+};
+
 let jiraFields = [
     // Start with one blank row
     { name: '', value: '' }
@@ -977,6 +991,7 @@ linkStyle.textContent = `
 
 `;
 document.head.appendChild(linkStyle);
+
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log(window.electron);
@@ -2230,11 +2245,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
                     document.body.appendChild(linkInputContainer);
-
+                    
                     const input = linkInputContainer.querySelector('input');
-                    const [addOrUpdateBtn, cancelBtn] = linkInputContainer.querySelectorAll('button');
+                    const [addOrUpdateBtn, cancelBtn, closeBtn, closeBtnX] = linkInputContainer.querySelectorAll('button');
                     input.focus(); // Immediately focus on the URL field
-
+                      
                     // Remember selection
                     const storedRange = {
                         startContainer: range.startContainer,
@@ -2280,8 +2295,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         linkInputContainer.remove();
                         editor.focus();
                     });
-
+                    
                     cancelBtn.addEventListener('click', () => {
+                        linkInputContainer.remove();
+                        editor.focus();
+                    });
+                    closeBtn.addEventListener('click', () => {
+                        linkInputContainer.remove();
+                        editor.focus();
+                    });
+                    closeBtnX.addEventListener('click', () => {
                         linkInputContainer.remove();
                         editor.focus();
                     });
@@ -2294,6 +2317,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         } else if (e.key === 'Escape') {
                             e.preventDefault();
                             cancelBtn.click();
+                        } else if (e.key === 'Escape') {
+                            e.preventDefault();
+                            closeBtn.click();
+                        } else if (e.key === 'Escape') {
+                            e.preventDefault();
+                            closeBtnX.click();
                         }
                     });
                 });
@@ -4229,6 +4258,10 @@ document.addEventListener('DOMContentLoaded', () => {
             event.preventDefault();  // Stops Electron from closing/reopening
             ipcRenderer.send("shortcut-triggered", "toggle-sidebar");
         }
+        if (event.key === 'F1') {
+            event.preventDefault(); // Prevent default browser help
+            showModal('keyboard-shortcuts-modal');
+        }
     });
 
     // Reset log content with confirmation
@@ -4253,6 +4286,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Handle cancel button
             const cancelBtn = modal.querySelector('.cancel-modal');
             const confirmBtn = modal.querySelector('.confirm-modal');
+            const closeBtn = modal.querySelector('#close-shortcuts-modal');
+            const closeBtnX = modal.querySelector('#close-shortcuts-x');
 
             function closeModal() {
                 container.classList.add('hidden');
@@ -4260,6 +4295,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 modal.classList.add('hidden');
                 // Remove event listeners to prevent memory leaks
                 cancelBtn.removeEventListener('click', closeModal);
+                closeBtn.removeEventListener('click', closeModal); 
+                closeBtnX.removeEventListener('click', closeModal);                 
                 confirmBtn.removeEventListener('click', handleReset);
                 window.removeEventListener('keydown', handleKeydown);
             }
@@ -4310,8 +4347,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     handleReset();
                 }
             }
-
+            
             cancelBtn.addEventListener('click', closeModal);
+            closeBtn.removeEventListener('click', closeModal);
+            closeBtnX.removeEventListener('click', closeModal); 
             confirmBtn.addEventListener('click', handleReset);
             window.addEventListener('keydown', handleKeydown);
         });
@@ -4499,6 +4538,8 @@ ${errorData.stack}
         // Handle modal buttons
         const confirmBtn = modal.querySelector('.confirm-modal');
         const cancelBtn = modal.querySelector('.cancel-modal');
+        const closeBtn = modal.querySelector('#close-shortcuts-modal');
+        const closeBtnX = modal.querySelector('#close-shortcuts-x');
 
         function closeModal() {
             // Hide both container and modal
@@ -4517,6 +4558,9 @@ ${errorData.stack}
         function cleanup() {
             if (confirmBtn) confirmBtn.removeEventListener('click', handleConfirm);
             if (cancelBtn) cancelBtn.removeEventListener('click', handleCancel);
+            if (closeBtn) closeBtn.removeEventListener('click', handleCancel);
+            if (closeBtnX) closeBtnX.removeEventListener('click', handleCancel);
+            
             window.removeEventListener('keydown', handleKeydown);
         }
 
@@ -4539,11 +4583,22 @@ ${errorData.stack}
                 e.preventDefault();
                 handleConfirm();
             }
+            else if (e.key === 'Enter' && document.activeElement !== closeBtn) {
+                e.preventDefault();
+                handleConfirm();
+            } 
+            else if (e.key === 'Enter' && document.activeElement !== closeBtnX) {
+                e.preventDefault();
+                handleConfirm();
+            }                          
         }
 
         // Add event listeners
         if (confirmBtn) confirmBtn.addEventListener('click', handleConfirm);
         if (cancelBtn) cancelBtn.addEventListener('click', handleCancel);
+        if (closeBtn) closeBtn.addEventListener('click', handleCancel);
+        if (closeBtnX) closeBtnX.addEventListener('click', handleCancel);        
+        
         window.addEventListener('keydown', handleKeydown);
 
         // Also handle clicking outside the modal to close
@@ -4607,6 +4662,12 @@ ${errorData.stack}
                     document.getElementById('save-annotation').click();
                 }
                 break;
+            case 'w': // Stamp tool
+                if (!e.ctrlKey) {
+                    e.preventDefault();
+                    document.querySelector('[data-tool="stamp"]').click();
+                }
+                break;
         }
     }
 
@@ -4640,6 +4701,41 @@ ${errorData.stack}
         return tempCanvas.toDataURL('image/png').split(',')[1];
     }
 
+    function drawStamp(ctx, x, y, stamp) {
+        const stampConfig = stamps[stamp];
+        if (!stampConfig) return;
+
+        ctx.save();
+
+        // Set up text style
+        ctx.font = 'bold 24px Arial';
+        const textWidth = ctx.measureText(stampConfig.text).width;
+
+        // Draw background
+        ctx.fillStyle = stampConfig.color;
+        const padding = 10;
+        const stampWidth = textWidth + (padding * 2);
+        const stampHeight = 36;
+
+        // Draw rounded rectangle for background
+        ctx.beginPath();
+        ctx.roundRect(x - (stampWidth / 2), y - (stampHeight / 2), stampWidth, stampHeight, 6);
+        ctx.fill();
+
+        // Draw border
+        ctx.strokeStyle = stampConfig.borderColor;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Draw text
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(stampConfig.text, x, y);
+
+        ctx.restore();
+    }
+
     // Also close on escape key
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
@@ -4671,18 +4767,52 @@ ${errorData.stack}
         // Tool selection: remove any enabling of pointer events here
         tools.forEach(tool => {
             tool.addEventListener('click', (e) => {
-                console.log('Annotation tool clicked:', e.currentTarget.dataset.tool);
-                // Remove active class from all tools
-                toolbar.querySelectorAll('.annotation-tool').forEach(t => t.classList.remove('active'));
-                // Set the current tool from the button's data-tool attribute
-                currentTool = e.currentTarget.dataset.tool;
-                e.currentTarget.classList.add('active');
-                // Enable pointer events on the annotation canvas so you can start drawing
-                annotationCanvas.style.setProperty('pointer-events', 'auto', 'important');
-                annotationCanvas.style.zIndex = 100;
+                const toolType = e.currentTarget.dataset.tool;
+
+                // First, remove active from all other tools
+                tools.forEach(t => {
+                    if (t !== e.currentTarget) {
+                        t.classList.remove('active');
+                    }
+                });
+
+                if (toolType === 'stamp') {
+                    // Toggle the tool's active state
+                    const wasActive = e.currentTarget.classList.contains('active');
+                    if (wasActive) {
+                        e.currentTarget.classList.remove('active');
+                        document.getElementById('stamp-selector').classList.add('hidden');
+                        currentTool = null;
+                        annotationCanvas.style.pointerEvents = 'none';
+                    } else {
+                        e.currentTarget.classList.add('active');
+                        const selector = document.getElementById('stamp-selector');
+                        selector.classList.remove('hidden');
+                        currentTool = toolType;
+                        // If no stamp is selected, default to 'pass'
+                        if (!currentStamp) {
+                            currentStamp = 'pass';
+                            document.querySelector('[data-stamp="pass"]').classList.add('bg-gray-100');
+                        }
+                        annotationCanvas.style.pointerEvents = 'auto';
+                    }
+                } else {
+                    // For non-stamp tools
+                    if (currentTool === toolType) {
+                        e.currentTarget.classList.remove('active');
+                        currentTool = null;
+                        annotationCanvas.style.pointerEvents = 'none';
+                    } else {
+                        e.currentTarget.classList.add('active');
+                        currentTool = toolType;
+                        annotationCanvas.style.pointerEvents = 'auto';
+                    }
+                    // Always hide stamp selector when switching to other tools
+                    document.getElementById('stamp-selector').classList.add('hidden');
+                }
             });
         });
-
+        
 
         // Color picker
         colorPicker.addEventListener('change', (e) => {
@@ -4710,7 +4840,6 @@ ${errorData.stack}
             }
         });
 
-        // Save button handler
         // Save button handler
         document.getElementById('save-annotation').addEventListener('click', () => {
             // 1) Ensure we actually have an active event
@@ -4759,7 +4888,16 @@ ${errorData.stack}
             }
         });
 
-
+        document.querySelectorAll('.stamp-option').forEach(option => {
+            option.addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentStamp = e.currentTarget.dataset.stamp;
+                document.querySelectorAll('.stamp-option').forEach(opt =>
+                    opt.classList.remove('bg-gray-100'));
+                e.currentTarget.classList.add('bg-gray-100');
+                // Keep the selector visible and the tool active
+            });
+        });
         // ----- New: Attach pointer event listeners on the canvas for drawing -----
 
         // When the user clicks in the canvas area, enable drawing.
@@ -4786,31 +4924,53 @@ ${errorData.stack}
         document.addEventListener('DOMContentLoaded', initializeAnnotation);
     }
 
-
+    document.getElementById('close-modal').addEventListener('click', () => {
+        // Reset all tools when modal closes
+        //tools.forEach(t => t.classList.remove('active'));
+        currentTool = null;
+        document.getElementById('stamp-selector').classList.add('hidden');
+        annotationCanvas.style.pointerEvents = 'none';
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+            // Reset all tools when modal closes
+            tools.forEach(t => t.classList.remove('active'));
+            currentTool = null;
+            document.getElementById('stamp-selector').classList.add('hidden');
+            annotationCanvas.style.pointerEvents = 'none';
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    });
     // ----- Drawing Functions -----
 
     function startDrawing(e) {
-        if (!currentTool) {
-            console.log('No tool selected, abort drawing');
-            return;
-        }
         if (!currentTool) return;
-        isDrawing = true;
-        console.log('Drawing started at', e.clientX, e.clientY);
+
         const rect = annotationCanvas.getBoundingClientRect();
         startX = e.clientX - rect.left;
         startY = e.clientY - rect.top;
-        // Save current state for undo.
-        undoStack.push(annotationCtx.getImageData(0, 0, annotationCanvas.width, annotationCanvas.height));
-        redoStack = [];
-        document.getElementById('annotation-undo').disabled = false;
-        document.getElementById('annotation-redo').disabled = true;
 
-        // Also store it in initialCanvasState for "live preview"
+        // Save the CURRENT state of the canvas
         initialCanvasState = annotationCtx.getImageData(0, 0, annotationCanvas.width, annotationCanvas.height);
 
-        startX = e.clientX - rect.left;
-        startY = e.clientY - rect.top;
+        if (currentTool === 'stamp' && currentStamp) {
+            // For stamps, draw immediately on click
+            undoStack.push(initialCanvasState);
+            drawStamp(annotationCtx, startX, startY, currentStamp);
+            redoStack = [];
+            document.getElementById('annotation-undo').disabled = false;
+            document.getElementById('annotation-redo').disabled = true;
+        } else {
+            isDrawing = true;
+            // Save current state for undo
+            undoStack.push(initialCanvasState);
+            redoStack = [];
+            document.getElementById('annotation-undo').disabled = false;
+            document.getElementById('annotation-redo').disabled = true;
+        }
     }
 
     function draw(e) {
@@ -4819,18 +4979,17 @@ ${errorData.stack}
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        // Create a temporary canvas for preview.
+        // Create temporary canvas for preview
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = annotationCanvas.width;
         tempCanvas.height = annotationCanvas.height;
         const tempCtx = tempCanvas.getContext('2d');
 
-        // Instead of copying the main canvas, revert to the original snapshot:
+        // Draw the current state first
         tempCtx.putImageData(initialCanvasState, 0, 0);
-
-        // Then draw the shape from (startX, startY) to (x, y)
         tempCtx.strokeStyle = annotationColor;
         tempCtx.lineWidth = 2;
+
         switch (currentTool) {
             case 'arrow':
                 drawArrow(tempCtx, startX, startY, x, y);
@@ -4843,15 +5002,16 @@ ${errorData.stack}
                 break;
         }
 
-        // Clear main canvas and copy the tempCanvas preview over
         annotationCtx.clearRect(0, 0, annotationCanvas.width, annotationCanvas.height);
         annotationCtx.drawImage(tempCanvas, 0, 0);
     }
 
     function stopDrawing() {
-        isDrawing = false;
-        // Disable pointer events on the canvas so that toolbar clicks work.
-        annotationCanvas.style.pointerEvents = 'none';
+        if (isDrawing) {
+            isDrawing = false;
+            // Save the final state AFTER completing the draw
+            initialCanvasState = annotationCtx.getImageData(0, 0, annotationCanvas.width, annotationCanvas.height);
+        }
     }
 
     // ----- Helper Drawing Functions -----
