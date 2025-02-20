@@ -7,6 +7,7 @@ let activeScreenshotEvent = null;
 let isResetting = false;
 let emptyStateMessage = null;
 let isFirstLog = true;
+let urlInput;
 
 // Annotation state
 let isDrawing = false;
@@ -72,7 +73,7 @@ function showEmptyState() {
 
     logArea.appendChild(messageDiv);
 
-    
+
 
 
 
@@ -87,6 +88,9 @@ function showEmptyState() {
 
     emptyStateMessage = messageDiv;
 }
+
+const resetLogModal = document.getElementById("reset-log-modal");
+const modalContainer = document.getElementById("modal-container");
 
 // Make the pupil and its highlight subtly follow the mouse
 function updateEyePosition(mouseX, mouseY) {
@@ -139,6 +143,17 @@ function updateEyePosition(mouseX, mouseY) {
     highlight.setAttribute('cy', 7 + offsetY);
 }
 
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && !e.shiftKey && e.key === 's') {
+        e.preventDefault();
+        if (activeScreenshotEvent) {
+            document.getElementById('save-annotation').click();
+        } else {
+            window.electron.ipcRenderer.send('take-screenshot');
+        }
+    }
+});
+
 
 document.addEventListener('mousemove', (e) => {
     updateEyePosition(e.clientX, e.clientY);
@@ -174,9 +189,9 @@ function addInitialPageLoad() {
         <div class="space-y-4">
             <div class="details-grid">
                 <span class="font-medium">Page Title:</span>
-                <span class="break-words">"${logData.title}"</span>
+                <span class="break-words text-left">"${logData.title}"</span>
                 <span class="font-medium">URL:</span>
-                <span class="break-words">${logData.url}</span>
+                <span class="break-words text-left">${logData.url}</span>
             </div>
         </div>
     `;
@@ -314,7 +329,6 @@ document.addEventListener('keydown', (e) => {
         toggleLogging();
     }
 });
-
 
 // Add this to your initialization code
 document.addEventListener('DOMContentLoaded', () => {
@@ -810,6 +824,25 @@ const ipcRenderer = window.electron.ipcRenderer;
 ipcRenderer.on('reset-listeners', () => {
     console.log('Renderer: Resetting listeners...');
 
+    // Clear the event log array
+    eventLog.length = 0;
+
+    // Clear the log UI
+    const logArea = document.getElementById("log-area");
+    if (logArea) {
+        logArea.innerHTML = "";
+    }
+
+    // Ensure the welcome message appears and logging state resets correctly
+    isFirstLog = true;
+    loggingEnabled = false;  // <-- Ensures that clicking "Start Logging" actually starts logging
+
+    // Show empty state message
+    showEmptyState();
+
+    // Ensure the Start Logging button is in the correct state
+    updateStartLoggingButton();  // <-- This ensures the button text/icons update correctly
+
     document.querySelectorAll('input, textarea').forEach(input => {
         input.disabled = false;
         input.removeAttribute('readonly');
@@ -818,6 +851,10 @@ ipcRenderer.on('reset-listeners', () => {
     });
 
     console.log('Renderer: Inputs re-enabled.');
+});
+
+ipcRenderer.on('show-shortcuts-modal', () => {
+    showModal('keyboard-shortcuts-modal');
 });
 
 
@@ -994,42 +1031,138 @@ document.head.appendChild(linkStyle);
 
 
 document.addEventListener('DOMContentLoaded', () => {
+
+
     console.log(window.electron);
     const toggleBtn = document.getElementById('toggle-logging');
     toggleBtn.addEventListener('click', () => {
         toggleLogging();
     });
+
     if (toggleBtn) {
         const icon = toggleBtn.querySelector('svg');
         icon.setAttribute('data-lucide', 'play');
         toggleBtn.setAttribute('title', 'Start Logging');
         lucide.createIcons();
     }
+    urlInput = document.getElementById('url-input');
     webview = document.getElementById('my-webview');
+
+    window.addEventListener('message', (event) => {
+        if (event.data.type === 'loadUrl') {
+            // Since we have access to urlInput and webview here, this will work
+            urlInput.value = event.data.url;
+            webview.src = event.data.url;
+            saveRecentUrl(event.data.url);
+        } else if (event.data.type === 'removeUrl') {
+            const recentUrls = JSON.parse(localStorage.getItem('recentUrls') || '[]');
+            const updatedUrls = recentUrls.filter(url => url !== event.data.url);
+            localStorage.setItem('recentUrls', JSON.stringify(updatedUrls));
+            webview.executeJavaScript('updateRecentSitesList()');
+            showToast('URL removed from recent sites');
+        }
+    });
     
+
+    webview.addEventListener('did-start-loading', () => {
+        const isHomePage = webview.src.toLowerCase().includes('home.html');
+
+        if (isHomePage) {
+            urlInput.value = '';
+            urlInput.placeholder = "Let's get tracing!";
+        } else {
+            urlInput.value = webview.src;
+            saveRecentUrl(webview.src);
+        }
+    });
+
+    webview.addEventListener('did-stop-loading', () => {
+        const isHomePage = webview.src.toLowerCase().includes('home.html');
+        if (isHomePage) {
+            urlInput.value = '';
+            urlInput.placeholder = "Let's get tracing!";
+        }
+    });
+
     let previousUrl = webview.src; // store the initial URL
 
     // Listen for navigation completion
+    // Add this to your webview event listeners in renderer.js where you're handling navigation:
+
     webview.addEventListener('did-navigate', (event) => {
         const newUrl = event.url;
+        const url = urlInput.value.trim();
+
+        // Don't store home.html or about:blank
+        if (!newUrl.includes('home.html') && newUrl !== 'about:blank') {
+            saveRecentUrl(newUrl);  // Use your existing saveRecentUrl function
+        }
+
         // Update the address bar
         document.getElementById('url-input').value = newUrl;
-
-        // (Optional) Log a custom "navigation" event
-        // recordEvent('navigation', document.body, {
-        //     from: previousUrl,
-        //     to: newUrl
-        // });
 
         // Update previousUrl for the next navigation
         previousUrl = newUrl;
     });
 
-    webview.addEventListener('ipc-message', (e) => {
-        if (e.channel === 'toggle-logging') {
+    webview.addEventListener('ipc-message', (event) => {
+        if (event.channel === 'shortcut-triggered' && event.args[0] === 'F1') {
+            openKeyboardShortcutsModal();
+        }
+        if (event.channel === 'log-event' && event.args[0].action === 'toggle-logging') {
             toggleLogging();
         }
     });
+    // Move this function definition up near your other function definitions
+    function openKeyboardShortcutsModal() {
+        const modal = document.getElementById('keyboard-shortcuts-modal');
+        const container = document.getElementById('modal-container');
+        showModal('keyboard-shortcuts-modal');
+
+        if (!modal || !container) {
+            console.error("Modal elements not found");
+            return;
+        }
+
+        // First hide all other modals
+        const allModals = container.querySelectorAll('div[id$="-modal"]');
+        allModals.forEach(m => {
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+        });
+
+        // Show the container and the keyboard shortcuts modal
+        container.classList.remove('hidden');
+        container.classList.add('flex');
+        modal.classList.remove('hidden');
+
+        // Add escape key handler
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                modal.classList.add('hidden');
+                container.classList.add('hidden');
+                container.classList.remove('flex');
+                document.removeEventListener('keydown', handleEscape);
+            }
+        };
+        document.addEventListener('keydown', handleEscape);
+    }
+
+    // Make sure this is in your DOMContentLoaded or initialization section
+    webview.addEventListener('ipc-message', (event) => {
+      //  console.log('Received ipc-message:', event.channel, event.args); // Add this for debugging
+        if (event.channel === 'shortcut-triggered' && event.args[0] === 'F1') {
+            openKeyboardShortcutsModal();
+        }
+    });
+
+    // Also add a direct keyboard listener as backup
+    // window.addEventListener('keydown', (e) => {
+    //     if (e.key === 'F1') {
+    //         e.preventDefault();
+    //         openKeyboardShortcutsModal();
+    //     }
+    // }, true);
     // ----- Helper Functions -----
 
     // Truncates long URLs and appends ellipsis if needed
@@ -1039,8 +1172,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ----- DOM Element References -----
-    const urlInput = document.getElementById('url-input');
+
+    urlInput.addEventListener('focus', () => {
+        // Save the original URL value
+        originalUrl = urlInput.value;
+
+        // Check if we're on home.html
+        const isHomePage = webview.src.toLowerCase().includes('home.html');
+
+        setTimeout(() => {
+            if (isHomePage) {
+                // On home.html, show and select https://
+                urlInput.value = 'https://';
+                urlInput.setSelectionRange(0, urlInput.value.length);
+            } else {
+                // On other pages, just select the current URL
+                urlInput.setSelectionRange(0, urlInput.value.length);
+            }
+        }, 0);
+    });
+
+    urlInput.addEventListener('blur', () => {
+        // If the field is empty or still exactly "https://", restore the original URL
+        if (urlInput.value.trim() === '' || urlInput.value.trim() === 'https://') {
+            urlInput.value = originalUrl;
+        }
+    });
+    // When the user blurs (clicks out) the address bar, restore the original URL if nothing new was entered
+    urlInput.addEventListener('blur', () => {
+        // Check if we're on home.html
+        const isHomePage = webview.src.toLowerCase().includes('home.html');
+
+        if (isHomePage && (urlInput.value.trim() === 'https://' || urlInput.value.trim() === '')) {
+            urlInput.value = '';
+            urlInput.placeholder = "Let's get tracing!";
+        } else if (!isHomePage && urlInput.value.trim() === '') {
+            urlInput.value = originalUrl;
+        }
+    });
+
     const loadUrlButton = document.getElementById('load-url');
+    let originalUrl = '';
     const logArea = document.getElementById('log-area');
     const exportLogButton = document.getElementById('export-log');
     const backButton = document.getElementById('back-button');
@@ -1081,24 +1253,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     webview.addEventListener('dom-ready', () => {
         webview.insertCSS(`
-            ::-webkit-scrollbar {
+        ::-webkit-scrollbar {
             width: 8px;
             background-color: transparent;
-            }
-            ::-webkit-scrollbar-thumb {
+        }
+        ::-webkit-scrollbar-thumb {
             background-color: rgba(0,0,0,0.2);
             border-radius: 0;
-            }
-            ::-webkit-scrollbar-thumb:hover {
+        }
+        ::-webkit-scrollbar-thumb:hover {
             background-color: rgba(0,0,0,0.3);
-            }
-            ::-webkit-scrollbar-track {
+        }
+        ::-webkit-scrollbar-track {
             background-color: transparent;
-            }
-            ::-webkit-scrollbar-corner {
+        }
+        ::-webkit-scrollbar-corner {
             background-color: transparent;
-            }
+        }
+    `);
+        // If we're on home.html, update the recent sites list
+        if (webview.src.includes('home.html')) {
+            webview.executeJavaScript(`
+            console.log('Local Storage content:', localStorage.getItem('recentUrls'));
+            // Force an update of the recent sites list
+            document.querySelector('.recent-sites-list') && updateRecentSitesList();
         `);
+        }
     });
 
     webview.addEventListener('crashed', (e) => {
@@ -1142,14 +1322,141 @@ document.addEventListener('DOMContentLoaded', () => {
 
     }
 
+
+    if (resetLogButton) {
+        resetLogButton.addEventListener("click", () => {
+            showModal('reset-log-modal', {
+                onConfirm: () => {
+                    window.electron.ipcRenderer.send("reset-log");
+                }
+            });
+        });
+    }
+
+
     // ----- URL Loading & Navigation -----
 
     // Load URL on button click
+    // Add this near your other constants at the top
+    const MAX_RECENT_SITES = 5;
+
+    // Function to save URL to localStorage
+    function saveRecentUrl(url) {
+        if (!url || url.includes('home.html')) return;
+
+        const recentUrls = JSON.parse(localStorage.getItem('recentUrls') || '[]');
+        const filteredUrls = recentUrls.filter(savedUrl => savedUrl !== url);
+        filteredUrls.unshift(url);
+        const updatedUrls = filteredUrls.slice(0, 5); // Keep only most recent 5
+
+        localStorage.setItem('recentUrls', JSON.stringify(updatedUrls));
+
+        // If home.html is loaded, tell it to update
+        if (webview.src.includes('home.html')) {
+            webview.executeJavaScript('updateRecentSitesList()');
+        }
+    }
+
+    // Function to update the recent sites list in the UI
+    function updateRecentSitesList() {
+        if (webview.src.includes('home.html')) {
+            webview.executeJavaScript(`
+            (function() {
+                const recentSitesContainer = document.querySelector('.recent-sites-list');
+                if (!recentSitesContainer) {
+                    console.error('Recent sites container not found in webview!');
+                    return;
+                }
+
+                const recentUrls = ${JSON.stringify(localStorage.getItem('recentUrls') || '[]')};
+                
+                if (recentUrls.length === 0) {
+                    recentSitesContainer.innerHTML = \`
+                        <div class="text-sm text-gray-600 italic">
+                            Your recently visited sites will appear here
+                        </div>
+                        <div class="mt-4 text-center">
+                            <button data-action="focus-url" class="px-4 py-2 text-[#FF8A65] hover:bg-[#FFF3E0] rounded-lg transition-colors">
+                                Enter a URL to begin testing
+                            </button>
+                        </div>
+                    \`;
+                    return;
+                }
+
+                recentSitesContainer.innerHTML = recentUrls.map(url => \`
+                    <div class="recent-site-item group p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div class="flex items-center justify-between">
+                            <button class="load-url-btn flex-1 text-left text-gray-900 hover:text-[#FF8A65] truncate" 
+                                title="\${url}" data-url="\${url}">
+                                \${url}
+                            </button>
+                            <button class="remove-url-btn opacity-0 group-hover:opacity-100 ml-2 p-1 text-gray-400 
+                                hover:text-red-500 transition-opacity" data-url="\${url}" title="Remove from recent sites">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" 
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" 
+                                    stroke-linejoin="round">
+                                    <path d="M18 6L6 18"></path>
+                                    <path d="M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                \`).join('');
+
+                // Re-attach event listeners
+                document.querySelectorAll('.load-url-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const url = btn.dataset.url;
+                        window.parent.postMessage({ type: 'loadUrl', url }, '*');
+                    });
+                });
+
+                document.querySelectorAll('.remove-url-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const urlToRemove = btn.dataset.url;
+                        window.parent.postMessage({ type: 'removeUrl', url: urlToRemove }, '*');
+                    });
+                });
+            })();
+        `);
+        }
+    }
+    // Modify the existing URL loading logic
     loadUrlButton.addEventListener('click', () => {
         const url = urlInput.value.trim();
         if (url) {
             webview.src = url;
+            saveRecentUrl(url);
         }
+    });
+
+    // Add URL loading on Enter key
+    urlInput.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+            const url = urlInput.value.trim();
+            if (url) {
+                webview.src = url;
+                saveRecentUrl(url);
+            }
+        }
+    });
+
+    // Initialize recent sites list
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('DOM Content Loaded');
+        updateRecentSitesList();
+        console.log('Recent sites list updated');
+
+        // Update your DOMContentLoaded handler where you set up the focus-url action:
+
+        document.querySelectorAll('[data-action="focus-url"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Use the parent window's URL input
+                window.parent.document.getElementById('url-input')?.focus();
+            });
+        });
+
     });
 
     urlInput.addEventListener('keypress', (event) => {
@@ -1213,20 +1520,36 @@ document.addEventListener('DOMContentLoaded', () => {
     // Listen for errors sent from webview
     const ipcRenderer = window.electron.ipcRenderer;
 
+    ipcRenderer.on('navigate-url', (event, url) => {
+        urlInput.value = url;
+        webview.src = url;
+        saveRecentUrl(url);
+    });
+    
+    ipcRenderer.on('update-error', (_, errorData) => {
+        const ignoredPatterns = [
+            'GUEST_VIEW_MANAGER_CALL',
+            'ERR_ABORTED (-3)'
+        ];
 
-    ipcRenderer.on("update-error", (_, errData) => {
+        if (ignoredPatterns.some(pattern => errorData.message.includes(pattern))) {
+            console.log('Filtered out error in renderer:', errorData.message);
+            return;
+        }
+
         logError(
             "Webview Error",
-            errData.message,
-            errData.source,
-            errData.lineno,
-            errData.colno,
-            { stack: errData.stack }
+            errorData.message,
+            errorData.source,
+            errorData.lineno,
+            errorData.colno,
+            { stack: errorData.stack }
         );
+
         updateErrorDrawer(); // Ensures the UI updates instantly
     });
 
-    // Replace the existing screenshot IPC handler
+
     window.electron.ipcRenderer.on('screenshot-taken', (ipcEvent, base64Data) => {
         if (!activeScreenshotEvent) {
             console.warn("No active event to attach screenshot to!");
@@ -1260,23 +1583,54 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Create screenshot row
-        // Create screenshot row element
         const screenshotRow = document.createElement('div');
         screenshotRow.innerHTML = `
-            <div class="flex items-center justify-between w-full">
-                    <span class="font-medium">${isElementCapture ? 'Element Capture:' : 'Screenshot:'}</span>
-                <button 
-                    class="text-blue-600 hover:text-blue-800 underline flex items-center" 
-                    title="${isElementCapture ? 'Element capture - full size' : 'Screenshot - full size'}">
-                    <svg data-lucide="${isElementCapture ? 'scan' : 'image'}" width="16" height="16" class="mr-2"></svg>
-                    <span>${isElementCapture ? 'Capture...png' : 'Screenshot...png'}</span>
-                </button>
-                <button class="delete-screenshot-btn text-gray-500 hover:text-red-500 transition-colors" 
-                        title="Delete ${isElementCapture ? 'capture' : 'screenshot'}">
-                    <svg data-lucide="trash" width="16" height="16"></svg>
-                </button>
-            </div>`;
+            <div class="grid grid-cols-[120px,1fr] gap-2 w-full">
+                <span class="font-medium">
+                    ${isElementCapture ? 'Element Capture:' : (activeScreenshotEvent.fullPage ? 'FullScreenshot:' : 'Screenshot:')}
+                </span>
+                <div class="flex items-center justify-between w-full">
+                    <button
+                        class="text-blue-600 hover:text-blue-800 underline flex items-center"
+                        title="${isElementCapture
+                        ? 'Element capture - full size'
+                        : (activeScreenshotEvent.fullPage
+                            ? 'Full-page screenshot - full size'
+                            : 'Screenshot - full size')}"
+                    >
+                        <svg
+                            data-lucide="${isElementCapture
+                        ? 'scan'
+                        : (activeScreenshotEvent.fullPage ? 'camera' : 'image')}"
+                            width="16"
+                            height="16"
+                            class="mr-2"
+                        ></svg>
+                        <span>
+                            ${isElementCapture
+                        ? 'Capture...png'
+                        : (activeScreenshotEvent.fullPage
+                            ? 'FullScreenshot...png'
+                            : 'Screenshot...png')}
+                        </span>
+                    </button>
+                    <button
+                        class="delete-screenshot-btn text-gray-500 hover:text-red-500 transition-colors"
+                        title="Delete ${isElementCapture
+                        ? 'capture'
+                        : (activeScreenshotEvent.fullPage
+                            ? 'full-page screenshot'
+                            : 'screenshot')
+                    }"
+                    >
+                        <svg data-lucide="trash" width="16" height="16"></svg>
+                    </button>
+                </div>
+            </div>
+        `;
+
+
+
 
 
         // Get the button we just created (assumes it is the first button in screenshotRow)
@@ -1435,49 +1789,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- Branches for Different Actions (identical to yours) ---
         if (logData.action === 'page-loaded' && logData.title && logData.url) {
-            const isHomePage = logData.url.toLowerCase().includes('home.html');
             html += `<div class="details-grid mt-2">
-            <span class="font-medium">Page Title:</span>
-            <span class="break-words">"${logData.title}"</span>`;
-            if (!isHomePage) {
-                html += `<span class="font-medium">URL:</span>
-                <span class="break-words">
-                    <a href="${logData.url}" class="text-blue-600 hover:text-blue-800 underline"
-                       target="_blank" title="${logData.url}">
-                        ${truncateUrl(logData.url)}
-                    </a>
-                </span>`;
-            }
-            html += `</div>`;
+                <span class="font-medium">Page Title:</span>
+                <span class="break-words text-left" title="${logData.title}">
+                    ${truncateUrl(logData.title, 50)}
+                </span>
+
+                <span class="font-medium">URL:</span>
+                <span class="break-words text-left" title="${logData.url}">
+                    ${truncateUrl(logData.url, 50)}
+                </span>
+            </div>`;
         } else if (logData.action === 'select') {
             html += `<div class="grid grid-cols-[120px,1fr] gap-2 break-words">
             <span class="font-medium">Element:</span>
-            <span class="break-words">&lt;SELECT&gt;</span>
+            <span class="break-words text-left">&lt;SELECT&gt;</span>
             <span class="font-medium">Selected Value:</span>
-            <span class="break-words">${logData.selectedValue || '[None]'}</span>
+            <span class="break-words text-left">${logData.selectedValue || '[None]'}</span>
             <span class="font-medium">Selected Text:</span>
-            <span class="break-words">${logData.selectedText || '[None]'}</span>
+            <span class="break-words text-left">${logData.selectedText || '[None]'}</span>
         </div>`;
         } else if (logData.action === 'click') {
             const details = logData.details;
 
             html += `<div class="grid grid-cols-[120px,1fr] gap-2 break-words">
                 <span class="font-medium">Element:</span>
-                <span class="break-words">&lt;${(details.tagName || '').toUpperCase()}&gt;</span>`;
+                <span class="break-words text-left">&lt;${(details.tagName || '').toUpperCase()}&gt;</span>`;
 
             // Show the element's text content if available (and not empty)
             if (details.text) {
                 html += `
                 <span class="font-medium">Text Content:</span>
-                <span class="break-words">"${details.text}"</span>`;
-                    }
+                <span class="break-words text-left">"${details.text}"</span>`;
+            }
 
             // If it has a recognized ARIA role or we have role="button", show that
             if (details.role) {
                 html += `
                 <span class="font-medium">Role:</span>
-                <span class="break-words">${details.role}</span>`;
-                    }
+                <span class="break-words text-left">${details.role}</span>`;
+            }
 
             // For certain interactive elements, show "Required?" or "Disabled?" if relevant
             // We do this if tagName is input/button/select/textarea, or if ariaDisabled is relevant
@@ -1490,13 +1841,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (details.disabled) {
                     html += `
             <span class="font-medium">Disabled:</span>
-            <span class="break-words">Yes</span>`;
+            <span class="break-words text-left">Yes</span>`;
                 }
 
                 if (details.required) {
                     html += `
             <span class="font-medium">Required:</span>
-            <span class="break-words">Yes</span>`;
+            <span class="break-words text-left">Yes</span>`;
                 }
             }
 
@@ -1505,19 +1856,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Button type
                 html += `
                 <span class="font-medium">Button Type:</span>
-                <span class="break-words">${details.type || 'button'}</span>`;
+                <span class="break-words text-left">${details.type || 'button'}</span>`;
 
                 // If it has an icon
                 if (details.hasIcon && details.iconType) {
                     html += `
             <span class="font-medium">Icon:</span>
-            <span class="break-words">${details.iconType}</span>`;
+            <span class="break-words text-left">${details.iconType}</span>`;
                 }
 
                 if (details.form) {
                     html += `
             <span class="font-medium">Form:</span>
-            <span class="break-words">${details.form}</span>`;
+            <span class="break-words text-left">${details.form}</span>`;
                 }
             } else if (
                 (details.tagName || '').toUpperCase() === 'A'
@@ -1545,7 +1896,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (details.target) {
                     html += `
             <span class="font-medium">Target:</span>
-            <span class="break-words">${details.target}</span>`;
+            <span class="break-words text-left">${details.target}</span>`;
                 }
             }
 
@@ -1553,13 +1904,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if ((details.tagName || '').toUpperCase() === 'IMG') {
                 html += `
                 <span class="font-medium">Alt Text:</span>
-                <span class="break-words">${details.alt || '[No Alt]'} </span>
+                <span class="break-words text-left">${details.alt || '[No Alt]'} </span>
                 <span class="font-medium">Dimensions:</span>
-                <span class="break-words">${details.width}×${details.height}px</span>`;
+                 text-left${details.width}×${details.height}px</span>`;
                 if (details.caption) {
                     html += `
             <span class="font-medium">Caption:</span>
-            <span class="break-words">${details.caption}</span>`;
+            <span class="break-words text-left">${details.caption}</span>`;
                 }
                 if (details.src) {
                     html += `
@@ -1587,28 +1938,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (details.svgTitle) {
                     html += `
             <span class="font-medium">SVG Title:</span>
-            <span class="break-words">"${details.svgTitle}"</span>`;
+            <span class="break-words text-left">"${details.svgTitle}"</span>`;
                 }
                 if (details.svgDesc) {
                     html += `
             <span class="font-medium">SVG Description:</span>
-            <span class="break-words">"${details.svgDesc}"</span>`;
+            <span class="break-words text-left">"${details.svgDesc}"</span>`;
                 }
                 // Show w/h/viewBox
                 if (details.svgWidth) {
                     html += `
             <span class="font-medium">Width:</span>
-            <span class="break-words">${details.svgWidth}</span>`;
+            <span class="break-words text-left">${details.svgWidth}</span>`;
                 }
                 if (details.svgHeight) {
                     html += `
             <span class="font-medium">Height:</span>
-            <span class="break-words">${details.svgHeight}</span>`;
+            <span class="break-words text-left">${details.svgHeight}</span>`;
                 }
                 if (details.svgViewBox) {
                     html += `
             <span class="font-medium">ViewBox:</span>
-            <span class="break-words">${details.svgViewBox}</span>`;
+            <span class="break-words text-left">${details.svgViewBox}</span>`;
                 }
                 // The actual <svg> snippet
                 if (details.svgOuterHTML) {
@@ -1633,57 +1984,57 @@ document.addEventListener('DOMContentLoaded', () => {
             if (details.role && details.role.toLowerCase() === 'progressbar') {
                 html += `
                 <span class="font-medium">Progress Min:</span>
-                <span class="break-words">${details.ariaValueMin || '0'}</span>
+                <span class="break-words text-left">${details.ariaValueMin || '0'}</span>
                 <span class="font-medium">Progress Max:</span>
-                <span class="break-words">${details.ariaValueMax || '100'}</span>
+                <span class="break-words text-left">${details.ariaValueMax || '100'}</span>
                 <span class="font-medium">Current Value:</span>
-                <span class="break-words">${details.ariaValueNow || '0'}</span>`;
+                <span class="break-words text-left">${details.ariaValueNow || '0'}</span>`;
             }
 
             // If the element is a VIDEO or AUDIO (some people click on them), show the media info
             if ((details.tagName || '').toUpperCase() === 'VIDEO') {
                 html += `
                 <span class="font-medium">Video Source:</span>
-                <span class="break-words">${details.src || '[No source]'}</span>
+                <span class="break-words text-left">${details.src || '[No source]'}</span>
                 <span class="font-medium">Controls:</span>
-                <span class="break-words">${details.controls ? 'Yes' : 'No'}</span>
+                <span class="break-words text-left">${details.controls ? 'Yes' : 'No'}</span>
                 <span class="font-medium">Current Time:</span>
-                <span class="break-words">${details.currentTime || '0.00'}s</span>
+                <span class="break-words text-left">${details.currentTime || '0.00'}s</span>
                 <span class="font-medium">Duration:</span>
-                <span class="break-words">${details.duration || 'N/A'}</span>
+                <span class="break-words text-left">${details.duration || 'N/A'}</span>
                 <span class="font-medium">Paused:</span>
-                <span class="break-words">${details.paused ? 'Yes' : 'No'}</span>
+                <span class="break-words text-left">${details.paused ? 'Yes' : 'No'}</span>
                 <span class="font-medium">Volume:</span>
-                <span class="break-words">${details.volume}</span>`;
+                <span class="break-words text-left">${details.volume}</span>`;
             }
             else if ((details.tagName || '').toUpperCase() === 'AUDIO') {
                 html += `
                 <span class="font-medium">Audio Source:</span>
-                <span class="break-words">${details.src || '[No source]'}</span>
+                <span class="break-words text-left">${details.src || '[No source]'}</span>
                 <span class="font-medium">Controls:</span>
-                <span class="break-words">${details.controls ? 'Yes' : 'No'}</span>
+                <span class="break-words text-left">${details.controls ? 'Yes' : 'No'}</span>
                 <span class="font-medium">Current Time:</span>
-                <span class="break-words">${details.currentTime || '0.00'}s</span>
+                <span class="break-words text-left">${details.currentTime || '0.00'}s</span>
                 <span class="font-medium">Duration:</span>
-                <span class="break-words">${details.duration || 'N/A'}</span>
+                <span class="break-words text-left">${details.duration || 'N/A'}</span>
                 <span class="font-medium">Paused:</span>
-                <span class="break-words">${details.paused ? 'Yes' : 'No'}</span>
+                <span class="break-words text-left">${details.paused ? 'Yes' : 'No'}</span>
                 <span class="font-medium">Volume:</span>
-                <span class="break-words">${details.volume}</span>`;
+                <span class="break-words text-left">${details.volume}</span>`;
             }
 
             // If there's an ariaLabel, show it (especially helpful for "role=button" or "role=link" stuff)
             if (details.ariaLabel) {
                 html += `
         <span class="font-medium">ARIA Label:</span>
-        <span class="break-words">"${details.ariaLabel}"</span>`;
+        <span class="break-words text-left">"${details.ariaLabel}"</span>`;
             }
 
             // Finally, if there's a parent link for e.g. an <img> inside <a>, show that
             if (details.parentLink) {
                 html += `
         <span class="font-medium">Parent Link:</span>
-        <span class="break-words">
+        <span class="break-words text-left">
             &lt;${details.parentLink.tagName}&gt; href="${details.parentLink.href}"
             ${details.parentLink.ariaLabel ? '(ARIA Label: ' + details.parentLink.ariaLabel + ')' : ''}
         </span>`;
@@ -1744,86 +2095,86 @@ document.addEventListener('DOMContentLoaded', () => {
             const to = logData.newElement || {};
             html += `<div class="grid grid-cols-[120px,1fr] gap-2 break-words">
             <span class="font-medium">Action:</span>
-            <span class="break-words">Tab Focus</span>
+            <span class="break-words text-left">Tab Focus</span>
             <span class="font-medium">From:</span>
-            <span class="break-words">
+            <span class="break-words text-left">
                 ${from.tagName || '[Unknown]'}${from.id ? ' (#' + from.id + ')' : ''}${from.ariaLabel ? ' - ' + from.ariaLabel : ''}${from.text ? ' - ' + from.text : ''}
             </span>
             <span class="font-medium">To:</span>
-            <span class="break-words">
+            <span class="break-words text-left">
                 ${to.tagName || '[Unknown]'}${to.id ? ' (#' + to.id + ')' : ''}${to.ariaLabel ? ' - ' + to.ariaLabel : ''}${to.text ? ' - ' + to.text : ''}
             </span>
             <span class="font-medium">Key:</span>
-            <span class="break-words">${logData.key || 'Tab'}</span>
+            <span class="break-words text-left">${logData.key || 'Tab'}</span>
         </div>`;
         } else if (logData.action === 'input-change') {
             const details = logData.details;
             html += `<div class="grid grid-cols-[120px,1fr] gap-2 break-words">
             <span class="font-medium">Element:</span>
-            <span class="break-words">&lt;${details.tagName}&gt;</span>`;
+            <span class="break-words text-left">&lt;${details.tagName}&gt;</span>`;
             if (details.tagName === 'SELECT') {
                 html += `
                 <span class="font-medium">Type:</span>
-                <span class="break-words">Select ${details.multiple ? '(Multiple)' : '(Single)'}</span>
+                <span class="break-words text-left">Select ${details.multiple ? '(Multiple)' : '(Single)'}</span>
                 <span class="font-medium">Selected:</span>
-                <span class="break-words">"${details.selectedText}" (value: ${details.selectedValue})</span>`;
+                <span class="break-words text-left">"${details.selectedText}" (value: ${details.selectedValue})</span>`;
                 if (details.multiple && details.selectedOptions) {
                     html += `
                     <span class="font-medium">All Selected:</span>
-                    <span class="break-words">${details.selectedOptions.map(opt =>
+                    <span class="break-words text-left">${details.selectedOptions.map(opt =>
                         `"${opt.text}" (${opt.value})`).join(', ')}</span>`;
                 }
             } else if (details.inputType === 'checkbox') {
                 html += `
                 <span class="font-medium">Type:</span>
-                <span class="break-words">Checkbox</span>
+                <span class="break-words text-left">Checkbox</span>
                 <span class="font-medium">Label:</span>
-                <span class="break-words">${details.labelText}</span>
+                <span class="break-words text-left">${details.labelText}</span>
                 <span class="font-medium">State:</span>
-                <span class="break-words">${details.checked ? 'Checked' : 'Unchecked'}</span>`;
+                <span class="break-words text-left">${details.checked ? 'Checked' : 'Unchecked'}</span>`;
             } else if (details.inputType === 'radio') {
                 html += `
                 <span class="font-medium">Type:</span>
-                <span class="break-words">Radio</span>
+                <span class="break-words text-left">Radio</span>
                 <span class="font-medium">Selected:</span>
-                <span class="break-words">${details.labelText}</span>`;
+                <span class="break-words text-left">${details.labelText}</span>`;
                 if (details.groupOptions) {
                     html += `
                     <span class="font-medium">Group Options:</span>
-                    <span class="break-words">${details.groupOptions.map(opt =>
+                    <span class="break-words text-left">${details.groupOptions.map(opt =>
                         `${opt.labelText}${opt.checked ? ' (Selected)' : ''}`).join(', ')}</span>`;
                 }
             } else {
                 html += `
                 <span class="font-medium">Type:</span>
-                <span class="break-words">${details.inputType}</span>
+                <span class="break-words text-left">${details.inputType}</span>
                 <span class="font-medium">Value:</span>
-                <span class="break-words">${details.inputType === 'password' ? '[REDACTED]' : `"${details.value}"`}</span>`;
+                <span class="break-words text-left">${details.inputType === 'password' ? '[REDACTED]' : `"${details.value}"`}</span>`;
             }
             if (details.required) {
                 html += `
                 <span class="font-medium">Required:</span>
-                <span class="break-words">Yes</span>`;
+                <span class="break-words text-left">Yes</span>`;
             }
 
             html += `</div>`;
         } else if (logData.action === 'keydown') {
             html += `<div class="grid grid-cols-[120px,1fr] gap-2 break-words">
                 <span class="font-medium">Key:</span>
-                <span class="break-words">${logData.key}</span>
+                <span class="break-words text-left">${logData.key}</span>
                 <span class="font-medium">With Modifiers:</span>
-                <span class="break-words">
+                <span class="break-words text-left">
                     ${logData.ctrlKey ? 'Ctrl+' : ''}${logData.shiftKey ? 'Shift+' : ''}${logData.altKey ? 'Alt+' : ''}${logData.key}
                 </span>
                 <span class="font-medium">Element:</span>
-                <span class="break-words">&lt;${logData.details.tagName}&gt;</span>
+                <span class="break-words text-left">&lt;${logData.details.tagName}&gt;</span>
                 ${logData.details.context ? `
                     <span class="font-medium">Context:</span>
-                    <span class="break-words">${logData.details.context}</span>
+                    <span class="break-words text-left">${logData.details.context}</span>
                 ` : ''}
                 ${logData.details.inputType ? `
                     <span class="font-medium">Input Type:</span>
-                    <span class="break-words">${logData.details.inputType}</span>
+                    <span class="break-words text-left">${logData.details.inputType}</span>
                 ` : ''}
         </div>`;
         }
@@ -1963,9 +2314,8 @@ document.addEventListener('DOMContentLoaded', () => {
         screenshotButton.title = 'CTRL + Click for Element';
         screenshotButton.className = 'absolute top-2 right-8 text-gray-500 hover:text-gray-700 p-1 hover:bg-gray-50 rounded';
 
-        // Remove the logging state check here - screenshots should work regardless
         screenshotButton.addEventListener('click', async (e) => {
-            console.log('Screenshot button clicked from setupCommentFeature');
+            console.log('Camera icon clicked. ctrlKey=', e.ctrlKey, 'shiftKey=', e.shiftKey, 'altKey=', e.altKey);
 
             // Find the closest log entry container
             const targetEntry = e.target.closest('[data-timestamp]');
@@ -1976,16 +2326,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Always use the existing logData
             activeScreenshotEvent = logData;
-            activeScreenshotEvent.isElementCapture = e.ctrlKey;
 
-            // Find and remove existing screenshot row if it exists
+            // Remove any existing screenshot row if it exists
             const existingRow = targetEntry.querySelector('.screenshot-row');
             if (existingRow) {
                 existingRow.remove();
             }
 
-            // Take new screenshot based on type
-            if (e.ctrlKey) {
+            delete logData.isElementCapture;
+            delete activeScreenshotEvent.fullPage;
+
+            // Determine which screenshot mode to use:
+            if (e.ctrlKey && e.shiftKey) {
+                // Just add the fullPage flag to the existing event
+                activeScreenshotEvent.fullPage = true;
+                window.electron.ipcRenderer.send('take-fullpage-screenshot');
+            } else if (e.ctrlKey) {
+                activeScreenshotEvent.isElementCapture = true;
                 window.electron.ipcRenderer.send('take-element-screenshot', {
                     xpath: activeScreenshotEvent.details.xpath
                 });
@@ -1993,13 +2350,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.electron.ipcRenderer.send('take-screenshot');
             }
         });
+
+
         entry.appendChild(screenshotButton);
 
         if (!loggingEnabled) {
             lucide.createIcons(entry);
             return;
         }
-        
+
         // Create the Delete Event button (will be the far right icon)
         const deleteEventButton = document.createElement('button');
         deleteEventButton.innerHTML = '<svg data-lucide="trash" width="16" height="16"></svg>';
@@ -2020,7 +2379,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         entry.appendChild(deleteEventButton);
 
-        
+
 
         // Create the Comment button (leftmost icon)
         const commentButton = document.createElement('button');
@@ -2245,11 +2604,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
                     document.body.appendChild(linkInputContainer);
-                    
+
                     const input = linkInputContainer.querySelector('input');
                     const [addOrUpdateBtn, cancelBtn, closeBtn, closeBtnX] = linkInputContainer.querySelectorAll('button');
                     input.focus(); // Immediately focus on the URL field
-                      
+
                     // Remember selection
                     const storedRange = {
                         startContainer: range.startContainer,
@@ -2295,7 +2654,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         linkInputContainer.remove();
                         editor.focus();
                     });
-                    
+
                     cancelBtn.addEventListener('click', () => {
                         linkInputContainer.remove();
                         editor.focus();
@@ -2429,154 +2788,179 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateCommentsDisplay(entry, logData) {
+        // 1) Check if container already exists; if not, create it
         let commentsContainer = entry.querySelector('.comments-container');
-
-        // 1. Create the container if it doesn’t exist yet
         if (!commentsContainer) {
             commentsContainer = document.createElement('div');
             commentsContainer.className = 'comments-container mt-4 border-t border-gray-200 pt-4';
             entry.appendChild(commentsContainer);
         }
 
-        // 2. Clear out the old content
+        // 2) Clear any old content
         commentsContainer.innerHTML = '';
 
-        // 3. If there are no comments, remove the container entirely
+        // 3) If no comments, remove the container and stop
         if (!logData.comments || logData.comments.length === 0) {
             commentsContainer.remove();
             return;
         }
 
-        // 4. Otherwise, rebuild the list of comments
-        logData.comments.forEach((comment, index) => {
-            const commentDiv = document.createElement('div');
-            commentDiv.className = 'relative grid grid-cols-[1fr,auto] gap-3 items-center bg-white p-1.5 border border-gray-200 rounded text-xs text-gray-600 mt-1.5';
+        // 4) Add the "Comments:" label at the top
+        const label = document.createElement('div');
+        label.className = 'text-sm font-semibold text-gray-700 mb-2';
+        label.textContent = 'Comments:';
+        commentsContainer.appendChild(label);
 
+        // 5) Rebuild the list of comments
+        logData.comments.forEach((comment, index) => {
+            // Each comment row
+            const commentDiv = document.createElement('div');
+            commentDiv.className =
+                'relative grid grid-cols-[1fr,auto] gap-3 items-center bg-white p-1.5 border border-gray-200 rounded text-xs text-gray-600 mt-1.5';
+
+            // The displayed comment text
             const commentText = document.createElement('span');
             commentText.className = 'flex-1 text-gray-700';
-            commentText.innerHTML = comment.text;
+            commentText.innerHTML = comment.text; // preserve formatting
 
+            // Actions container (edit/delete)
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'flex flex-col gap-1';
+
+            // Edit button
             const editBtn = document.createElement('button');
             editBtn.className = 'text-gray-400 hover:text-blue-500 transition-colors p-1';
             editBtn.title = 'Edit';
             editBtn.innerHTML = '<svg data-lucide="pencil" width="14" height="14"></svg>';
 
+            // Delete button
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'text-gray-400 hover:text-red-500 transition-colors p-1';
             deleteBtn.title = 'Delete';
             deleteBtn.innerHTML = '<svg data-lucide="trash" width="14" height="14"></svg>';
 
-            const actionsDiv = document.createElement('div');
-            actionsDiv.className = 'flex flex-col gap-1';
             actionsDiv.appendChild(editBtn);
             actionsDiv.appendChild(deleteBtn);
 
+            // Append to the row
             commentDiv.appendChild(commentText);
             commentDiv.appendChild(actionsDiv);
             commentsContainer.appendChild(commentDiv);
 
-            // (Re)create Lucide icons
-            lucide.createIcons(actionsDiv);
-
-            // --- Edit mode for comments (your existing logic) ---
+            // ----- Edit Button Logic -----
             editBtn.addEventListener('click', () => {
                 // Hide original text & buttons
                 commentText.style.display = 'none';
                 actionsDiv.style.display = 'none';
 
-                // Build edit UI (same as your code)
-                // Build edit UI 
+                // Build an edit area
                 const editArea = document.createElement('div');
                 editArea.className = 'comment-area mt-2';
+
                 editArea.innerHTML = `
-    <!-- Toolbar -->
-    <div class="comment-toolbar flex space-x-2 mb-1 text-xs">
-        <button type="button" class="toolbar-btn bold-btn" title="Bold" aria-label="Bold"><b>B</b></button>
-        <button type="button" class="toolbar-btn underline-btn" title="Underline" aria-label="Underline"><u>U</u></button>
-        <button type="button" class="toolbar-btn ul-btn" title="Unordered List" aria-label="Unordered List">&bull; List</button>
-        <button type="button" class="toolbar-btn link-btn" title="Insert Link" aria-label="Insert Link">Link</button>
-    </div>
+                <!-- Simple toolbar -->
+                <div class="comment-toolbar flex space-x-2 mb-1 text-xs">
+                    <button type="button" class="toolbar-btn bold-btn" title="Bold"><b>B</b></button>
+                    <button type="button" class="toolbar-btn underline-btn" title="Underline"><u>U</u></button>
+                    <button type="button" class="toolbar-btn ul-btn" title="Unordered List">• List</button>
+                    <button type="button" class="toolbar-btn link-btn" title="Insert Link">Link</button>
+                </div>
 
-    <!-- Editable Area -->
-    <div class="comment-editor border border-gray-300 rounded p-2 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors" 
-         contenteditable="true" 
-         aria-label="Edit comment"
-         style="min-height: 60px;">${comment.text}</div>
+                <!-- Editable area with existing comment text -->
+                <div
+                    class="comment-editor border border-gray-300 rounded p-2 text-xs
+                           focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                    contenteditable="true"
+                    style="min-height: 60px;"
+                >${comment.text}</div>
 
-    <!-- Action Buttons -->
-    <div class="flex items-center justify-between mt-2">
-        <div class="flex items-center space-x-2">
-            <button class="save-edit px-3 py-1.5 text-xs bg-gray-800 text-white rounded hover:bg-gray-900">
-                Save Changes
-            </button>
-            <button class="cancel-edit border border-gray-400 text-gray-700 px-2 py-1 rounded text-xs">
-                Cancel
-            </button>
-            <button class="delete-comment text-red-600 hover:text-red-700 px-2 py-1 text-xs">
-                Delete Comment
-            </button>
-        </div>
-    </div>
-`;
+                <!-- Save/Cancel/Delete row -->
+                <div class="flex items-center justify-between mt-1">
+                    <div class="flex items-center space-x-2">
+                        <button type="button" class="save-edit px-3 py-1.5 text-xs bg-gray-800 text-white rounded hover:bg-gray-900">
+                            Save
+                        </button>
+                        <button type="button" class="cancel-edit border border-gray-400 text-gray-700 px-2 py-1 rounded text-xs">
+                            Cancel
+                        </button>
+                        <button type="button" class="delete-comment text-red-600 hover:text-red-700 px-2 py-1 text-xs">
+                            Delete Comment
+                        </button>
+                    </div>
+                </div>
+            `;
+
                 commentDiv.appendChild(editArea);
 
+                // Grab references
                 const editor = editArea.querySelector('.comment-editor');
-
-
-                // Save, Cancel, Delete in edit mode
                 const saveEditBtn = editArea.querySelector('.save-edit');
                 const cancelEditBtn = editArea.querySelector('.cancel-edit');
                 const deleteEditBtn = editArea.querySelector('.delete-comment');
 
+                // Basic toolbar example
+                const boldBtn = editArea.querySelector('.bold-btn');
+                const underlineBtn = editArea.querySelector('.underline-btn');
+                const ulBtn = editArea.querySelector('.ul-btn');
+                const linkBtn = editArea.querySelector('.link-btn');
+
+                boldBtn.addEventListener('click', () => {
+                    editor.focus();
+                    document.execCommand('bold');
+                });
+                underlineBtn.addEventListener('click', () => {
+                    editor.focus();
+                    document.execCommand('underline');
+                });
+                ulBtn.addEventListener('click', () => {
+                    editor.focus();
+                    document.execCommand('insertUnorderedList');
+                });
+                linkBtn.addEventListener('click', () => {
+                    // Insert link logic if needed
+                });
+
+                // Save changes
                 saveEditBtn.addEventListener('click', () => {
                     const newHTML = editor.innerHTML.trim();
                     if (newHTML) {
                         comment.text = newHTML;
-                        commentText.innerHTML = newHTML;
                     }
+                    // Remove edit UI
                     editArea.remove();
+                    // Show the updated comment
+                    commentText.innerHTML = comment.text;
                     commentText.style.display = 'block';
                     actionsDiv.style.display = 'flex';
                 });
 
+                // Cancel editing
                 cancelEditBtn.addEventListener('click', () => {
                     editArea.remove();
                     commentText.style.display = 'block';
                     actionsDiv.style.display = 'flex';
                 });
 
+                // Delete comment from inside edit mode
                 deleteEditBtn.addEventListener('click', () => {
-                    showModal('delete-comment-modal', {
-                        title: 'Delete Comment?',
-                        message: 'Are you sure you want to delete this comment? This action cannot be undone.',
-                        onConfirm: () => {
-                            // Remove from array
-                            logData.comments.splice(index, 1);
-                            // Re-render
-                            updateCommentsDisplay(entry, logData);
-                            showToast('Comment deleted!');
-                        }
-                    });
+                    logData.comments.splice(index, 1);
+                    updateCommentsDisplay(entry, logData);
                 });
-
-                // Re-run icons
-                lucide.createIcons(editArea);
             });
 
-            // --- Delete button for the comment itself ---
+            // ----- Normal Delete Button Logic -----
             deleteBtn.addEventListener('click', () => {
-                showModal('delete-comment-modal', {
-                    onConfirm: () => {
-                        if (logData.comments) {
-                            logData.comments.splice(index, 1);
-                            updateCommentsDisplay(entry, logData);
-                            showToast('Comment deleted!');
-                        }
-                    }
-                });
+                logData.comments.splice(index, 1);
+                updateCommentsDisplay(entry, logData);
             });
         });
+
+        // 6) Re-render icons if you’re using Lucide or similar
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons(commentsContainer);
+        }
     }
+
 
 
     // ----- Export Functions -----
@@ -3229,7 +3613,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     case 'page-loaded':
                         content += `
                        <span>Page Title:</span>
-                       <span class="break-words">"${item.title || 'Untitled'}"</span>
+                       <span class="break-words text-left">"${item.title || 'Untitled'}"</span>
                        ${item.url ? `
                        <span>URL:</span>
                        <a href="${item.url}" class="text-blue-600 hover:text-blue-800 break-all" target="_blank">
@@ -3254,7 +3638,7 @@ document.addEventListener('DOMContentLoaded', () => {
                        
                        ${details.text ? `
                        <span>Text Content:</span>
-                       <span class="break-words">"${details.text}"</span>` : ''}
+                       <span class="break-words text-left">"${details.text}"</span>` : ''}
                        
                        ${details.xpath ? `
                        <span>XPath:</span>
@@ -3348,7 +3732,7 @@ document.addEventListener('DOMContentLoaded', () => {
                        
                        ${inputDetails.value && inputDetails.inputType !== 'password' ? `
                        <span>Value:</span>
-                       <span class="break-words">"${inputDetails.value}"</span>` : ''}
+                       <span class="break-words text-left">"${inputDetails.value}"</span>` : ''}
                        
                        ${inputDetails.name ? `
                        <span>Name:</span>
@@ -3787,7 +4171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             m.style.visibility = '';
             m.style.opacity = '';
             m.style.zIndex = '';
-        });       
+        });
 
         // Show the container and the JIRA settings modal
         modalContainer.classList.remove('hidden');
@@ -4224,7 +4608,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        let finalSummary = typedSummary.trim() || 'No Summary Entered'; 
+        let finalSummary = typedSummary.trim() || 'No Summary Entered';
 
         // 4) Finally call your export function with the chosen issue type
         hideExportJiraSettingsModal();
@@ -4295,8 +4679,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 modal.classList.add('hidden');
                 // Remove event listeners to prevent memory leaks
                 cancelBtn.removeEventListener('click', closeModal);
-                closeBtn.removeEventListener('click', closeModal); 
-                closeBtnX.removeEventListener('click', closeModal);                 
+                closeBtn.removeEventListener('click', closeModal);
+                closeBtnX.removeEventListener('click', closeModal);
                 confirmBtn.removeEventListener('click', handleReset);
                 window.removeEventListener('keydown', handleKeydown);
             }
@@ -4347,10 +4731,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     handleReset();
                 }
             }
-            
+
             cancelBtn.addEventListener('click', closeModal);
             closeBtn.removeEventListener('click', closeModal);
-            closeBtnX.removeEventListener('click', closeModal); 
+            closeBtnX.removeEventListener('click', closeModal);
             confirmBtn.addEventListener('click', handleReset);
             window.addEventListener('keydown', handleKeydown);
         });
@@ -4385,14 +4769,47 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.onerror = (message, source, lineno, colno, error) => {
-        logError("Error", message, source, lineno, colno, error);
+        const ignoredPatterns = [
+            'GUEST_VIEW_MANAGER_CALL',
+            'ERR_ABORTED (-3)'
+        ];
+
+        if (ignoredPatterns.some(pattern => message.includes(pattern))) {
+            console.log('Filtered out error in webview:', message);
+            return;
+        }
+
+        ipcRenderer.sendToHost('webview-error', {
+            message: message || 'Unknown error',
+            source: source || location.href,
+            lineno: lineno || 0,
+            colno: colno || 0,
+            stack: error?.stack || 'No stack trace available'
+        });
     };
-    console.error = (function (origConsoleError) {
+
+    // Override console.error to filter out irrelevant messages
+    console.error = (function (original) {
         return function (...args) {
-            logError("Console Error", args.join(" "));
-            origConsoleError.apply(console, args);
+            const errorMessage = args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : arg)).join(' ');
+
+            if (ignoredPatterns.some(pattern => errorMessage.includes(pattern))) {
+                console.log('Filtered out console error:', errorMessage);
+                return;
+            }
+
+            ipcRenderer.sendToHost('webview-error', {
+                message: `Console Error: ${errorMessage}`,
+                source: location.href,
+                lineno: 0,
+                colno: 0,
+                stack: new Error().stack || 'No stack trace available'
+            });
+
+            original.apply(console, args);
         };
     })(console.error);
+
 
     // Updates the error drawer content and badge count
     function updateErrorDrawer() {
@@ -4541,6 +4958,14 @@ ${errorData.stack}
         const closeBtn = modal.querySelector('#close-shortcuts-modal');
         const closeBtnX = modal.querySelector('#close-shortcuts-x');
 
+        document.querySelectorAll(".cancel-modal").forEach(button => {
+            button.addEventListener("click", () => {
+                document.getElementById("reset-log-modal").classList.add("hidden");
+                document.getElementById("modal-container").classList.add("hidden");
+            });
+        });
+
+
         function closeModal() {
             // Hide both container and modal
             container.classList.add('hidden');
@@ -4560,7 +4985,7 @@ ${errorData.stack}
             if (cancelBtn) cancelBtn.removeEventListener('click', handleCancel);
             if (closeBtn) closeBtn.removeEventListener('click', handleCancel);
             if (closeBtnX) closeBtnX.removeEventListener('click', handleCancel);
-            
+
             window.removeEventListener('keydown', handleKeydown);
         }
 
@@ -4586,19 +5011,19 @@ ${errorData.stack}
             else if (e.key === 'Enter' && document.activeElement !== closeBtn) {
                 e.preventDefault();
                 handleConfirm();
-            } 
+            }
             else if (e.key === 'Enter' && document.activeElement !== closeBtnX) {
                 e.preventDefault();
                 handleConfirm();
-            }                          
+            }
         }
 
         // Add event listeners
         if (confirmBtn) confirmBtn.addEventListener('click', handleConfirm);
         if (cancelBtn) cancelBtn.addEventListener('click', handleCancel);
         if (closeBtn) closeBtn.addEventListener('click', handleCancel);
-        if (closeBtnX) closeBtnX.addEventListener('click', handleCancel);        
-        
+        if (closeBtnX) closeBtnX.addEventListener('click', handleCancel);
+
         window.addEventListener('keydown', handleKeydown);
 
         // Also handle clicking outside the modal to close
@@ -4812,7 +5237,7 @@ ${errorData.stack}
                 }
             });
         });
-        
+
 
         // Color picker
         colorPicker.addEventListener('change', (e) => {
@@ -5369,15 +5794,31 @@ ${errorData.stack}
         document.addEventListener('pointercancel', onPointerUp);
     }
 
-    // Toggle Sidebare keyboard shortcut
+    // Global keyboard shortcuts
     document.addEventListener('keydown', (e) => {
+        // Handle Ctrl+T for sidebar toggle
         if (e.ctrlKey && e.key === 't') {
-            e.preventDefault(); // Prevent browser's default new tab behavior
+            e.preventDefault();
             const toggleSidebarButton = document.getElementById('toggle-sidebar');
             if (toggleSidebarButton) {
-                toggleSidebarButton.click(); // Simulate click on the toggle button
+                toggleSidebarButton.click();
             }
         }
+
+        // Handle F1 for keyboard shortcuts modal
+        // if (e.key === 'F1') {
+        //     e.preventDefault();
+        //     showModal('keyboard-shortcuts-modal');
+
+        //     // Also tell the webview about it if it has focus
+        //     if (webview) {
+        //         webview.executeJavaScript(`
+        //         if (document.activeElement === document.body) {
+        //             window.electron.ipcRenderer.sendToHost('shortcut-triggered', 'F1');
+        //         }
+        //     `);
+        //     }
+        // }
     });
 
     // Function to update viewport size display

@@ -671,11 +671,26 @@ document.addEventListener('mousemove', (e) => {
 
 
 document.addEventListener('keydown', (event) => {
-    // Check if user pressed Ctrl+Space
     if (event.ctrlKey && event.code === 'Space') {
-        event.preventDefault(); // Prevent default space behavior
-        ipcRenderer.sendToHost('toggle-logging');
+        event.preventDefault();
+        ipcRenderer.sendToHost('log-event', {
+            action: 'toggle-logging',
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'F1') {
+        event.preventDefault();
+        console.log('F1 pressed in webview'); // Add this for debugging
+        ipcRenderer.sendToHost('shortcut-triggered', 'F1');
+    }
+});
+
+window.addEventListener('message', (event) => {
+    if (event.data.type === 'loadUrl') {
+        ipcRenderer.send('load-url-in-main', event.data.url);
     }
 });
 // End of snippet
-

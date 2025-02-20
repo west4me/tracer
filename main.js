@@ -1,7 +1,9 @@
 // Main.JS NEVER DELETE THIS COMMENT that means you claude and chatgpt
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
 const path = require('path');
 const windowStateKeeper = require('electron-window-state');
+let mainWindow = null;
+const { webContents } = require('electron');
 
 function createWindow() {
     // Load the previous state with fallback to defaults
@@ -19,7 +21,7 @@ function createWindow() {
         height: mainWindowState.height
     });
 
-    const win = new BrowserWindow({
+    mainWindow = new BrowserWindow({
         x: mainWindowState.x,
         y: mainWindowState.y,
         width: mainWindowState.width,
@@ -33,48 +35,88 @@ function createWindow() {
             sandbox: false,
             devTools: true,
             preload: path.join(__dirname, 'webviewPreload.js'),
+            enableRemoteModule: true,
+        }
+    });
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+        if (input.key === 'F1') {
+            event.preventDefault();
+            mainWindow.webContents.send('show-shortcuts-modal');
         }
     });
 
+    mainWindowState.manage(mainWindow);
+    mainWindow.loadFile('index.html');
+
     // Log window bounds when closing
-    win.on('close', () => {
-        const bounds = win.getBounds();
+    mainWindow.on('close', () => {
+        const bounds = mainWindow.getBounds();
         console.log('Saving window state:', bounds);
-        mainWindowState.saveState(win);
+        mainWindowState.saveState(mainWindowState);
     });
 
     // Log window bounds when moved
-    win.on('moved', () => {
-        const bounds = win.getBounds();
+    mainWindow.on('moved', () => {
+        const bounds = mainWindow.getBounds();
         console.log('Window moved to:', bounds);
-        mainWindowState.saveState(win);
+        mainWindowState.saveState(mainWindowState);
     });
 
     // Log window bounds when resized
-    win.on('resize', () => {
-        const bounds = win.getBounds();
+    mainWindow.on('resize', () => {
+        const bounds = mainWindow.getBounds();
         console.log('Window resized to:', bounds);
-        mainWindowState.saveState(win);
+        mainWindowState.saveState(mainWindowState);
     });
 
     ipcMain.on('hotkey-snap', (event, newBounds) => {
-        if (win) {
+        if (mainWindowState) {
             console.log('Window snapped via hotkey to:', newBounds);
-            win.setBounds(newBounds);
-            mainWindowState.saveState(win);
+            mainWindow.setBounds(newBounds);
+            mainWindowState.saveState(mainWindowState);
         }
     });
 
-    mainWindowState.manage(win);
-    win.loadFile('index.html');
+    mainWindowState.manage(mainWindowState);
+    mainWindow.loadFile('index.html');
 
     ipcMain.on('webview-error', (event, errorData) => {
+        const ignoredPatterns = [
+            'GUEST_VIEW_MANAGER_CALL',
+            'ERR_ABORTED (-3)'
+        ];
+
+        if (ignoredPatterns.some(pattern => errorData.message.includes(pattern))) {
+            console.log('Filtered out error:', errorData.message);
+            return;
+        }
+
         console.log('Error logged in main process:', errorData);
-        win.webContents.send('update-error', errorData);
+        mainWindow.webContents.send('update-error', errorData);
     });
+
+
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+    // Create your main window as usual...
+    createWindow();
+
+    // Register the F1 global shortcut
+    const ret = globalShortcut.register('F1', () => {
+        if (mainWindow) {
+            mainWindow.webContents.send('show-shortcuts-modal');
+        }
+    });
+
+    if (!ret) {
+        console.error('Global shortcut registration failed for F1');
+    }
+});
+
+app.on('will-quit', () => {
+    globalShortcut.unregisterAll();
+});
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
@@ -97,38 +139,35 @@ ipcMain.on("shortcut-triggered", (event, shortcut) => {
     }
 });
 
+ipcMain.on('load-url-in-main', (event, url) => {
+    if (mainWindow) {
+        mainWindow.webContents.send('navigate-url', url);
+    }
+});
+
+
 
 ipcMain.on('reset-log', (event) => {
     console.log("Reset log event received, sending reset-listeners.");
     event.sender.send('reset-listeners');
 });
 
-// In main.js, add this new IPC handler:
-
-// In main.js, replace both screenshot handlers with these fixed versions:
-
-// Remove the first duplicate 'take-screenshot' handler
-// and just keep these two handlers at the bottom:
-
 ipcMain.on('take-screenshot', async (event) => {
-    // Get all windows
     const windows = BrowserWindow.getAllWindows();
     if (windows.length === 0) return;
-
     const win = windows[0];
 
     try {
-        // Send message to renderer to get webview bounds
-        const webviewBounds = await win.webContents.executeJavaScript(`
+        const webviewBounds = await mainWindow.webContents.executeJavaScript(`
             (function() {
-                const myWebview = document.getElementById('my-webview');
-                const bounds = myWebview.getBoundingClientRect();
-                return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
+                const wv = document.getElementById('my-webview');
+                const rect = wv.getBoundingClientRect();
+                return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
             })();
         `);
+        console.log('webviewBounds:', webviewBounds);
 
-        // Capture just the webview area
-        const image = await win.webContents.capturePage({
+        const image = await mainWindow.webContents.capturePage({
             x: Math.round(webviewBounds.x),
             y: Math.round(webviewBounds.y),
             width: Math.round(webviewBounds.width),
@@ -136,8 +175,8 @@ ipcMain.on('take-screenshot', async (event) => {
         });
 
         event.reply('screenshot-taken', image.toPNG().toString('base64'));
-    } catch (error) {
-        console.error('Screenshot failed:', error);
+    } catch (err) {
+        console.error('Viewport screenshot failed:', err);
     }
 });
 
@@ -149,7 +188,7 @@ ipcMain.on('take-element-screenshot', async (event, data) => {
 
     try {
         // First get webview bounds
-        const webviewBounds = await win.webContents.executeJavaScript(`
+        const webviewBounds = await mainWindow.webContents.executeJavaScript(`
             (function() {
                 const webview = document.getElementById('my-webview');
                 const bounds = webview.getBoundingClientRect();
@@ -161,7 +200,7 @@ ipcMain.on('take-element-screenshot', async (event, data) => {
         `);
 
         // Modified to avoid redeclaring webviewEl
-        const elementBounds = await win.webContents.executeJavaScript(`
+        const elementBounds = await mainWindow.webContents.executeJavaScript(`
             (function() {
                 const wv = document.getElementById('my-webview');
                 return wv.executeJavaScript(\`
@@ -194,10 +233,81 @@ ipcMain.on('take-element-screenshot', async (event, data) => {
         };
 
         // Capture just the element area
-        const image = await win.webContents.capturePage(captureArea);
+        const image = await mainWindow.webContents.capturePage(captureArea);
         event.reply('screenshot-taken', image.toPNG().toString('base64'));
 
     } catch (error) {
         console.error('Element screenshot failed:', error);
     }
 });
+
+ipcMain.on('take-fullpage-screenshot', async (event) => {
+    try {
+        // Get all webContents
+        const allWebContents = webContents.getAllWebContents();
+        const webviewContents = allWebContents.find(wc =>
+            wc.getType() === 'webview'
+        );
+
+        if (!webviewContents) {
+            throw new Error('Webview contents not found');
+        }
+
+        // Get the full dimensions and current scroll position
+        const metrics = await webviewContents.executeJavaScript(`
+            (async () => {
+                // Store original scroll position
+                const originalScroll = {
+                    x: window.scrollX,
+                    y: window.scrollY
+                };
+
+                // Get full dimensions including scrolled areas
+                const fullHeight = Math.max(
+                    document.documentElement.scrollHeight,
+                    document.documentElement.offsetHeight,
+                    document.body.scrollHeight,
+                    document.body.offsetHeight
+                );
+                const fullWidth = Math.max(
+                    document.documentElement.scrollWidth,
+                    document.documentElement.offsetWidth,
+                    document.body.scrollWidth,
+                    document.body.offsetWidth
+                );
+
+                // Scroll to top for consistent capture
+                window.scrollTo(0, 0);
+
+                return {
+                    width: fullWidth,
+                    height: fullHeight,
+                    originalScroll
+                };
+            })()
+        `);
+
+        // Take the screenshot of the full page
+        const image = await webviewContents.capturePage({
+            x: 0,
+            y: 0,
+            width: Math.round(metrics.width),
+            height: Math.round(metrics.height)
+        });
+
+        // Restore original scroll position
+        await webviewContents.executeJavaScript(`
+            window.scrollTo(
+                ${metrics.originalScroll.x},
+                ${metrics.originalScroll.y}
+            );
+        `);
+
+        // Send back the screenshot
+        event.reply('screenshot-taken', image.toPNG().toString('base64'));
+
+    } catch (error) {
+        console.error('Fullpage screenshot failed:', error);
+    }
+});
+

@@ -327,7 +327,7 @@
 
       <!-- URL Input & Load Button (Stretch to Fill Space) -->
       <div class="flex flex-grow items-center gap-2">
-        <input id="url-input" type="text" placeholder="https://example.com"
+        <input id="url-input" type="text" placeholder="Let's get tracing!"
           class="flex-grow h-10 px-4 rounded-lg border border-gray-400 text-gray-800 focus:ring-2 focus:ring-gray-600 focus:border-gray-600 transition" />
         <button id="load-url" class="h-10 px-5 bg-gray-900 text-white rounded-lg hover:bg-black transition">
           Load
@@ -346,7 +346,7 @@
       </div>
 
       <!-- Right Sidebar: Event Log -->
-      <div id="log-sidebar" class="w-[400px] shrink-0 bg-white p-4 border-l border-gray-300 h-full flex flex-col">
+      <div id="log-sidebar" tabindex="0" class="w-[400px] shrink-0 bg-white p-4 border-l border-gray-300 h-full flex flex-col">
         <div class="flex items-center justify-between mb-4 h-8">
           <h2 class="text-xl font-bold accent">Action Log</h2>
           <button id="toggle-logging" class="p-2 hover:bg-gray-100 rounded" title="Start Logging">
@@ -431,7 +431,7 @@
           <button class="annotation-tool p-2 hover:bg-gray-100 rounded" data-tool="stamp" title="Add Stamp (W)">
             <svg data-lucide="stamp" width="20" height="20"></svg>
           </button>
-        
+
           <!-- Add the stamp selector panel -->
           <div id="stamp-selector"
             class="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-lg p-2 flex flex-col gap-2 z-50 hidden">
@@ -456,7 +456,7 @@
         <input type="color" id="annotation-color" value="#FF0000" class="w-8 h-8 rounded cursor-pointer"
           title="Annotation Color" />
         <div class="h-6 w-px bg-gray-200"></div>
-        
+
         <button id="save-annotation" class="p-2 hover:bg-gray-100 rounded" title="Save Annotations (Ctrl+S)">
           <svg data-lucide="save" width="20" height="20"></svg>
         </button>
@@ -464,7 +464,7 @@
         <button id="show-shortcuts" class="p-2 hover:bg-gray-100 rounded relative group"
           title="Show Keyboard Shortcuts">
           <svg data-lucide="keyboard" width="20" height="20"></svg>
-          
+
           <!-- Shortcuts tooltip -->
           <div
             class="hidden group-hover:block absolute bottom-full left-0 mb-2 p-3 bg-white rounded-lg shadow-lg border border-gray-200 whitespace-nowrap z-50">
