@@ -1992,6 +1992,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="break-words text-left">"${details.text}"</span>`;
             }
 
+            if (details.fontInfo) {
+                html += `
+            <span class="font-medium">Font Family:</span>
+            <span class="break-words text-left">${details.fontInfo.fontFamily}</span>
+            <span class="font-medium">Font Size:</span>
+            <span class="break-words text-left">${details.fontInfo.fontSize}</span>
+            <span class="font-medium">Font Weight:</span>
+            <span class="break-words text-left">${details.fontInfo.fontWeight}</span>
+            <span class="font-medium">Font Style:</span>
+            <span class="break-words text-left">${details.fontInfo.fontStyle}</span>
+            <span class="font-medium">Line Height:</span>
+            <span class="break-words text-left">${details.fontInfo.lineHeight}</span>
+            <span class="font-medium">Color:</span>
+            <span class="break-words text-left">${details.fontInfo.color}</span>`;
+            }
+
             // If it has a recognized ARIA role or we have role="button", show that
             if (details.role) {
                 html += `
@@ -3163,6 +3179,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (details.context) {
                     section += `- **Section:** ${details.context}\n`;
                 }
+                if (details.fontInfo) {
+                    section += `- **Font Family:** ${details.fontInfo.fontFamily}\n`;
+                    section += `- **Font Size:** ${details.fontInfo.fontSize}\n`;
+                    section += `- **Font Weight:** ${details.fontInfo.fontWeight}\n`;
+                    section += `- **Font Style:** ${details.fontInfo.fontStyle}\n`;
+                    section += `- **Line Height:** ${details.fontInfo.lineHeight}\n`;
+                    section += `- **Color:** ${details.fontInfo.color}\n`;
+                }
                 if ((details.tagName || '').toUpperCase() === 'IMG') {
                     section += `- **Alt Text:** ${details.alt || '[No Alt Text]'}\n`;
                     section += `- **Dimensions:** ${details.width && details.height ? details.width + '×' + details.height + 'px' : 'Unknown'}\n`;
@@ -3265,9 +3289,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else {
                 section += `- **Details:** ${JSON.stringify(item)}\n`;
-            }
-
-            if (item.comments && item.comments.length > 0) {
+            } if (item.comments && item.comments.length > 0) {
                 section += `\n### Comments\n`;
                 item.comments.forEach(comment => {
                     section += `- ${comment.text}\n`;
@@ -3322,462 +3344,462 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let htmlReport = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-   <meta charset="UTF-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>tracer - Interactive Test Report</title>
-   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-   <script src="https://cdn.tailwindcss.com"></script>
-   <script src="https://unpkg.com/lucide@latest"></script>
-   <style>
-       :root {
-           --color-primary: #FF8A65;
-           --color-secondary: #8A5A44;
-           --color-accent: #AF4F41;
-           --color-neutral: #E5E5E5;
-       }
-
-       body {
-           font-family: 'Inter', sans-serif;
-           line-height: 1.6;
-           color: #1a1a1a;
-           background: #fafafa;
-       }
-
-       .timeline-item {
-           position: relative;
-           padding-left: 2rem;
-           margin-bottom: 2rem;
-           transition: transform 0.2s ease;
-       }
-
-       .timeline-item::before {
-           content: '';
-           position: absolute;
-           left: 0;
-           top: 0;
-           height: 100%;
-           width: 2px;
-           background: var(--color-primary);
-           opacity: 0.3;
-       }
-
-       .timeline-item::after {
-           content: '';
-           position: absolute;
-           left: -4px;
-           top: 0;
-           width: 10px;
-           height: 10px;
-           border-radius: 50%;
-           background: var(--color-primary);
-       }
-
-       .timeline-item:hover {
-           transform: translateX(4px);
-       }
-
-       .action-card {
-           background: white;
-           border-radius: 8px;
-           box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-           overflow: hidden;
-           transition: all 0.3s ease;
-       }
-
-       .action-card:hover {
-           box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-       }
-
-       .element-capture-container {
-           position: relative;
-           overflow: hidden;
-           border-radius: 4px;
-           background: #f5f5f5;
-           display: inline-block;
-       }
-
-       .element-capture-container img {
-           width: auto;
-           height: auto;
-           display: block;
-       }
-
-       .screenshot-container {
-           position: relative;
-           overflow: hidden;
-           border-radius: 4px;
-           background: #f5f5f5;
-       }
-
-       .screenshot-container img {
-           max-width: 100%;
-           height: auto;
-           transition: transform 0.3s ease;
-       }
-
-       .screenshot-container:hover img {
-           transform: scale(1.05);
-       }
-
-       .tag {
-           display: inline-block;
-           padding: 0.25rem 0.75rem;
-           border-radius: 999px;
-           font-size: 0.875rem;
-           font-weight: 500;
-       }
-
-       .tag-click { background: #E8F5E9; color: #2E7D32; }
-       .tag-input { background: #E3F2FD; color: #1565C0; }
-       .tag-page { background: #FFF3E0; color: #F57C00; }
-       .tag-key { background: #F3E5F5; color: #7B1FA2; }
-       .tag-select { background: #FCE4EC; color: #C2185B; }
-       .tag-focus { background: #E8EAF6; color: #3F51B5; }
-
-       .details-grid {
-           display: grid;
-           grid-template-columns: 120px 1fr;
-           gap: 0.5rem 1rem;
-           align-items: start;
-           padding: 0.5rem;
-           background: #f9fafb;
-           border-radius: 4px;
-           margin-top: 1rem;
-       }
-
-       .details-grid > span:nth-child(odd) {
-           font-weight: 500;
-           color: #4B5563;
-       }
-
-       .code-block {
-           font-family: monospace;
-           background: #1a1a1a;
-           color: #fff;
-           padding: 0.5rem;
-           border-radius: 4px;
-           font-size: 0.875rem;
-           white-space: pre-wrap;
-           word-break: break-all;
-       }
-
-       .stat-card {
-           background: white;
-           border-radius: 8px;
-           padding: 1.5rem;
-           text-align: center;
-           box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-           transition: transform 0.2s ease;
-       }
-
-       .stat-card:hover {
-           transform: translateY(-2px);
-       }
-
-       .stat-value {
-           font-size: 2rem;
-           font-weight: 600;
-           color: var(--color-primary);
-           line-height: 1;
-       }
-
-       .stat-label {
-           color: #666;
-           font-size: 0.875rem;
-           margin-top: 0.5rem;
-       }
-
-       .tab-focus-info {
-           background: #F8FAFD;
-           border-left: 3px solid var(--color-accent);
-           padding: 1rem;
-           border-radius: 0 4px 4px 0;
-           margin-top: 0.5rem;
-       }
-
-       .tab-focus-info .element-info {
-           display: grid;
-           grid-template-columns: 120px 1fr;
-           gap: 0.5rem;
-           padding: 0.5rem;
-           background: rgba(255,255,255,0.5);
-           border-radius: 4px;
-           margin-top: 0.5rem;
-       }
-
-       .aria-info {
-           background: #F8FAFD;
-           border-left: 3px solid var(--color-primary);
-           padding: 0.75rem;
-           margin-top: 0.5rem;
-           border-radius: 0 4px 4px 0;
-       }
-
-       .image-info {
-           width: 100%;
-           margin-top: 1rem;
-           padding: 1rem;
-           background: #F8FAFD;
-           border-radius: 4px;
-       }
-
-       .image-thumbnail {
-           width: 120px;
-           height: 120px;
-           object-fit: cover;
-           border-radius: 4px;
-           cursor: zoom-in;
-           transition: transform 0.2s ease;
-       }
-
-       .image-thumbnail:hover {
-           transform: scale(1.1);
-       }
-
-       #imgModal {
-           position: fixed;
-           inset: 0;
-           background: rgba(0,0,0,0.9);
-           display: none;
-           align-items: center;
-           justify-content: center;
-           z-index: 50;
-       }
-
-       #imgModal img {
-           max-width: 90vw;
-           max-height: 90vh;
-           object-fit: contain;
-           border-radius: 4px;
-       }
-
-       .select-info {
-           background: #FCE4EC;
-           border-left: 3px solid #C2185B;
-           padding: 0.75rem;
-           margin-top: 0.5rem;
-           border-radius: 0 4px 4px 0;
-       }
-
-       .validation-state {
-           display: inline-flex;
-           align-items: center;
-           gap: 0.5rem;
-           padding: 0.25rem 0.5rem;
-           border-radius: 4px;
-           font-size: 0.875rem;
-       }
-
-       .validation-valid {
-           background: #E8F5E9;
-           color: #2E7D32;
-       }
-
-       .validation-invalid {
-           background: #FFEBEE;
-           color: #C62828;
-       }
-
-       .section-label {
-           font-size: 0.75rem;
-           text-transform: uppercase;
-           color: #6B7280;
-           letter-spacing: 0.05em;
-           margin-top: 1rem;
-           margin-bottom: 0.5rem;
-       }
-
-       .element-details {
-           background: #F9FAFB;
-           border-radius: 4px;
-           padding: 1rem;
-           margin-top: 1rem;
-       }
-
-       .capture-container {
-           display: inline-block;
-           background: white;
-           padding: 0.5rem;
-           border-radius: 4px;
-           box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-       }
-
-       .capture-label {
-           text-align: center;
-           color: #6B7280;
-           font-size: 0.875rem;
-           margin-top: 0.5rem;
-       }
-   </style>
-</head>
-<body class="min-h-screen">
-   <!-- Header with Stats -->
-   <header class="bg-white border-b border-gray-200 py-8">
-       <div class="container mx-auto px-6 max-w-6xl">
-           <div class="flex items-center justify-between mb-8">
-               <div class="flex items-center gap-3">
-                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="32" height="32" class="text-[--color-primary]">
-                       <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.2"/>
-                       <circle cx="8" cy="8" r="3" fill="currentColor"/>
-                       <circle cx="9" cy="7" r="1" fill="white"/>
-                   </svg>
-                   <h1 class="text-2xl font-bold">tracer Report</h1>
-               </div>
-               <span class="text-gray-500">Generated: ${new Date().toLocaleString()}</span>
-           </div>
-           
-           <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-               <div class="stat-card">
-                   <div class="stat-value">${eventLog.length}</div>
-                   <div class="stat-label">Total Actions</div>
-               </div>
-               <div class="stat-card">
-                   <div class="stat-value">${formatDuration(eventLog)}</div>
-                   <div class="stat-label">Duration</div>
-               </div>
-               <div class="stat-card">
-                   <div class="stat-value">${countUniquePages(eventLog)}</div>
-                   <div class="stat-label">Pages Visited</div>
-               </div>
-               <div class="stat-card">
-                   <div class="stat-value">${eventLog.filter(e => e.screenshot || e.elementCapture).length}</div>
-                   <div class="stat-label">Visual Captures</div>
-               </div>
-           </div>
-       </div>
-   </header>
-
-   <!-- Timeline -->
-   <main class="container mx-auto px-6 max-w-6xl py-12">
-       <div class="space-y-6">
-           ${eventLog.map((item, index) => {
-            const timeStr = formatTimestamp(item.timestamp);
-            const actionType = item.action.toLowerCase();
-            let tagClass = '';
-
-            switch (actionType) {
-                case 'click': tagClass = 'tag-click'; break;
-                case 'input-change': tagClass = 'tag-input'; break;
-                case 'page-loaded': tagClass = 'tag-page'; break;
-                case 'keydown': tagClass = 'tag-key'; break;
-                case 'select': tagClass = 'tag-select'; break;
-                case 'tab-focus': tagClass = 'tag-focus'; break;
-                default: tagClass = 'bg-gray-100 text-gray-700';
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>tracer - Interactive Test Report</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://unpkg.com/lucide@latest"></script>
+        <style>
+            :root {
+                --color-primary: #FF8A65;
+                --color-secondary: #8A5A44;
+                --color-accent: #AF4F41;
+                --color-neutral: #E5E5E5;
             }
 
-            return `
-               <div class="timeline-item">
-                   <div class="action-card p-6">
-                       <div class="flex items-center justify-between mb-4">
-                           <div class="flex items-center gap-3">
-                               <span class="tag ${tagClass}">${item.action}</span>
-                               <span class="text-sm text-gray-500">#${index + 1}</span>
-                           </div>
-                           <time class="text-sm text-gray-500">${timeStr}</time>
-                       </div>
+            body {
+                font-family: 'Inter', sans-serif;
+                line-height: 1.6;
+                color: #1a1a1a;
+                background: #fafafa;
+            }
 
-                       ${generateDetailedContent(item)}
+            .timeline-item {
+                position: relative;
+                padding-left: 2rem;
+                margin-bottom: 2rem;
+                transition: transform 0.2s ease;
+            }
+
+            .timeline-item::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 0;
+                height: 100%;
+                width: 2px;
+                background: var(--color-primary);
+                opacity: 0.3;
+            }
+
+            .timeline-item::after {
+                content: '';
+                position: absolute;
+                left: -4px;
+                top: 0;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: var(--color-primary);
+            }
+
+            .timeline-item:hover {
+                transform: translateX(4px);
+            }
+
+            .action-card {
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                overflow: hidden;
+                transition: all 0.3s ease;
+            }
+
+            .action-card:hover {
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+
+            .element-capture-container {
+                position: relative;
+                overflow: hidden;
+                border-radius: 4px;
+                background: #f5f5f5;
+                display: inline-block;
+            }
+
+            .element-capture-container img {
+                width: auto;
+                height: auto;
+                display: block;
+            }
+
+            .screenshot-container {
+                position: relative;
+                overflow: hidden;
+                border-radius: 4px;
+                background: #f5f5f5;
+            }
+
+            .screenshot-container img {
+                max-width: 100%;
+                height: auto;
+                transition: transform 0.3s ease;
+            }
+
+            .screenshot-container:hover img {
+                transform: scale(1.05);
+            }
+
+            .tag {
+                display: inline-block;
+                padding: 0.25rem 0.75rem;
+                border-radius: 999px;
+                font-size: 0.875rem;
+                font-weight: 500;
+            }
+
+            .tag-click { background: #E8F5E9; color: #2E7D32; }
+            .tag-input { background: #E3F2FD; color: #1565C0; }
+            .tag-page { background: #FFF3E0; color: #F57C00; }
+            .tag-key { background: #F3E5F5; color: #7B1FA2; }
+            .tag-select { background: #FCE4EC; color: #C2185B; }
+            .tag-focus { background: #E8EAF6; color: #3F51B5; }
+
+            .details-grid {
+                display: grid;
+                grid-template-columns: 120px 1fr;
+                gap: 0.5rem 1rem;
+                align-items: start;
+                padding: 0.5rem;
+                background: #f9fafb;
+                border-radius: 4px;
+                margin-top: 1rem;
+            }
+
+            .details-grid > span:nth-child(odd) {
+                font-weight: 500;
+                color: #4B5563;
+            }
+
+            .code-block {
+                font-family: monospace;
+                background: #1a1a1a;
+                color: #fff;
+                padding: 0.5rem;
+                border-radius: 4px;
+                font-size: 0.875rem;
+                white-space: pre-wrap;
+                word-break: break-all;
+            }
+
+            .stat-card {
+                background: white;
+                border-radius: 8px;
+                padding: 1.5rem;
+                text-align: center;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                transition: transform 0.2s ease;
+            }
+
+            .stat-card:hover {
+                transform: translateY(-2px);
+            }
+
+            .stat-value {
+                font-size: 2rem;
+                font-weight: 600;
+                color: var(--color-primary);
+                line-height: 1;
+            }
+
+            .stat-label {
+                color: #666;
+                font-size: 0.875rem;
+                margin-top: 0.5rem;
+            }
+
+            .tab-focus-info {
+                background: #F8FAFD;
+                border-left: 3px solid var(--color-accent);
+                padding: 1rem;
+                border-radius: 0 4px 4px 0;
+                margin-top: 0.5rem;
+            }
+
+            .tab-focus-info .element-info {
+                display: grid;
+                grid-template-columns: 120px 1fr;
+                gap: 0.5rem;
+                padding: 0.5rem;
+                background: rgba(255,255,255,0.5);
+                border-radius: 4px;
+                margin-top: 0.5rem;
+            }
+
+            .aria-info {
+                background: #F8FAFD;
+                border-left: 3px solid var(--color-primary);
+                padding: 0.75rem;
+                margin-top: 0.5rem;
+                border-radius: 0 4px 4px 0;
+            }
+
+            .image-info {
+                width: 100%;
+                margin-top: 1rem;
+                padding: 1rem;
+                background: #F8FAFD;
+                border-radius: 4px;
+            }
+
+            .image-thumbnail {
+                width: 120px;
+                height: 120px;
+                object-fit: cover;
+                border-radius: 4px;
+                cursor: zoom-in;
+                transition: transform 0.2s ease;
+            }
+
+            .image-thumbnail:hover {
+                transform: scale(1.1);
+            }
+
+            #imgModal {
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.9);
+                display: none;
+                align-items: center;
+                justify-content: center;
+                z-index: 50;
+            }
+
+            #imgModal img {
+                max-width: 90vw;
+                max-height: 90vh;
+                object-fit: contain;
+                border-radius: 4px;
+            }
+
+            .select-info {
+                background: #FCE4EC;
+                border-left: 3px solid #C2185B;
+                padding: 0.75rem;
+                margin-top: 0.5rem;
+                border-radius: 0 4px 4px 0;
+            }
+
+            .validation-state {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.25rem 0.5rem;
+                border-radius: 4px;
+                font-size: 0.875rem;
+            }
+
+            .validation-valid {
+                background: #E8F5E9;
+                color: #2E7D32;
+            }
+
+            .validation-invalid {
+                background: #FFEBEE;
+                color: #C62828;
+            }
+
+            .section-label {
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                color: #6B7280;
+                letter-spacing: 0.05em;
+                margin-top: 1rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .element-details {
+                background: #F9FAFB;
+                border-radius: 4px;
+                padding: 1rem;
+                margin-top: 1rem;
+            }
+
+            .capture-container {
+                display: inline-block;
+                background: white;
+                padding: 0.5rem;
+                border-radius: 4px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+
+            .capture-label {
+                text-align: center;
+                color: #6B7280;
+                font-size: 0.875rem;
+                margin-top: 0.5rem;
+            }
+        </style>
+        </head>
+        <body class="min-h-screen">
+        <!-- Header with Stats -->
+        <header class="bg-white border-b border-gray-200 py-8">
+            <div class="container mx-auto px-6 max-w-6xl">
+                <div class="flex items-center justify-between mb-8">
+                    <div class="flex items-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="32" height="32" class="text-[--color-primary]">
+                            <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.2"/>
+                            <circle cx="8" cy="8" r="3" fill="currentColor"/>
+                            <circle cx="9" cy="7" r="1" fill="white"/>
+                        </svg>
+                        <h1 class="text-2xl font-bold">tracer Report</h1>
+                    </div>
+                    <span class="text-gray-500">Generated: ${new Date().toLocaleString()}</span>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="stat-card">
+                        <div class="stat-value">${eventLog.length}</div>
+                        <div class="stat-label">Total Actions</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${formatDuration(eventLog)}</div>
+                        <div class="stat-label">Duration</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${countUniquePages(eventLog)}</div>
+                        <div class="stat-label">Pages Visited</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${eventLog.filter(e => e.screenshot || e.elementCapture).length}</div>
+                        <div class="stat-label">Visual Captures</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Timeline -->
+        <main class="container mx-auto px-6 max-w-6xl py-12">
+            <div class="space-y-6">
+                ${eventLog.map((item, index) => {
+                    const timeStr = formatTimestamp(item.timestamp);
+                    const actionType = item.action.toLowerCase();
+                    let tagClass = '';
+
+                    switch (actionType) {
+                        case 'click': tagClass = 'tag-click'; break;
+                        case 'input-change': tagClass = 'tag-input'; break;
+                        case 'page-loaded': tagClass = 'tag-page'; break;
+                        case 'keydown': tagClass = 'tag-key'; break;
+                        case 'select': tagClass = 'tag-select'; break;
+                        case 'tab-focus': tagClass = 'tag-focus'; break;
+                        default: tagClass = 'bg-gray-100 text-gray-700';
+                    }
+
+                    return `
+                    <div class="timeline-item">
+                        <div class="action-card p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-3">
+                                    <span class="tag ${tagClass}">${item.action}</span>
+                                    <span class="text-sm text-gray-500">#${index + 1}</span>
+                                </div>
+                                <time class="text-sm text-gray-500">${timeStr}</time>
+                            </div>
+
+                            ${generateDetailedContent(item)}
 
 
-                        ${item.elementCapture ? `
-                            <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-                                <h4 class="text-lg font-semibold mb-3">
-                                    <div class="flex items-center gap-2">
-                                        <svg data-lucide="scan" class="w-5 h-5"></svg>
-                                        Element Capture
+                                ${item.elementCapture ? `
+                                    <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                                        <h4 class="text-lg font-semibold mb-3">
+                                            <div class="flex items-center gap-2">
+                                                <svg data-lucide="scan" class="w-5 h-5"></svg>
+                                                Element Capture
+                                            </div>
+                                        </h4>
+                                        <div class="capture-container">
+                                            <img src="data:image/png;base64,${item.elementCapture}" 
+                                                alt="Captured element"
+                                                style="width: auto; height: auto; max-width: 100%;"
+                                                onclick="showModalImage(this.src)"
+                                                loading="lazy">
+                                        </div>
                                     </div>
-                                </h4>
-                                <div class="capture-container">
-                                    <img src="data:image/png;base64,${item.elementCapture}" 
-                                        alt="Captured element"
-                                        style="width: auto; height: auto; max-width: 100%;"
-                                        onclick="showModalImage(this.src)"
-                                        loading="lazy">
+                                    ` : ''}
+
+                                    ${item.screenshot ? `
+                                    <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                                        <h4 class="text-lg font-semibold mb-3">
+                                            <div class="flex items-center gap-2">
+                                                <svg data-lucide="camera" class="w-5 h-5"></svg>
+                                                Screenshot
+                                            </div>
+                                        </h4>
+                                        <div class="screenshot-container">
+                                            <img src="data:image/png;base64,${item.screenshot}" 
+                                                alt="Page screenshot"
+                                                class="rounded shadow-sm cursor-zoom-in"
+                                                onclick="showModalImage(this.src)"
+                                                loading="lazy">
+                                        </div>
+                                    </div>
+                                    ` : ''}
+
+                            ${item.comments && item.comments.length > 0 ? `
+                            <div class="mt-4">
+                                <div class="section-label">Comments</div>
+                                <div class="space-y-3">
+                                    ${item.comments.map(comment => `
+                                    <div class="p-3 bg-gray-50 rounded">
+                                        <div class="prose prose-sm">${comment.text}</div>
+                                        <div class="text-xs text-gray-500 mt-2">
+                                            ${new Date(comment.timestamp).toLocaleString()}
+                                        </div>
+                                    </div>
+                                    `).join('')}
                                 </div>
                             </div>
                             ` : ''}
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>
+        </main>
 
-                            ${item.screenshot ? `
-                            <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-                                <h4 class="text-lg font-semibold mb-3">
-                                    <div class="flex items-center gap-2">
-                                        <svg data-lucide="camera" class="w-5 h-5"></svg>
-                                        Screenshot
-                                    </div>
-                                </h4>
-                                <div class="screenshot-container">
-                                    <img src="data:image/png;base64,${item.screenshot}" 
-                                        alt="Page screenshot"
-                                        class="rounded shadow-sm cursor-zoom-in"
-                                        onclick="showModalImage(this.src)"
-                                        loading="lazy">
-                                </div>
-                            </div>
-                            ` : ''}
+        <!-- Image Modal -->
+        <div id="imgModal" class="fixed inset-0 bg-black bg-opacity-90 hidden items-center justify-center z-50">
+            <button onclick="hideModalImage()" class="absolute top-4 right-4 text-white hover:text-gray-300">
+                <svg data-lucide="x" width="24" height="24"></svg>
+            </button>
+            <img src="" alt="Full size capture" class="rounded-lg max-w-[90vw] max-h-[90vh] object-contain">
+        </div>
 
-                       ${item.comments && item.comments.length > 0 ? `
-                       <div class="mt-4">
-                           <div class="section-label">Comments</div>
-                           <div class="space-y-3">
-                               ${item.comments.map(comment => `
-                               <div class="p-3 bg-gray-50 rounded">
-                                   <div class="prose prose-sm">${comment.text}</div>
-                                   <div class="text-xs text-gray-500 mt-2">
-                                       ${new Date(comment.timestamp).toLocaleString()}
-                                   </div>
-                               </div>
-                               `).join('')}
-                           </div>
-                       </div>
-                       ` : ''}
-                   </div>
-               </div>`;
-        }).join('')}
-       </div>
-   </main>
+        <script>
+            function showModalImage(src) {
+                const modal = document.getElementById('imgModal');
+                const img = modal.querySelector('img');
+                const canvas = document.getElementById('annotation-canvas');
+                const toolbar = document.getElementById('annotation-toolbar');
 
-   <!-- Image Modal -->
-   <div id="imgModal" class="fixed inset-0 bg-black bg-opacity-90 hidden items-center justify-center z-50">
-       <button onclick="hideModalImage()" class="absolute top-4 right-4 text-white hover:text-gray-300">
-           <svg data-lucide="x" width="24" height="24"></svg>
-       </button>
-       <img src="" alt="Full size capture" class="rounded-lg max-w-[90vw] max-h-[90vh] object-contain">
-   </div>
+                img.src = src;
+                modal.style.display = 'flex';
+            }
 
-   <script>
-       function showModalImage(src) {
-           const modal = document.getElementById('imgModal');
-           const img = modal.querySelector('img');
-           const canvas = document.getElementById('annotation-canvas');
-           const toolbar = document.getElementById('annotation-toolbar');
+            if (src.includes('screenshot')) {
+                    toolbar.style.display = 'flex';
+                    canvas.style.display = 'block';
+                } else {
+                    toolbar.style.display = 'none';
+                    canvas.style.display = 'none';
+                }
 
-           img.src = src;
-           modal.style.display = 'flex';
-       }
+            function hideModalImage() {
+                document.getElementById('imgModal').style.display = 'none';
+            }
 
-       if (src.includes('screenshot')) {
-               toolbar.style.display = 'flex';
-               canvas.style.display = 'block';
-           } else {
-               toolbar.style.display = 'none';
-               canvas.style.display = 'none';
-           }
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') hideModalImage();
+            });
 
-       function hideModalImage() {
-           document.getElementById('imgModal').style.display = 'none';
-       }
-
-       document.addEventListener('keydown', (e) => {
-           if (e.key === 'Escape') hideModalImage();
-       });
-
-       lucide.createIcons();
-   </script>
-</body>
-</html>`;
+            lucide.createIcons();
+        </script>
+        </body>
+        </html>`;
 
         // Generate detailed content for each action type
         function generateDetailedContent(item) {
@@ -3816,11 +3838,28 @@ document.addEventListener('DOMContentLoaded', () => {
                        ${details.text ? `
                        <span>Text Content:</span>
                        <span class="break-words text-left">"${details.text}"</span>` : ''}
-                       
+                                              
+
                        ${details.xpath ? `
                        <span>XPath:</span>
                        <code class="break-all bg-gray-100 px-2 py-1 rounded text-sm">${details.xpath}</code>` : ''}
                    `;
+
+                        if (details.fontInfo) {
+                            content += `
+                            <div class="font-medium">Font Family:</div>
+                            <div>${details.fontInfo.fontFamily}</div>
+                            <div class="font-medium">Font Size:</div>
+                            <div>${details.fontInfo.fontSize}</div>
+                            <div class="font-medium">Font Weight:</div>
+                            <div>${details.fontInfo.fontWeight}</div>
+                            <div class="font-medium">Font Style:</div>
+                            <div>${details.fontInfo.fontStyle}</div>
+                            <div class="font-medium">Line Height:</div>
+                            <div>${details.fontInfo.lineHeight}</div>
+                            <div class="font-medium">Color:</div>
+                            <div>${details.fontInfo.color}</div>`;
+                        }
 
                         if (details.tagName === 'IMG') {
                             content += `
@@ -4555,6 +4594,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     if (d.text) {
                         description += `*Text:* "${d.text}"\n`;
+                    } if (d.fontInfo) {
+                        let fontContent = '';
+                        fontContent += `* Font Family: ${d.fontInfo.fontFamily}\n`;
+                        fontContent += `* Font Size: ${d.fontInfo.fontSize}\n`;
+                        fontContent += `* Font Weight: ${d.fontInfo.fontWeight}\n`;
+                        fontContent += `* Font Style: ${d.fontInfo.fontStyle}\n`;
+                        fontContent += `* Line Height: ${d.fontInfo.lineHeight}\n`;
+                        fontContent += `* Color: ${d.fontInfo.color}\n`;
+                        description += createPanel('Font Information', fontContent);
                     }
 
                     // Enhanced element-specific details

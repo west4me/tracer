@@ -212,10 +212,33 @@ function findParentContainer(el) {
     return null;
 }
 
-
+function getFontInfo(element) {
+    const computedStyle = window.getComputedStyle(element);
+    return {
+        fontFamily: computedStyle.fontFamily,
+        fontSize: computedStyle.fontSize,
+        fontWeight: computedStyle.fontWeight,
+        fontStyle: computedStyle.fontStyle,
+        lineHeight: computedStyle.lineHeight,
+        color: computedStyle.color
+    };
+}
 
 
 // Main Element Details Function
+// Helper function to extract computed font information
+function getFontInfo(element) {
+    const computedStyle = window.getComputedStyle(element);
+    return {
+        fontFamily: computedStyle.fontFamily,
+        fontSize: computedStyle.fontSize,
+        fontWeight: computedStyle.fontWeight,
+        fontStyle: computedStyle.fontStyle,
+        lineHeight: computedStyle.lineHeight,
+        color: computedStyle.color
+    };
+}
+
 function getElementDetails(target) {
     const details = {
         tagName: target.tagName,
@@ -367,7 +390,6 @@ function getElementDetails(target) {
         details.readOnly = target.readOnly;
         details.form = target.form ? target.form.id || '[No Form ID]' : null;
     }
-    // Check for parent link
     const parentLink = target.closest('a');
     if (parentLink && parentLink !== target) {
         details.parentLink = {
@@ -377,7 +399,6 @@ function getElementDetails(target) {
             ariaLabel: parentLink.getAttribute('aria-label') || null
         };
     }
-    // Progress bar details
     if (target.tagName === 'PROGRESS') {
         details.min = target.getAttribute('min') || target.min || '0';
         details.max = target.getAttribute('max') || target.max || '100';
@@ -389,9 +410,6 @@ function getElementDetails(target) {
         details.ariaValueMax = target.getAttribute('aria-valuemax') || '100';
         details.ariaValueNow = target.getAttribute('aria-valuenow') || '0';
     }
-
-    // Media element details
-    // Inside your getElementDetails(target) function, replace the existing VIDEO and AUDIO blocks with this:
     if (target.tagName === 'VIDEO') {
         details.src = target.currentSrc || target.src || null;
         details.poster = target.getAttribute('poster') || null;
@@ -401,7 +419,6 @@ function getElementDetails(target) {
         details.paused = target.paused;
         details.volume = target.volume;
     }
-
     if (target.tagName === 'AUDIO') {
         details.src = target.currentSrc || target.src || null;
         details.controls = target.controls;
@@ -410,7 +427,6 @@ function getElementDetails(target) {
         details.paused = target.paused;
         details.volume = target.volume;
     }
-
     else if (target.tagName === 'SVG') {
         const svgTitleEl = target.querySelector('title');
         const svgDescEl = target.querySelector('desc');
@@ -424,10 +440,18 @@ function getElementDetails(target) {
         // This line is critical:
         details.svgOuterHTML = target.outerHTML;
     }
-    
+
+    // NEW: Attach computed font information
+    try {
+        details.fontInfo = getFontInfo(target);
+    } catch (error) {
+        console.error("Error fetching font information:", error);
+    }
+
     details.parentContainer = findParentContainer(target);
     return details;
 }
+
 
 const getCurrentSection = (element) => {
     const container = element.closest('section, article, nav, aside, header, footer');
