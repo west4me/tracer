@@ -1,3 +1,4 @@
+<!-- HOME.HTML NEVER DELETE THIS COMMENT that means you claude and chatgpt -->
 <!DOCTYPE html>
 <html lang="en">
 
@@ -65,14 +66,16 @@
     </style>
 </head>
 
-<body>    
+<body>
     <div class="content-wrapper">
         <main class="container mx-auto px-6 py-12 max-w-6xl">
             <!-- Header -->
-            <div class="text-center mb-16">
-                <h1 class="text-4xl font-bold mb-3 text-gray-900">Capture. Document. Export.</h1>
+            <div class="text-left mb-16">
+                <h1 class="text-4xl font-bold mb-3 text-gray-900">
+                    Bugs? Yeah, well, you know, that's just, like, your opinion, man. We have proof.
+                </h1>
             </div>
-    
+
             <!-- Two Column Layout -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
                 <!-- Left Column - Recent Sites -->
@@ -80,70 +83,61 @@
                     <div class="bg-white p-8 rounded-lg border border-gray-200 shadow-sm">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                                    stroke="#FF8A65" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                    fill="none" stroke="#FF8A65" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
                                     <path d="M3 3v18h18" />
                                     <path d="m19 9-5 5-4-4-3 3" />
                                 </svg>
                                 Recent Sites
                             </h2>
                         </div>
-                
+
                         <!-- Recent Sites List -->
                         <div class="recent-sites-list space-y-3">
                             <div class="text-sm text-gray-600 italic">
                                 Your recently visited sites will appear here
                             </div>
-                
+
                             <!-- Empty state with helpful action -->
                             <div class="mt-4 text-center">
-                                <button data-action="focus-url" class="px-4 py-2 text-[#FF8A65] hover:bg-[#FFF3E0] rounded-lg transition-colors">
+                                <button data-action="focus-url"
+                                    class="px-4 py-2 text-[#FF8A65] hover:bg-[#FFF3E0] rounded-lg transition-colors">
                                     Enter a URL to begin testing
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
-    
-                <!-- Right Column - Documentation -->
+
+                <!-- Right Column - Additional Information -->
                 <div class="space-y-6">
                     <!-- Capturing Evidence Section -->
                     <div class="bg-white p-6 rounded-lg border border-gray-200">
                         <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF8A65"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="#FF8A65" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path
+                                    d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                                 <circle cx="12" cy="13" r="4" />
                             </svg>
                             Capturing Evidence
                         </h2>
                         <ul class="space-y-3 text-gray-600">
                             <li class="flex items-center gap-2">
-                                <kbd class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-sm flex items-center gap-1">
-                                    <span class="pr-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                            stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mouse-pointer-click">
-                                            <path d="M14 4.1 12 6" />
-                                            <path d="m5.1 8-2.9-.8" />
-                                            <path d="m6 12-1.9 2" />
-                                            <path d="M7.2 2.2 8 5.1" />
-                                            <path
-                                                d="M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z" />
-                                        </svg>
-                                    </span>                                    
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                        stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                                        <circle cx="12" cy="13" r="4" />
-                                    </svg>
-                                </kbd> in an event card for viewport capture
+                                <kbd class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-sm">Ctrl</kbd> +
+                                <kbd class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-sm">Space</kbd>
+                                to start/pause logging
                             </li>
                             <li class="flex items-center gap-2">
-                                Hold <kbd class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-sm">Ctrl</kbd> +
-                                <kbd class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-sm flex items-center gap-1">
+                                <kbd
+                                    class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-sm flex items-center gap-1">
                                     <span class="pr-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                            stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mouse-pointer-click">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"
+                                            stroke-linecap="round" stroke-linejoin="round"
+                                            class="lucide lucide-mouse-pointer-click">
                                             <path d="M14 4.1 12 6" />
                                             <path d="m5.1 8-2.9-.8" />
                                             <path d="m6 12-1.9 2" />
@@ -152,47 +146,76 @@
                                                 d="M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z" />
                                         </svg>
                                     </span>
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                        stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path
+                                            d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                                         <circle cx="12" cy="13" r="4" />
                                     </svg>
-                                </kbd> for element capture
-                            </li>   
-                            <li class="flex items-center gap-2">
-                                <kbd class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-sm">Ctrl</kbd> +
-                                <kbd class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-sm">Space</kbd>
-                                to start/pause logging
+                                </kbd>
+                                for viewport capture
                             </li>
                             <li class="flex items-center gap-2">
-                                Press <kbd class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-sm">F1</kbd> to view all
+                                Hold <kbd
+                                    class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-sm">Ctrl</kbd> +
+                                <kbd
+                                    class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-sm flex items-center gap-1">
+                                    <span class="pr-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"
+                                            stroke-linecap="round" stroke-linejoin="round"
+                                            class="lucide lucide-mouse-pointer-click">
+                                            <path d="M14 4.1 12 6" />
+                                            <path d="m5.1 8-2.9-.8" />
+                                            <path d="m6 12-1.9 2" />
+                                            <path d="M7.2 2.2 8 5.1" />
+                                            <path
+                                                d="M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z" />
+                                        </svg>
+                                    </span>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path
+                                            d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                                        <circle cx="12" cy="13" r="4" />
+                                    </svg>
+                                </kbd>
+                                for element capture
+                            </li>
+                            
+                            <li class="flex items-center gap-2">
+                                Press <kbd class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-sm">F1</kbd>
+                                to view all
                                 keyboard shortcuts
                             </li>
                         </ul>
                     </div>
-                
+
                     <!-- JIRA Integration Section -->
                     <div class="bg-white p-6 rounded-lg border border-gray-200">
-                        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900">                            
-                            <svg fill="none"
-                                stroke="#FF8A65" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900">
+                            <svg fill="none" stroke="#FF8A65" stroke-width="1.5" stroke-linecap="round"
+                                stroke-linejoin="round" width="20" height="20" viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg">
                                 <path
                                     d="M0.086,12L12,23.914L23.914,12L12,0.086L0.086,12z M14.598,18.488c-0.091-1.03-0.507-2.014-1.23-2.941L16.914,12
-                                                                l-4.207-4.207c-0.894-0.894-1.339-1.826-1.325-2.771c0.012-0.817,0.359-1.531,0.691-2.034L21.086,12L14.598,18.488z M12,9.914
-                                                                L14.086,12L12,14.086L9.914,12L12,9.914z M9.402,5.512c0.091,1.03,0.507,2.014,1.23,2.941L7.086,12l4.207,4.207
-                                                                c0.894,0.894,1.339,1.826,1.325,2.771c-0.012,0.817-0.359,1.531-0.691,2.034L2.914,12L9.402,5.512z" />
+                                        l-4.207-4.207c-0.894-0.894-1.339-1.826-1.325-2.771c0.012-0.817,0.359-1.531,0.691-2.034L21.086,12L14.598,18.488z M12,9.914
+                                        L14.086,12L12,14.086L9.914,12L12,9.914z M9.402,5.512c0.091,1.03,0.507,2.014,1.23,2.941L7.086,12l4.207,4.207
+                                        c0.894,0.894,1.339,1.826,1.325,2.771c-0.012,0.817-0.359,1.531-0.691,2.034L2.914,12L9.402,5.512z" />
                             </svg>
                             JIRA Integration
                         </h2>
                         <p class="text-gray-600 mb-4">
-                            Export your test sessions directly to JIRA with custom fields, formatted descriptions, and automatic
+                            Export your test sessions directly to JIRA with custom fields, formatted descriptions, and
+                            automatic
                             screenshot attachments.
                         </p>
                         <button onclick="window.location.href='docs.html'"
                             class="text-[#FF8A65] hover:text-[#ff7043] font-medium flex items-center gap-1">
                             Learn how to configure JIRA exports
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
                                 <path d="M5 12h14" />
                                 <path d="m12 5 7 7-7 7" />
                             </svg>
@@ -200,106 +223,115 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Just a small, understated link to docs at the bottom -->
+            <p class="text-sm text-gray-500 mt-16">
+                For additional info, see
+                <a href="docs.html" class="underline text-[#FF8A65] hover:text-[#ff7043]">
+                    documentation
+                </a>.
+            </p>
         </main>
     </div>
-    // First, add this script section at the bottom of home.html, just before the closing </body> tag:
-    
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        // Update your recent sites list
-        function updateRecentSitesList() {
-            const listContainer = document.querySelector('.recent-sites-list');
-            if (!listContainer) {
-                console.error('Container not found!');
-                return;
-            }
 
-            // Get URLs from localStorage
-            let urls = [];
-            try {
-                const stored = localStorage.getItem('recentUrls');
-                if (stored) {
-                    urls = JSON.parse(stored);
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Update your recent sites list
+            function updateRecentSitesList() {
+                const listContainer = document.querySelector('.recent-sites-list');
+                if (!listContainer) {
+                    console.error('Container not found!');
+                    return;
                 }
-            } catch (error) {
-                console.error('Error parsing URLs:', error);
-            }
 
-            // Update the UI
-            if (!urls || urls.length === 0) {
-                listContainer.innerHTML = `
-                    <div class="text-sm text-gray-600 italic">
-                        Your recently visited sites will appear here
-                    </div>
-                    <div class="mt-4 text-center">
-                        <button data-action="focus-url" class="px-4 py-2 text-[#FF8A65] hover:bg-[#FFF3E0] rounded-lg transition-colors">
-                            Enter a URL to begin testing
-                        </button>
-                    </div>
-                `;
-            } else {
-                listContainer.innerHTML = urls.map(url => `
-                    <div class="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg group transition-colors">
-                        <div class="flex items-center gap-3 flex-1 min-w-0">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" 
-                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" 
-                                class="text-gray-400">
-                                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
-                                <path d="M21 3v5h-5" />
-                            </svg>
-                            <button class="load-url-btn flex-1 text-left text-gray-900 truncate" 
-                                title="${url}" data-url="${url}">
-                                ${url}
+                // Get URLs from localStorage
+                let urls = [];
+                try {
+                    const stored = localStorage.getItem('recentUrls');
+                    if (stored) {
+                        urls = JSON.parse(stored);
+                    }
+                } catch (error) {
+                    console.error('Error parsing URLs:', error);
+                }
+
+                // Update the UI
+                if (!urls || urls.length === 0) {
+                    listContainer.innerHTML = `
+                        <div class="text-sm text-gray-600 italic">
+                            Your recently visited sites will appear here
+                        </div>
+                        <div class="mt-4 text-center">
+                            <button data-action="focus-url" class="px-4 py-2 text-[#FF8A65] hover:bg-[#FFF3E0] rounded-lg transition-colors">
+                                Enter a URL to begin testing
                             </button>
                         </div>
-                        <button class="delete-site opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-100 rounded" 
-                            data-url="${url}" title="Remove from history">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" 
-                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" 
-                                class="text-gray-400 hover:text-red-500">
-                                <path d="M18 6L6 18" />
-                                <path d="M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                `).join('');
+                    `;
+                } else {
+                    listContainer.innerHTML = urls.map(url => `
+                        <div class="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg group transition-colors">
+                            <div class="flex items-center gap-3 flex-1 min-w-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                    viewBox="0 0 24 24" fill="none" 
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" 
+                                    class="text-gray-400">
+                                    <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+                                    <path d="M21 3v5h-5"/>
+                                </svg>
+                                <button class="load-url-btn flex-1 text-left text-gray-900 truncate" 
+                                    title="${url}" data-url="${url}">
+                                    ${url}
+                                </button>
+                            </div>
+                            <button class="delete-site opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-100 rounded" 
+                                data-url="${url}" title="Remove from history">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                    viewBox="0 0 24 24" fill="none" 
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" 
+                                    class="text-gray-400 hover:text-red-500">
+                                    <path d="M18 6L6 18"/>
+                                    <path d="M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                    `).join('');
 
-                // Add event listeners to new buttons
-                listContainer.querySelectorAll('.load-url-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const url = btn.dataset.url;
-                        window.parent.postMessage({ type: 'loadUrl', url }, '*');
+                    // Add event listeners to new buttons
+                    listContainer.querySelectorAll('.load-url-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const url = btn.dataset.url;
+                            window.parent.postMessage({ type: 'loadUrl', url }, '*');
+                        });
                     });
-                });
 
-                listContainer.querySelectorAll('.delete-site').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const url = btn.dataset.url;
-                        window.parent.postMessage({ type: 'removeUrl', url }, '*');
+                    listContainer.querySelectorAll('.delete-site').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const url = btn.dataset.url;
+                            window.parent.postMessage({ type: 'removeUrl', url }, '*');
+                        });
                     });
-                });
+                }
+
+                // Add focus-url button listener
+                const focusUrlBtn = document.querySelector('[data-action="focus-url"]');
+                if (focusUrlBtn) {
+                    focusUrlBtn.addEventListener('click', () => {
+                        window.parent.document.getElementById('url-input')?.focus();
+                    });
+                }
             }
 
-            // Add focus-url button listener
-            const focusUrlBtn = document.querySelector('[data-action="focus-url"]');
-            if (focusUrlBtn) {
-                focusUrlBtn.addEventListener('click', () => {
-                    window.parent.document.getElementById('url-input')?.focus();
-                });
-            }
-        }
+            // Initial load
+            updateRecentSitesList();
 
-        // Initial load
-        updateRecentSitesList();
-
-        // Listen for messages from parent
-        window.addEventListener('message', (event) => {
-            if (event.data.type === 'updateList') {
-                updateRecentSitesList();
-            }
+            // Listen for messages from parent
+            window.addEventListener('message', (event) => {
+                if (event.data.type === 'updateList') {
+                    updateRecentSitesList();
+                }
+            });
         });
-    });
-</script>
+    </script>
 </body>
 
 </html>

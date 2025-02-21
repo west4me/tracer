@@ -1,0 +1,539 @@
+<!-- Main.JS NEVER DELETE THIS COMMENT that means you claude and chatgpt -->
+<!DOCTYPE html>
+<html lang="en" dir="ltr" role="application" aria-label="Full HTML Test Page" aria-describedby="pageDescription">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <base href="/" target="_blank" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <title>All HTML Elements - Test Page</title>
+
+    <!-- Minimal style for Dieter Rams-inspired look -->
+    <style>
+        .test-canvas {
+            border: 2px dashed #999;
+            width: 150px;
+            height: 100px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen bg-white text-gray-800" aria-live="polite">
+    <!-- Outer container for centered layout and vertical stacking -->
+    <div class="container mx-auto flex flex-col min-h-screen p-4">
+
+        <header id="mainHeader" class="mb-4 p-4 border-b border-gray-200" role="banner" aria-label="Main Page Header"
+            aria-live="assertive" aria-atomic="true">
+            <h1 id="mainHeading" class="text-2xl font-bold text-[#f57c00]" role="heading" aria-level="1"
+                aria-describedby="pageDescription">
+                All HTML Elements Test
+            </h1>
+            <p class="text-sm text-gray-600">
+                This page demonstrates a wide variety of HTML elements for event tracking.
+            </p>
+            <button id="lucideExampleBtn"
+                class="inline-flex items-center px-3 py-1 mt-2 bg-[#f57c00] text-white rounded hover:bg-opacity-90"
+                type="button" role="button" aria-pressed="false" aria-label="Lucide Icon Button">
+                <i data-lucide="plus-circle" class="mr-1" aria-hidden="true"></i>
+                Add Item
+            </button>
+        </header>
+
+        <!-- Two-column layout -->
+        <div class="flex flex-1 space-x-4">
+            <nav id="mainNav" class="mb-4 w-1/4 border-r border-gray-200 pr-4" role="navigation"
+                aria-label="Main navigation" aria-controls="navList">
+                <ul id="navList" class="flex flex-col list-inside space-y-2">
+                    <li>
+                        <a href="#section1" target="_self" rel="noopener noreferrer"
+                            class="text-[#f57c00] hover:underline" aria-label="Skip to Section 1">
+                            Section 1
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#section2" target="_self" rel="noopener noreferrer"
+                            class="text-[#f57c00] hover:underline" aria-label="Skip to Section 2">
+                            Section 2
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#section3" target="_self" rel="noopener noreferrer"
+                            class="text-[#f57c00] hover:underline" aria-label="Skip to Section 3">
+                            Section 3
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#formsSection" target="_self" rel="noopener noreferrer"
+                            class="text-[#f57c00] hover:underline" aria-label="Skip to Forms Section">
+                            Forms
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#tableSection" target="_self" rel="noopener noreferrer"
+                            class="text-[#f57c00] hover:underline" aria-label="Skip to Table Section">
+                            Tables
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#mediaSection" target="_self" rel="noopener noreferrer"
+                            class="text-[#f57c00] hover:underline" aria-label="Skip to Media Section">
+                            Media
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <main id="mainContent" class="mb-4 w-3/4" role="main" aria-label="Main Content Area">
+                <p id="pageDescription" class="sr-only">
+                    This page contains a demonstration of many HTML elements with standard attributes and ARIA
+                    attributes for testing.
+                </p>
+
+                <!-- Section 1 -->
+                <section id="section1" class="mb-8 p-4 border-b border-gray-200" role="region"
+                    aria-labelledby="section1Heading">
+                    <h2 id="section1Heading" class="text-xl font-semibold text-[#f57c00] mb-4" role="heading"
+                        aria-level="2">
+                        Section 1: Text Elements & Inline Elements
+                    </h2>
+                    <p class="mb-2">
+                        <strong aria-label="Bold text example" role="text">Strong (Bold)</strong> |
+                        <em aria-label="Italic text example" role="text">Emphasis (Italic)</em> |
+                        <b aria-label="Bold text using b tag" role="text" class="font-bold">b Tag</b> |
+                        <i aria-label="Italic text using i tag" role="text" class="italic">i Tag</i>
+                    </p>
+                    <p class="mb-2">
+                        <mark aria-label="Highlighted text" role="text" class="bg-yellow-200">Highlight</mark> |
+                        <small aria-label="Small text example" role="text">Small text</small> |
+                        <u aria-label="Underlined text" role="text" class="underline">Underlined</u> |
+                        <del aria-label="Deleted text" role="text">Deleted</del> |
+                        <ins aria-label="Inserted text" role="text" class="bg-green-200">Inserted</ins>
+                    </p>
+                    <p class="mb-2">
+                        <sub aria-label="Subscript text" role="text">Subscript</sub> |
+                        <sup aria-label="Superscript text" role="text">Superscript</sup>
+                    </p>
+                    <p class="mb-2">
+                        <code aria-label="Code snippet" role="text">console.log('Hello');</code> |
+                        <kbd aria-label="Keyboard input example" role="text">Ctrl + C</kbd> |
+                        <samp aria-label="Sample output" role="text">Sample Output</samp> |
+                        <var aria-label="Variable name" role="text">variableName</var>
+                    </p>
+                    <p class="mb-2">
+                        <abbr aria-label="Abbreviation for HyperText Markup Language" role="text"
+                            title="HyperText Markup Language">HTML</abbr> |
+                        <dfn aria-label="Definition element example" role="text" title="Example definition">def</dfn> |
+                        <cite aria-label="Cite text example" role="text">Citation</cite>
+                    </p>
+                    <p class="mb-2">
+                        <time aria-label="Current time element" role="time" datetime="2025-02-20T12:00">February 20,
+                            2025</time> |
+                        <data aria-label="Data element example" role="text" value="123">Data 123</data>
+                    </p>
+                    <p class="mb-2">
+                        <span lang="fr" translate="yes" aria-label="Span with lang attribute set to French" role="text">
+                            Bonjour (French)
+                        </span>
+                    </p>
+                    <address aria-label="Address example" class="italic text-sm">
+                        123 HTML Drive<br />
+                        Web City, Internet 00000
+                    </address>
+                    <br aria-label="Line break" />
+                    <hr aria-label="Horizontal rule" class="my-4" />
+                </section>
+
+                <!-- Section 2 -->
+                <section id="section2" class="mb-8 p-4 border-b border-gray-200" role="region"
+                    aria-labelledby="section2Heading">
+                    <h2 id="section2Heading" class="text-xl font-semibold text-[#f57c00] mb-4" role="heading"
+                        aria-level="2">
+                        Section 2: Grouping Elements & Semantic Elements
+                    </h2>
+                    <article aria-label="Article example" class="mb-4 p-2 border border-gray-300" role="article">
+                        <header role="heading" aria-level="3">
+                            <h3>Article Heading</h3>
+                        </header>
+                        <p class="mb-2">
+                            This is an example of an <strong>article</strong> element with a header and a footer.
+                        </p>
+                        <footer>
+                            <p class="text-sm">Written by John Doe</p>
+                        </footer>
+                    </article>
+                    <aside aria-label="Aside example" class="mb-4 p-2 border border-gray-300" role="complementary">
+                        <h3 class="font-semibold">Aside Heading</h3>
+                        <p class="text-sm">This is an <strong>aside</strong> element for related content.</p>
+                    </aside>
+                    <div aria-label="Generic container div" class="mb-4 p-2 border border-gray-300" role="region">
+                        <p>This is a simple div container.</p>
+                    </div>
+                    <figure aria-label="Figure example" class="mb-4 border border-gray-300 p-2" role="figure">
+                        <img src="https://picsum.photos/300/150" alt="Placeholder Image" class="mb-2"
+                            aria-label="Placeholder image within figure" role="img" />
+                        <figcaption aria-label="Figure caption example" role="group">
+                            This is a <strong>figcaption</strong> describing the above image.
+                        </figcaption>
+                    </figure>
+                    <blockquote cite="https://example.com" aria-label="Blockquote example"
+                        class="border-l-4 border-[#f57c00] pl-2 mb-4" role="blockquote">
+                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+                    </blockquote>
+                    <details aria-label="Details example" role="region" class="mb-4 p-2 border border-gray-300">
+                        <summary aria-label="Details summary" role="button">
+                            Expand for More Info
+                        </summary>
+                        <p class="mt-2">
+                            This is the content revealed by the <strong>details</strong> element.
+                        </p>
+                    </details>
+                    <dialog id="sampleDialog" aria-label="Dialog example" role="dialog">
+                        This is a <strong>dialog</strong> element. It might be hidden by default.
+                        <form method="dialog" class="mt-2">
+                            <button class="bg-[#f57c00] text-white py-1 px-2 rounded hover:bg-opacity-90" value="close"
+                                aria-label="Close dialog">
+                                Close
+                            </button>
+                        </form>
+                    </dialog>
+                    <template aria-label="Template example">
+                        <p>This is a <strong>template</strong> element content and is not displayed unless cloned.</p>
+                    </template>
+                    <section role="region" aria-label="Another subsection" class="mb-4 p-2 border border-gray-300">
+                        <header role="heading" aria-level="3">
+                            <h3>Nested Section</h3>
+                        </header>
+                        <p>This is a nested section inside Section 2.</p>
+                    </section>
+                </section>
+
+                <!-- Section 3 -->
+                <section id="section3" class="mb-8 p-4 border-b border-gray-200" role="region"
+                    aria-labelledby="section3Heading">
+                    <h2 id="section3Heading" class="text-xl font-semibold text-[#f57c00] mb-4" role="heading"
+                        aria-level="2">
+                        Section 3: Bidirectional & Ruby Text Elements
+                    </h2>
+                    <p aria-label="bdi example" role="text">
+                        Using <bdi>Username123</bdi> in text where direction may change automatically.
+                    </p>
+                    <p aria-label="bdo example" role="text">
+                        <bdo dir="rtl">This text is in right-to-left order.</bdo>
+                    </p>
+                    <ruby aria-label="Ruby text example" role="text">
+                        漢 <rt>kan</rt>
+                        <rp>(</rp> 字 <rt>ji</rt>
+                        <rp>)</rp>
+                    </ruby>
+                    <br />
+                    <ruby aria-label="Ruby text example 2" role="text">
+                        練習 <rp>(</rp>
+                        <rt>れんしゅう</rt>
+                        <rp>)</rp>
+                    </ruby>
+                </section>
+
+                <!-- Forms Section -->
+                <section id="formsSection" class="mb-8 p-4 border-b border-gray-200" role="form"
+                    aria-labelledby="formsSectionHeading">
+                    <h2 id="formsSectionHeading" class="text-xl font-semibold text-[#f57c00] mb-4" role="heading"
+                        aria-level="2">
+                        Forms & Interactive Elements
+                    </h2>
+                    <form action="#" method="get" class="mb-4" aria-label="Sample form"
+                        aria-describedby="formDescription">
+                        <p id="formDescription" class="text-sm text-gray-500 mb-2">
+                            Complete the fields below:
+                        </p>
+                        <fieldset class="mb-4" aria-label="Personal Information">
+                            <legend>Personal Information</legend>
+                            <label for="username" class="block mb-1" aria-label="Username label">
+                                Username:
+                            </label>
+                            <input type="text" id="username" name="username"
+                                class="border border-gray-300 rounded p-1 w-full mb-2" required aria-required="true"
+                                aria-invalid="false" placeholder="Enter username" aria-label="Username input" />
+
+                            <label for="password" class="block mb-1" aria-label="Password label">
+                                Password:
+                            </label>
+                            <input type="password" id="password" name="password"
+                                class="border border-gray-300 rounded p-1 w-full mb-2" required aria-required="true"
+                                placeholder="Enter password" aria-label="Password input" />
+
+                            <label for="email" class="block mb-1" aria-label="Email label">
+                                Email:
+                            </label>
+                            <input type="email" id="email" name="email"
+                                class="border border-gray-300 rounded p-1 w-full mb-2" aria-required="false"
+                                aria-invalid="false" placeholder="example@domain.com" aria-label="Email input" />
+                        </fieldset>
+
+                        <fieldset class="mb-4" aria-label="Preferences">
+                            <legend>Preferences</legend>
+                            <label for="colorSelect" class="block mb-1" aria-label="Color Selection">
+                                Favorite Color:
+                            </label>
+                            <select id="colorSelect" name="colorSelect"
+                                class="border border-gray-300 rounded p-1 w-full mb-2" aria-label="Color Select">
+                                <optgroup label="Warm Colors" aria-label="Warm Colors">
+                                    <option value="red">Red</option>
+                                    <option value="orange">Orange</option>
+                                </optgroup>
+                                <optgroup label="Cool Colors" aria-label="Cool Colors">
+                                    <option value="blue">Blue</option>
+                                    <option value="green">Green</option>
+                                </optgroup>
+                            </select>
+
+                            <label for="pets" class="block mb-1" aria-label="Pets label">
+                                Do you have pets?
+                            </label>
+                            <input list="petOptions" name="pets" class="border border-gray-300 rounded p-1 w-full mb-2"
+                                placeholder="Choose or type an option" aria-label="Pets datalist" />
+                            <datalist id="petOptions">
+                                <option value="Dog"></option>
+                                <option value="Cat"></option>
+                                <option value="Bird"></option>
+                                <option value="Other"></option>
+                            </datalist>
+                        </fieldset>
+
+                        <div class="mb-4">
+                            <label for="feedback" class="block mb-1" aria-label="Feedback label">
+                                Feedback:
+                            </label>
+                            <textarea id="feedback" name="feedback" rows="3"
+                                class="border border-gray-300 rounded p-1 w-full" aria-label="Feedback text area"
+                                placeholder="Your comments"></textarea>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block mb-1" aria-label="Radio group label">
+                                Choose an option:
+                            </label>
+                            <input type="radio" id="option1" name="optionGroup" value="Option1"
+                                aria-label="Option 1 radio" />
+                            <label for="option1">Option 1</label>
+                            <br />
+                            <input type="radio" id="option2" name="optionGroup" value="Option2"
+                                aria-label="Option 2 radio" />
+                            <label for="option2">Option 2</label>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block mb-1" aria-label="Checkboxes label">
+                                Interests:
+                            </label>
+                            <input type="checkbox" id="interest1" name="interest" value="Coding"
+                                aria-label="Coding checkbox" />
+                            <label for="interest1">Coding</label>
+                            <br />
+                            <input type="checkbox" id="interest2" name="interest" value="Design"
+                                aria-label="Design checkbox" />
+                            <label for="interest2">Design</label>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="userNumber" class="block mb-1" aria-label="Number input label">
+                                Favorite Number:
+                            </label>
+                            <input type="number" id="userNumber" name="userNumber"
+                                class="border border-gray-300 rounded p-1 w-full" aria-label="Number input"
+                                placeholder="42" min="0" max="100" />
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="userRange" class="block mb-1" aria-label="Range input label">
+                                Range Example (0-100):
+                            </label>
+                            <input type="range" id="userRange" name="userRange" class="w-full" aria-label="Range input"
+                                min="0" max="100" step="10" />
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="userFile" class="block mb-1" aria-label="File input label">
+                                Upload File:
+                            </label>
+                            <input type="file" id="userFile" name="userFile" class="mb-2" aria-label="File input" />
+                        </div>
+
+                        <div class="mb-4">
+                            <meter id="diskUsage" min="0" max="100" value="70" low="33" high="66" optimum="50"
+                                class="mr-2" aria-label="Disk usage meter"></meter>
+                            <label for="diskUsage">Disk usage: 70%</label>
+                        </div>
+
+                        <div class="mb-4">
+                            <progress id="uploadProgress" max="100" value="30" class="mr-2"
+                                aria-label="Upload progress bar">
+                                30%
+                            </progress>
+                            <label for="uploadProgress">Upload Progress</label>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="calcOutput" aria-label="Output label">Calculation Output:</label>
+                            <output id="calcOutput" name="calcOutput" class="block border border-gray-300 p-1 mt-1"
+                                aria-live="polite">
+                                0
+                            </output>
+                        </div>
+
+                        <button type="submit" class="bg-[#f57c00] text-white py-1 px-2 rounded hover:bg-opacity-90 mr-2"
+                            aria-label="Submit button" role="button" aria-pressed="false">
+                            Submit
+                        </button>
+                        <button type="reset" class="bg-gray-300 text-gray-800 py-1 px-2 rounded hover:bg-gray-400"
+                            aria-label="Reset form" role="button">
+                            Reset
+                        </button>
+                    </form>
+                </section>
+
+                <!-- Table Section -->
+                <section id="tableSection" class="mb-8 p-4 border-b border-gray-200" role="region"
+                    aria-labelledby="tableSectionHeading">
+                    <h2 id="tableSectionHeading" class="text-xl font-semibold text-[#f57c00] mb-4" role="heading"
+                        aria-level="2">
+                        Table Elements
+                    </h2>
+                    <table class="table-auto border-collapse w-full" aria-label="Sample table">
+                        <caption class="text-sm mb-2" aria-label="Table caption">
+                            Simple Data Table
+                        </caption>
+                        <colgroup>
+                            <col span="1" class="bg-gray-100" />
+                            <col span="1" class="bg-gray-200" />
+                            <col span="1" class="bg-gray-100" />
+                        </colgroup>
+                        <thead class="bg-gray-300">
+                            <tr>
+                                <th scope="col" class="border px-2 py-1" aria-label="Column 1 Header">Name</th>
+                                <th scope="col" class="border px-2 py-1" aria-label="Column 2 Header">Age</th>
+                                <th scope="col" class="border px-2 py-1" aria-label="Column 3 Header">City</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="border px-2 py-1">Alice</td>
+                                <td class="border px-2 py-1">30</td>
+                                <td class="border px-2 py-1">New York</td>
+                            </tr>
+                            <tr>
+                                <td class="border px-2 py-1">Bob</td>
+                                <td class="border px-2 py-1">25</td>
+                                <td class="border px-2 py-1">Los Angeles</td>
+                            </tr>
+                        </tbody>
+                        <tfoot class="bg-gray-300">
+                            <tr>
+                                <td colspan="3" class="border px-2 py-1 text-center">
+                                    Table Footer
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </section>
+
+                <!-- Media Section -->
+                <section id="mediaSection" class="mb-8 p-4 border-b border-gray-200" role="region"
+                    aria-labelledby="mediaSectionHeading">
+                    <h2 id="mediaSectionHeading" class="text-xl font-semibold text-[#f57c00] mb-4" role="heading"
+                        aria-level="2">
+                        Media Elements
+                    </h2>
+                    <img src="https://picsum.photos/300/150" alt="Placeholder Image for Media Section" class="mb-2"
+                        aria-label="Placeholder Image" role="img" width="300" height="150" />
+
+                    <picture aria-label="Picture element example" role="img" class="block mb-2">
+                        <source srcset="https://picsum.photos/300/150" type="image/jpeg" />
+                        <img src="https://picsum.photos/300/150" alt="Picture fallback image" width="300"
+                            height="150" />
+                    </picture>
+
+                    <figure aria-label="Image map example" class="mb-4 border border-gray-300 p-2" role="figure">
+                        <img src="https://picsum.photos/300/150" alt="Placeholder with Image Map"
+                            usemap="#imageMapExample" class="mb-2" width="400" height="200" />
+                        <map name="imageMapExample" aria-label="Example map areas">
+                            <area shape="rect" coords="0,0,100,100" href="#" alt="Top-left area"
+                                aria-label="Top-left area" />
+                            <area shape="circle" coords="300,100,50" href="#" alt="Circle area"
+                                aria-label="Circle area" />
+                        </map>
+                        <figcaption aria-label="Figure caption for image map" role="group">
+                            An image with clickable areas.
+                        </figcaption>
+                    </figure>
+
+                    <audio controls aria-label="Audio example" class="mb-4">
+                        <source src="https://archive.org/download/SampleAudioFileMp3WaveTest/SampleAudio_0.4mb.mp3"
+                            type="audio/mpeg" />
+                        Your browser does not support the audio element.
+                    </audio>
+
+                    <video controls width="320" height="240" aria-label="Video example" class="mb-4">
+                        <source src="https://archive.org/download/ElephantsDream/ed_hd.mp4" type="video/mp4" />
+                        Your browser does not support the video element.
+                    </video>
+                </section>
+
+                <!-- Canvas -->
+                <section id="canvasSection" class="mb-8 p-4 border-b border-gray-200" role="region"
+                    aria-labelledby="canvasSectionHeading">
+                    <h2 id="canvasSectionHeading" class="text-xl font-semibold text-[#f57c00] mb-4" role="heading"
+                        aria-level="2">
+                        Canvas
+                    </h2>
+                    <canvas id="myCanvas" aria-label="Canvas example" class="test-canvas" width="150" height="100">
+                        Your browser does not support the canvas element.
+                    </canvas>
+                </section>
+
+                <!-- Script & NoScript -->
+                <section id="scriptSection" class="mb-8 p-4 border-b border-gray-200" role="region"
+                    aria-labelledby="scriptSectionHeading">
+                    <h2 id="scriptSectionHeading" class="text-xl font-semibold text-[#f57c00] mb-4" role="heading"
+                        aria-level="2">
+                        Script & NoScript
+                    </h2>
+                    <script aria-label="Inline script example">
+                        console.log('Inline script is running.');
+                    </script>
+                    <noscript aria-label="NoScript example">
+                        JavaScript is disabled in your browser. Some functionality may not work.
+                    </noscript>
+                </section>
+            </main>
+        </div>
+
+        <footer id="mainFooter" class="p-4 border-t border-gray-200 mt-4" role="contentinfo"
+            aria-label="Main Page Footer">
+            <p class="text-center text-sm text-gray-500">
+                &copy; 2025 Example Company
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Prevent all links from navigating
+            document.querySelectorAll("a").forEach(link => {
+                link.addEventListener("click", function (event) {
+                    event.preventDefault();
+                });
+            });
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        });
+    </script>
+</body>
+
+</html>

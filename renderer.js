@@ -206,6 +206,131 @@ function addInitialPageLoad() {
     logArea.scrollTop = logArea.scrollHeight;
 }
 
+// Modal utility function (unchanged)
+function showModal(modalId, { message = '', title = '', onConfirm = () => { }, onCancel = () => { } } = {}) {
+    const container = document.getElementById('modal-container');
+    const modal = document.getElementById(modalId);
+
+    if (!container || !modal) {
+        console.error('Modal elements not found');
+        return;
+    }
+
+    // Hide all existing modals first
+    const allModals = container.querySelectorAll('div[id$="-modal"]');
+    allModals.forEach(m => {
+        m.classList.add('hidden');
+        m.classList.remove('flex');
+        // Clear any inline styles
+        m.style.cssText = '';
+    });
+
+    // Show container and ensure it's positioned correctly
+    container.classList.remove('hidden');
+    container.classList.add('flex');
+    container.style.cssText = 'display: flex; align-items: center; justify-content: center;';
+
+    // Position the modal in the center
+    modal.classList.remove('hidden');
+    modal.style.cssText = `
+        position: relative;
+        margin: auto;
+        max-height: 90vh;
+        overflow-y: auto;
+    `;
+
+    // Handle message and title if provided
+    if (modalId === 'delete-screenshot-modal') {
+        const titleEl = modal.querySelector('#delete-screenshot-title');
+        const messageEl = modal.querySelector('#delete-screenshot-message');
+        if (titleEl && title) titleEl.textContent = title;
+        if (messageEl && message) messageEl.textContent = message;
+    } else if (message && modalId === 'alert-modal') {
+        const messageEl = document.getElementById('alert-message');
+        if (messageEl) messageEl.textContent = message;
+    }
+
+    // Handle modal buttons
+    const confirmBtn = modal.querySelector('.confirm-modal');
+    const cancelBtn = modal.querySelector('.cancel-modal');
+    const closeBtn = modal.querySelector('#close-shortcuts-modal');
+    const closeBtnX = modal.querySelector('#close-shortcuts-x');
+
+    document.querySelectorAll(".cancel-modal").forEach(button => {
+        button.addEventListener("click", () => {
+            document.getElementById("reset-log-modal").classList.add("hidden");
+            document.getElementById("modal-container").classList.add("hidden");
+        });
+    });
+
+
+    function closeModal() {
+        // Hide both container and modal
+        container.classList.add('hidden');
+        container.classList.remove('flex');
+        modal.classList.add('hidden');
+
+        // Clear styles
+        container.style.cssText = '';
+        modal.style.cssText = '';
+
+        // Clean up event listeners
+        cleanup();
+    }
+
+    function cleanup() {
+        if (confirmBtn) confirmBtn.removeEventListener('click', handleConfirm);
+        if (cancelBtn) cancelBtn.removeEventListener('click', handleCancel);
+        if (closeBtn) closeBtn.removeEventListener('click', handleCancel);
+        if (closeBtnX) closeBtnX.removeEventListener('click', handleCancel);
+
+        window.removeEventListener('keydown', handleKeydown);
+    }
+
+    function handleConfirm() {
+        if (typeof onConfirm === 'function') onConfirm();
+        closeModal();
+    }
+
+    function handleCancel() {
+        if (typeof onCancel === 'function') onCancel();
+        closeModal();
+    }
+
+    function handleKeydown(e) {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            handleCancel();
+        }
+        else if (e.key === 'Enter' && document.activeElement !== cancelBtn) {
+            e.preventDefault();
+            handleConfirm();
+        }
+        else if (e.key === 'Enter' && document.activeElement !== closeBtn) {
+            e.preventDefault();
+            handleConfirm();
+        }
+        else if (e.key === 'Enter' && document.activeElement !== closeBtnX) {
+            e.preventDefault();
+            handleConfirm();
+        }
+    }
+
+    // Add event listeners
+    if (confirmBtn) confirmBtn.addEventListener('click', handleConfirm);
+    if (cancelBtn) cancelBtn.addEventListener('click', handleCancel);
+    if (closeBtn) closeBtn.addEventListener('click', handleCancel);
+    if (closeBtnX) closeBtnX.addEventListener('click', handleCancel);
+
+    window.addEventListener('keydown', handleKeydown);
+
+    // Also handle clicking outside the modal to close
+    container.addEventListener('click', (e) => {
+        if (e.target === container) handleCancel();
+    });
+}
+
+
 function createScreenshotEvent(targetElement) {
     return {
         action: 'screenshot',
@@ -2303,6 +2428,14 @@ document.addEventListener('DOMContentLoaded', () => {
             updateLogUI(eventData);
         });
     }
+
+            document.addEventListener('keydown', (e) => {
+            if (e.key === 'F1') {
+                e.preventDefault(); // Prevent default browser help
+                showModal('keyboard-shortcuts-modal');
+            }
+        });
+
 
 
     // Adds the comment button and editing functionality to a log entry
@@ -4908,129 +5041,6 @@ ${errorData.stack}
     const modal = document.getElementById('screenshot-modal');
     const closeModal = document.getElementById('close-modal');
 
-    // Modal utility function (unchanged)
-    function showModal(modalId, { message = '', title = '', onConfirm = () => { }, onCancel = () => { } } = {}) {
-        const container = document.getElementById('modal-container');
-        const modal = document.getElementById(modalId);
-
-        if (!container || !modal) {
-            console.error('Modal elements not found');
-            return;
-        }
-
-        // Hide all existing modals first
-        const allModals = container.querySelectorAll('div[id$="-modal"]');
-        allModals.forEach(m => {
-            m.classList.add('hidden');
-            m.classList.remove('flex');
-            // Clear any inline styles
-            m.style.cssText = '';
-        });
-
-        // Show container and ensure it's positioned correctly
-        container.classList.remove('hidden');
-        container.classList.add('flex');
-        container.style.cssText = 'display: flex; align-items: center; justify-content: center;';
-
-        // Position the modal in the center
-        modal.classList.remove('hidden');
-        modal.style.cssText = `
-        position: relative;
-        margin: auto;
-        max-height: 90vh;
-        overflow-y: auto;
-    `;
-
-        // Handle message and title if provided
-        if (modalId === 'delete-screenshot-modal') {
-            const titleEl = modal.querySelector('#delete-screenshot-title');
-            const messageEl = modal.querySelector('#delete-screenshot-message');
-            if (titleEl && title) titleEl.textContent = title;
-            if (messageEl && message) messageEl.textContent = message;
-        } else if (message && modalId === 'alert-modal') {
-            const messageEl = document.getElementById('alert-message');
-            if (messageEl) messageEl.textContent = message;
-        }
-
-        // Handle modal buttons
-        const confirmBtn = modal.querySelector('.confirm-modal');
-        const cancelBtn = modal.querySelector('.cancel-modal');
-        const closeBtn = modal.querySelector('#close-shortcuts-modal');
-        const closeBtnX = modal.querySelector('#close-shortcuts-x');
-
-        document.querySelectorAll(".cancel-modal").forEach(button => {
-            button.addEventListener("click", () => {
-                document.getElementById("reset-log-modal").classList.add("hidden");
-                document.getElementById("modal-container").classList.add("hidden");
-            });
-        });
-
-
-        function closeModal() {
-            // Hide both container and modal
-            container.classList.add('hidden');
-            container.classList.remove('flex');
-            modal.classList.add('hidden');
-
-            // Clear styles
-            container.style.cssText = '';
-            modal.style.cssText = '';
-
-            // Clean up event listeners
-            cleanup();
-        }
-
-        function cleanup() {
-            if (confirmBtn) confirmBtn.removeEventListener('click', handleConfirm);
-            if (cancelBtn) cancelBtn.removeEventListener('click', handleCancel);
-            if (closeBtn) closeBtn.removeEventListener('click', handleCancel);
-            if (closeBtnX) closeBtnX.removeEventListener('click', handleCancel);
-
-            window.removeEventListener('keydown', handleKeydown);
-        }
-
-        function handleConfirm() {
-            if (typeof onConfirm === 'function') onConfirm();
-            closeModal();
-        }
-
-        function handleCancel() {
-            if (typeof onCancel === 'function') onCancel();
-            closeModal();
-        }
-
-        function handleKeydown(e) {
-            if (e.key === 'Escape') {
-                e.preventDefault();
-                handleCancel();
-            }
-            else if (e.key === 'Enter' && document.activeElement !== cancelBtn) {
-                e.preventDefault();
-                handleConfirm();
-            }
-            else if (e.key === 'Enter' && document.activeElement !== closeBtn) {
-                e.preventDefault();
-                handleConfirm();
-            }
-            else if (e.key === 'Enter' && document.activeElement !== closeBtnX) {
-                e.preventDefault();
-                handleConfirm();
-            }
-        }
-
-        // Add event listeners
-        if (confirmBtn) confirmBtn.addEventListener('click', handleConfirm);
-        if (cancelBtn) cancelBtn.addEventListener('click', handleCancel);
-        if (closeBtn) closeBtn.addEventListener('click', handleCancel);
-        if (closeBtnX) closeBtnX.addEventListener('click', handleCancel);
-
-        window.addEventListener('keydown', handleKeydown);
-
-        // Also handle clicking outside the modal to close
-        container.addEventListener('click', (e) => {
-            if (e.target === container) handleCancel();
-        });
-    }
 
     function clearAnnotations() {
         const canvas = document.getElementById('annotation-canvas');

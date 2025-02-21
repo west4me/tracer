@@ -163,38 +163,57 @@ const getIframeContext = (element) => {
 function findParentContainer(el) {
     let current = el.parentElement;
 
-    // We'll consider these tags "semantically significant"
-    const semanticallySignificant = [
-        'NAV', 'SECTION', 'ASIDE', 'HEADER', 'FOOTER', 'MAIN', 'ARTICLE', 'FORM'
-    ];
+    // Semantically significant container elements
+    const semanticallySignificant = ['NAV', 'ASIDE', 'HEADER', 'FOOTER', 'MAIN', 'ARTICLE', 'FORM', 'SECTION'];
 
     while (current) {
+        // Tag name in uppercase (to match your existing code checks)
         const tag = (current.tagName || '').toUpperCase();
         const role = current.getAttribute('role');
         const label = current.getAttribute('aria-label');
+        const labelledBy = current.getAttribute('aria-labelledby');
 
-        // If it's one of those container tags OR has a role OR an aria-label, let's return it
+        // Exclude mediaSection from being treated as the primary parent container
+        if (current.id === 'mediaSection') {
+            current = current.parentElement;
+            continue;
+        }
+
+        // If it's a significant container OR has a role/aria-label, we consider it the parent container
         if (
             semanticallySignificant.includes(tag) ||
             (role && role.trim() !== '') ||
             (label && label.trim() !== '')
         ) {
+            // Build a minimal HTML-like string (no classes)
+            // We'll convert `tag` back to lowercase to match normal HTML
+            const lowerTag = tag.toLowerCase();
+            const idPart = current.id ? ` id="${current.id}"` : '';
+            const rolePart = role ? ` role="${role}"` : '';
+            const labelPart = label ? ` aria-label="${label}"` : '';
+            const labelledByPart = labelledBy ? ` aria-labelledby="${labelledBy}"` : '';
+
+            const snippet = `<${lowerTag}${idPart}${rolePart}${labelPart}${labelledByPart}>`;
+
+            // Return your existing object + the new `snippet` field
             return {
                 tagName: tag,
                 ariaLabel: label || null,
                 role: role || null,
                 id: current.id || null,
-                className: current.className || null
+                className: current.className || null,
+
+                // The key addition: a clean HTML-like snippet
+                snippet
             };
         }
-
-        // Move up the DOM tree
         current = current.parentElement;
     }
-
-    // If we reach the top without finding anything, return null
     return null;
 }
+
+
+
 
 // Main Element Details Function
 function getElementDetails(target) {
