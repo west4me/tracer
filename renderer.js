@@ -920,6 +920,7 @@ document.getElementById('jira-settings-modal').addEventListener('click', (e) => 
 // Wire up the modal’s close button
 document.getElementById('close-jira-settings-modal').addEventListener('click', hideExportJiraSettingsModal);
 
+
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         const jiraModal = document.getElementById('jira-settings-modal');
@@ -928,6 +929,49 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+function hideKeyboardShortcutsModal() {
+    const modalContainer = document.getElementById('modal-container');
+    const keyboardShortcutsModal = document.getElementById('keyboard-shortcuts-modal');
+
+    // Remove flex display from both 
+    modalContainer.classList.remove('flex');
+    keyboardShortcutsModal.classList.remove('flex');
+
+    // Add hidden class to both
+    modalContainer.classList.add('hidden');
+    keyboardShortcutsModal.classList.add('hidden');
+
+    // Reset all styles that might have been added
+    modalContainer.style.cssText = '';
+    keyboardShortcutsModal.style.cssText = '';
+
+    // Force background removal
+    document.body.classList.remove('overflow-hidden');
+    modalContainer.style.background = 'none';
+}
+
+// Also add click outside to close
+document.getElementById('keyboard-shortcuts-modal').addEventListener('click', (e) => {
+    // Only close if clicking the backdrop (not the modal content)
+    if (e.target === e.currentTarget) {
+        hideKeyboardShortcutsModal();
+    }
+});
+
+// Wire up the modal’s close buttons
+document.getElementById('close-shortcuts-modal').addEventListener('click', hideKeyboardShortcutsModal);
+document.getElementById('close-shortcuts-x').addEventListener('click', hideKeyboardShortcutsModal);
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const shortcutsModal = document.getElementById('keyboard-shortcuts-modal');
+        if (!shortcutsModal.classList.contains('hidden')) {
+            hideKeyboardShortcutsModal();
+        }
+    }
+});
+
 
 // “Add Field” button => push a new blank row
 document.getElementById('add-jira-field').addEventListener('click', () => {
