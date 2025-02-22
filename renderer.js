@@ -1464,17 +1464,45 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add webview event listeners
     webview.addEventListener('console-message', (e) => {
         console.log('Guest page logged a message:', e.message);
-        if (e.message.includes('Error')) {
-            const errorData = {
-                message: e.message,
-                source: 'webview',
-                lineno: e.line,
-                colno: 0,
-                stack: 'From webview console'
-            };
-            window.electron.ipcRenderer.send('webview-error', errorData);
-        }
+
+        const errorData = {
+            message: e.message,
+            source: 'webview',
+            lineno: e.line || 0,
+            colno: 0,
+            stack: 'From webview console'
+        };
+
+        // Send error to the main process via IPC
+        window.electron.ipcRenderer.send('webview-error', errorData);
+
+        // Also send the error to #error-log
+        addErrorToLog(errorData);
     });
+
+
+    function addErrorToLog(errorData) {
+        const errorContainer = document.getElementById('error-log');
+        if (!errorContainer) {
+            console.error('[renderer.js] error-log element not found.');
+            return;
+        }
+
+        // Create the error entry
+        const errorEntry = document.createElement('div');
+        errorEntry.classList.add('error-entry', 'p-2', 'border-b', 'border-gray-300');
+
+        errorEntry.innerHTML = `
+        <strong class="text-red-500">Error:</strong> ${errorData.message}<br>
+        <small>Source: ${errorData.source || 'Unknown'}</small><br>
+        <small>Line: ${errorData.lineno || 'N/A'}, Column: ${errorData.colno || 'N/A'}</small>
+        <pre class="text-xs bg-gray-100 p-2 rounded">${errorData.stack || 'No stack trace available'}</pre>
+    `;
+
+        // Append error to the container
+        errorContainer.appendChild(errorEntry);
+    }
+
 
     webview.addEventListener('dom-ready', () => {
         webview.insertCSS(`
@@ -1752,13 +1780,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     ipcRenderer.on('update-error', (_, errorData) => {
+        console.log('[renderer.js] Received error from main process:', errorData);
+
         const ignoredPatterns = [
             'GUEST_VIEW_MANAGER_CALL',
             'ERR_ABORTED (-3)'
         ];
 
         if (ignoredPatterns.some(pattern => errorData.message.includes(pattern))) {
-            console.log('Filtered out error in renderer:', errorData.message);
+            console.log('[renderer.js] Filtered out error:', errorData.message);
             return;
         }
 
@@ -1773,6 +1803,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         updateErrorDrawer(); // Ensures the UI updates instantly
     });
+
 
 
     window.electron.ipcRenderer.on('screenshot-taken', (ipcEvent, base64Data) => {
