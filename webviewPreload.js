@@ -1,5 +1,6 @@
 // webviewPreload.js NEVER DELETE THIS COMMENT that means you claude and chatgpt
 const { contextBridge, ipcRenderer } = require('electron');
+
 let lastTabKeydown = null;
 let typedBuffer = '';
 let typedBufferTimer = null;
@@ -82,19 +83,35 @@ function getInputLabel(element) {
 
 ipcRenderer.send('force-window-focus');
 
-// Set up error handling
 console.error = (function (original) {
     return function (...args) {
-        ipcRenderer.sendToHost('webview-error', {
-            message: `Console Error: ${args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : arg)).join(' ')}`,
+        const errorMessage = args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : arg)).join(' ');
+
+        const ignoredPatterns = [
+            'GUEST_VIEW_MANAGER_CALL',
+            'ERR_ABORTED (-3)'
+        ];
+
+        if (ignoredPatterns.some(pattern => errorMessage.includes(pattern))) {
+            console.log('Filtered out console error in webview:', errorMessage);
+            return;
+        }
+
+        console.log('[webviewPreload.js] Sending error to main process:', errorMessage);
+
+        ipcRenderer.send('webview-error', {
+            message: `Console Error: ${errorMessage}`,
             source: location.href,
             lineno: 0,
             colno: 0,
             stack: new Error().stack || 'No stack trace available'
         });
+
         original.apply(console, args);
     };
 })(console.error);
+
+
 
 // Expose electron functionality to the window
 contextBridge.exposeInMainWorld('electron', {
@@ -104,7 +121,8 @@ contextBridge.exposeInMainWorld('electron', {
         send: (...args) => ipcRenderer.send(...args),
         sendShortcut: (shortcut) => ipcRenderer.send("shortcut-triggered", shortcut),
         sendToHost: (...args) => ipcRenderer.sendToHost(...args),
-        removeListener: (...args) => ipcRenderer.removeListener(...args)
+        removeListener: (...args) => ipcRenderer.removeListener(...args),
+        removeUrl: (url) => ipcRenderer.sendToHost('remove-url', url) 
     },
     clipboard: {
         writeText: (text) => {

@@ -64,7 +64,7 @@ function showEmptyState() {
       <circle id="eye-pupil" cx="8" cy="8" r="3" fill="#1a1a1a"/>
       <circle id="eye-highlight" cx="9" cy="7" r="1" fill="white"/>
   </svg>
-  <h3 class="text-xl font-semibold text-gray-700 mb-2">Ready to Start Logging</h3>
+  <h3 class="text-xl font-semibold text-gray-700 mb-2">Ready to start logging?</h3>
   <p class="text-gray-500 mb-6">Click the button below to begin tracking interactions</p>
   <button id="start-logging-btn" class="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors">
       <svg data-lucide="play" class="w-5 h-5"></svg>
@@ -1218,20 +1218,33 @@ document.addEventListener('DOMContentLoaded', () => {
     webview = document.getElementById('my-webview');
 
     window.addEventListener('message', (event) => {
+        console.log('Message received in renderer:', event.data);
+
         if (event.data.type === 'loadUrl') {
             // Since we have access to urlInput and webview here, this will work
             urlInput.value = event.data.url;
             webview.src = event.data.url;
             saveRecentUrl(event.data.url);
         } else if (event.data.type === 'removeUrl') {
+            console.log('Processing removeUrl for:', event.data.url);
+
+            // Get current URLs from localStorage
             const recentUrls = JSON.parse(localStorage.getItem('recentUrls') || '[]');
+            console.log('Current URLs in storage:', recentUrls);
+
+            // Filter out the URL to be removed
             const updatedUrls = recentUrls.filter(url => url !== event.data.url);
+            console.log('Updated URLs after removal:', updatedUrls);
+
+            // Save back to localStorage
             localStorage.setItem('recentUrls', JSON.stringify(updatedUrls));
-            webview.executeJavaScript('updateRecentSitesList()');
+
+            // Update the UI
+            webview.executeJavaScript('updateRecentSitesList();');
+
             showToast('URL removed from recent sites');
         }
     });
-    
 
     webview.addEventListener('did-start-loading', () => {
         const isHomePage = webview.src.toLowerCase().includes('home.html');
@@ -1275,13 +1288,56 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     webview.addEventListener('ipc-message', (event) => {
-        if (event.channel === 'shortcut-triggered' && event.args[0] === 'F1') {
-            openKeyboardShortcutsModal();
-        }
-        if (event.channel === 'log-event' && event.args[0].action === 'toggle-logging') {
-            toggleLogging();
+        if (event.channel === 'remove-url') {
+            const urlToRemove = event.args[0];
+
+            // Get current URLs
+            const recentUrls = JSON.parse(localStorage.getItem('recentUrls') || '[]');
+
+            // Filter out the URL
+            const updatedUrls = recentUrls.filter(url => url !== urlToRemove);
+
+            // Save back to localStorage
+            localStorage.setItem('recentUrls', JSON.stringify(updatedUrls));
+
+            // Use a different approach - completely refresh the list by calling the update function
+            webview.executeJavaScript(`
+            // Notify parent window to update list
+            window.parent.postMessage({ type: 'updateList' }, '*');
+            
+            // Also try to update directly
+            if (typeof updateRecentSitesList === 'function') {
+                console.log('Calling updateRecentSitesList directly');
+                updateRecentSitesList();
+            } else {
+                console.error('updateRecentSitesList function not found');
+            }
+        `);
+
+            showToast('URL removed from recent sites');
         }
     });
+
+    window.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'updateList') {
+            console.log('Received updateList message');
+            if (webview.src.includes('home.html')) {
+                // Call the function in home.html to update the list
+                webview.executeJavaScript(`
+                console.log('Refreshing recent sites list');
+                if (typeof updateRecentSitesList === 'function') {
+                    updateRecentSitesList();
+                } else {
+                    console.error('updateRecentSitesList function not found');
+                }
+            `);
+            }
+        }
+    });
+
+
+
+
     // Move this function definition up near your other function definitions
     function openKeyboardShortcutsModal() {
         const modal = document.getElementById('keyboard-shortcuts-modal');
@@ -1408,17 +1464,45 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add webview event listeners
     webview.addEventListener('console-message', (e) => {
         console.log('Guest page logged a message:', e.message);
-        if (e.message.includes('Error')) {
-            const errorData = {
-                message: e.message,
-                source: 'webview',
-                lineno: e.line,
-                colno: 0,
-                stack: 'From webview console'
-            };
-            window.electron.ipcRenderer.send('webview-error', errorData);
-        }
+
+        const errorData = {
+            message: e.message,
+            source: 'webview',
+            lineno: e.line || 0,
+            colno: 0,
+            stack: 'From webview console'
+        };
+
+        // Send error to the main process via IPC
+        window.electron.ipcRenderer.send('webview-error', errorData);
+
+        // Also send the error to #error-log
+        addErrorToLog(errorData);
     });
+
+
+    function addErrorToLog(errorData) {
+        const errorContainer = document.getElementById('error-log');
+        if (!errorContainer) {
+            console.error('[renderer.js] error-log element not found.');
+            return;
+        }
+
+        // Create the error entry
+        const errorEntry = document.createElement('div');
+        errorEntry.classList.add('error-entry', 'p-2', 'border-b', 'border-gray-300');
+
+        errorEntry.innerHTML = `
+        <strong class="text-red-500">Error:</strong> ${errorData.message}<br>
+        <small>Source: ${errorData.source || 'Unknown'}</small><br>
+        <small>Line: ${errorData.lineno || 'N/A'}, Column: ${errorData.colno || 'N/A'}</small>
+        <pre class="text-xs bg-gray-100 p-2 rounded">${errorData.stack || 'No stack trace available'}</pre>
+    `;
+
+        // Append error to the container
+        errorContainer.appendChild(errorEntry);
+    }
+
 
     webview.addEventListener('dom-ready', () => {
         webview.insertCSS(`
@@ -1696,13 +1780,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     ipcRenderer.on('update-error', (_, errorData) => {
+        console.log('[renderer.js] Received error from main process:', errorData);
+
         const ignoredPatterns = [
             'GUEST_VIEW_MANAGER_CALL',
             'ERR_ABORTED (-3)'
         ];
 
         if (ignoredPatterns.some(pattern => errorData.message.includes(pattern))) {
-            console.log('Filtered out error in renderer:', errorData.message);
+            console.log('[renderer.js] Filtered out error:', errorData.message);
             return;
         }
 
@@ -1717,6 +1803,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         updateErrorDrawer(); // Ensures the UI updates instantly
     });
+
 
 
     window.electron.ipcRenderer.on('screenshot-taken', (ipcEvent, base64Data) => {
@@ -1989,25 +2076,23 @@ document.addEventListener('DOMContentLoaded', () => {
             if (details.text) {
                 html += `
                 <span class="font-medium">Text Content:</span>
-                <span class="break-words text-left">"${details.text}"</span>`;
+                <span class="break-words text-left" style="font-size:${details.fontInfo.fontSize}; font-weight:${details.fontInfo.fontWeight}; font-style:${details.fontInfo.fontStyle}; line-height:${details.fontInfo.lineHeight}; color:${details.fontInfo.color};">"${details.text}"</span>`;
             }
-
             if (details.fontInfo) {
                 html += `
             <span class="font-medium">Font Family:</span>
-            <span class="break-words text-left">${details.fontInfo.fontFamily}</span>
+            <span class="break-words text-left" style="font-family:${details.fontInfo.fontFamily};">${details.fontInfo.fontFamily}</span>
             <span class="font-medium">Font Size:</span>
-            <span class="break-words text-left">${details.fontInfo.fontSize}</span>
+            <span class="break-words text-left" style="font-size:${details.fontInfo.fontSize};">${details.fontInfo.fontSize}</span>
             <span class="font-medium">Font Weight:</span>
-            <span class="break-words text-left">${details.fontInfo.fontWeight}</span>
+            <span class="break-words text-left" style="font-weight:${details.fontInfo.fontWeight};">${details.fontInfo.fontWeight}</span>
             <span class="font-medium">Font Style:</span>
-            <span class="break-words text-left">${details.fontInfo.fontStyle}</span>
+            <span class="break-words text-left" style="font-style:${details.fontInfo.fontStyle};">${details.fontInfo.fontStyle}</span>
             <span class="font-medium">Line Height:</span>
-            <span class="break-words text-left">${details.fontInfo.lineHeight}</span>
+            <span class="break-words text-left" style="line-height:${details.fontInfo.lineHeight};">${details.fontInfo.lineHeight}</span>
             <span class="font-medium">Color:</span>
-            <span class="break-words text-left">${details.fontInfo.color}</span>`;
+            <span class="break-words text-left" style="color:${details.fontInfo.color};">${details.fontInfo.color}</span>`;
             }
-
             // If it has a recognized ARIA role or we have role="button", show that
             if (details.role) {
                 html += `
@@ -2227,7 +2312,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (details.parentContainer) {
                 const pc = details.parentContainer;
-                let containerDesc = `<${pc.tagName.toLowerCase()}>`;
+                let containerDesc = `</${pc.tagName.toLowerCase()}>`;
                 if (pc.ariaLabel) containerDesc += ` aria-label="${pc.ariaLabel}"`;
                 if (pc.role) containerDesc += ` role="${pc.role}"`;
                 if (pc.id) containerDesc += ` #${pc.id}`;
@@ -3344,699 +3429,223 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let htmlReport = `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>tracer - Interactive Test Report</title>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script src="https://unpkg.com/lucide@latest"></script>
-        <style>
-            :root {
-                --color-primary: #FF8A65;
-                --color-secondary: #8A5A44;
-                --color-accent: #AF4F41;
-                --color-neutral: #E5E5E5;
-            }
-
-            body {
-                font-family: 'Inter', sans-serif;
-                line-height: 1.6;
-                color: #1a1a1a;
-                background: #fafafa;
-            }
-
-            .timeline-item {
-                position: relative;
-                padding-left: 2rem;
-                margin-bottom: 2rem;
-                transition: transform 0.2s ease;
-            }
-
-            .timeline-item::before {
-                content: '';
-                position: absolute;
-                left: 0;
-                top: 0;
-                height: 100%;
-                width: 2px;
-                background: var(--color-primary);
-                opacity: 0.3;
-            }
-
-            .timeline-item::after {
-                content: '';
-                position: absolute;
-                left: -4px;
-                top: 0;
-                width: 10px;
-                height: 10px;
-                border-radius: 50%;
-                background: var(--color-primary);
-            }
-
-            .timeline-item:hover {
-                transform: translateX(4px);
-            }
-
-            .action-card {
-                background: white;
-                border-radius: 8px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                overflow: hidden;
-                transition: all 0.3s ease;
-            }
-
-            .action-card:hover {
-                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            }
-
-            .element-capture-container {
-                position: relative;
-                overflow: hidden;
-                border-radius: 4px;
-                background: #f5f5f5;
-                display: inline-block;
-            }
-
-            .element-capture-container img {
-                width: auto;
-                height: auto;
-                display: block;
-            }
-
-            .screenshot-container {
-                position: relative;
-                overflow: hidden;
-                border-radius: 4px;
-                background: #f5f5f5;
-            }
-
-            .screenshot-container img {
-                max-width: 100%;
-                height: auto;
-                transition: transform 0.3s ease;
-            }
-
-            .screenshot-container:hover img {
-                transform: scale(1.05);
-            }
-
-            .tag {
-                display: inline-block;
-                padding: 0.25rem 0.75rem;
-                border-radius: 999px;
-                font-size: 0.875rem;
-                font-weight: 500;
-            }
-
-            .tag-click { background: #E8F5E9; color: #2E7D32; }
-            .tag-input { background: #E3F2FD; color: #1565C0; }
-            .tag-page { background: #FFF3E0; color: #F57C00; }
-            .tag-key { background: #F3E5F5; color: #7B1FA2; }
-            .tag-select { background: #FCE4EC; color: #C2185B; }
-            .tag-focus { background: #E8EAF6; color: #3F51B5; }
-
-            .details-grid {
-                display: grid;
-                grid-template-columns: 120px 1fr;
-                gap: 0.5rem 1rem;
-                align-items: start;
-                padding: 0.5rem;
-                background: #f9fafb;
-                border-radius: 4px;
-                margin-top: 1rem;
-            }
-
-            .details-grid > span:nth-child(odd) {
-                font-weight: 500;
-                color: #4B5563;
-            }
-
-            .code-block {
-                font-family: monospace;
-                background: #1a1a1a;
-                color: #fff;
-                padding: 0.5rem;
-                border-radius: 4px;
-                font-size: 0.875rem;
-                white-space: pre-wrap;
-                word-break: break-all;
-            }
-
-            .stat-card {
-                background: white;
-                border-radius: 8px;
-                padding: 1.5rem;
-                text-align: center;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                transition: transform 0.2s ease;
-            }
-
-            .stat-card:hover {
-                transform: translateY(-2px);
-            }
-
-            .stat-value {
-                font-size: 2rem;
-                font-weight: 600;
-                color: var(--color-primary);
-                line-height: 1;
-            }
-
-            .stat-label {
-                color: #666;
-                font-size: 0.875rem;
-                margin-top: 0.5rem;
-            }
-
-            .tab-focus-info {
-                background: #F8FAFD;
-                border-left: 3px solid var(--color-accent);
-                padding: 1rem;
-                border-radius: 0 4px 4px 0;
-                margin-top: 0.5rem;
-            }
-
-            .tab-focus-info .element-info {
-                display: grid;
-                grid-template-columns: 120px 1fr;
-                gap: 0.5rem;
-                padding: 0.5rem;
-                background: rgba(255,255,255,0.5);
-                border-radius: 4px;
-                margin-top: 0.5rem;
-            }
-
-            .aria-info {
-                background: #F8FAFD;
-                border-left: 3px solid var(--color-primary);
-                padding: 0.75rem;
-                margin-top: 0.5rem;
-                border-radius: 0 4px 4px 0;
-            }
-
-            .image-info {
-                width: 100%;
-                margin-top: 1rem;
-                padding: 1rem;
-                background: #F8FAFD;
-                border-radius: 4px;
-            }
-
-            .image-thumbnail {
-                width: 120px;
-                height: 120px;
-                object-fit: cover;
-                border-radius: 4px;
-                cursor: zoom-in;
-                transition: transform 0.2s ease;
-            }
-
-            .image-thumbnail:hover {
-                transform: scale(1.1);
-            }
-
-            #imgModal {
-                position: fixed;
-                inset: 0;
-                background: rgba(0,0,0,0.9);
-                display: none;
-                align-items: center;
-                justify-content: center;
-                z-index: 50;
-            }
-
-            #imgModal img {
-                max-width: 90vw;
-                max-height: 90vh;
-                object-fit: contain;
-                border-radius: 4px;
-            }
-
-            .select-info {
-                background: #FCE4EC;
-                border-left: 3px solid #C2185B;
-                padding: 0.75rem;
-                margin-top: 0.5rem;
-                border-radius: 0 4px 4px 0;
-            }
-
-            .validation-state {
-                display: inline-flex;
-                align-items: center;
-                gap: 0.5rem;
-                padding: 0.25rem 0.5rem;
-                border-radius: 4px;
-                font-size: 0.875rem;
-            }
-
-            .validation-valid {
-                background: #E8F5E9;
-                color: #2E7D32;
-            }
-
-            .validation-invalid {
-                background: #FFEBEE;
-                color: #C62828;
-            }
-
-            .section-label {
-                font-size: 0.75rem;
-                text-transform: uppercase;
-                color: #6B7280;
-                letter-spacing: 0.05em;
-                margin-top: 1rem;
-                margin-bottom: 0.5rem;
-            }
-
-            .element-details {
-                background: #F9FAFB;
-                border-radius: 4px;
-                padding: 1rem;
-                margin-top: 1rem;
-            }
-
-            .capture-container {
-                display: inline-block;
-                background: white;
-                padding: 0.5rem;
-                border-radius: 4px;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            }
-
-            .capture-label {
-                text-align: center;
-                color: #6B7280;
-                font-size: 0.875rem;
-                margin-top: 0.5rem;
-            }
-        </style>
-        </head>
-        <body class="min-h-screen">
-        <!-- Header with Stats -->
-        <header class="bg-white border-b border-gray-200 py-8">
-            <div class="container mx-auto px-6 max-w-6xl">
-                <div class="flex items-center justify-between mb-8">
-                    <div class="flex items-center gap-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="32" height="32" class="text-[--color-primary]">
-                            <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.2"/>
-                            <circle cx="8" cy="8" r="3" fill="currentColor"/>
-                            <circle cx="9" cy="7" r="1" fill="white"/>
-                        </svg>
-                        <h1 class="text-2xl font-bold">tracer Report</h1>
-                    </div>
-                    <span class="text-gray-500">Generated: ${new Date().toLocaleString()}</span>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div class="stat-card">
-                        <div class="stat-value">${eventLog.length}</div>
-                        <div class="stat-label">Total Actions</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${formatDuration(eventLog)}</div>
-                        <div class="stat-label">Duration</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${countUniquePages(eventLog)}</div>
-                        <div class="stat-label">Pages Visited</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">${eventLog.filter(e => e.screenshot || e.elementCapture).length}</div>
-                        <div class="stat-label">Visual Captures</div>
-                    </div>
-                </div>
+       <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>tracer Report</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 20px;
+      background: #ffffff;
+      color: #1a1a1a;
+    }
+    h1 {
+      font-size: 28px;
+      margin-bottom: 5px;
+    }
+    .report-header {
+      border-bottom: 2px solid #1a1a1a;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+    }
+    .stats {
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .event {
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 12px;
+      margin-bottom: 15px;
+      background: #f9f9f9;
+    }
+    .details-grid {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      row-gap: 6px;
+      column-gap: 10px;
+      font-size: 14px;
+    }
+    .details-grid .label {
+      font-weight: 600;
+    }
+    .section {
+      margin-top: 10px;
+    }
+    /* Thumbnail style: fixed max-width; no hover zoom */
+    .static-img {
+      max-width: 200px;
+      height: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-top: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="report-header">
+    <h1>tracer Report</h1>
+    <p>Generated: ${new Date().toLocaleString()}</p>
+    <p class="stats">
+      Total Actions: ${eventLog.length} | Duration: ${formatDuration(eventLog)} | Pages Visited: ${countUniquePages(eventLog)} | Visual Captures: ${eventLog.filter(e => e.screenshot || e.elementCapture).length}
+    </p>
+  </div>
+  <div class="events">
+    ${eventLog.map((item, index) => {
+      return `
+        <div class="event">
+          <div class="details-grid">
+            <div class="label">Event #:</div>
+            <div>${index + 1}</div>
+            ${generateDetailedContent(item)}
+          </div>
+          ${item.screenshot ? `
+            <div class="section">
+              <div class="label">Screenshot:</div>
+              <a href="#" onclick="openFullImage('data:image/png;base64,${item.screenshot}'); return false;">
+                <img class="static-img" src="data:image/png;base64,${item.screenshot}" alt="Screenshot">
+              </a>
             </div>
-        </header>
-
-        <!-- Timeline -->
-        <main class="container mx-auto px-6 max-w-6xl py-12">
-            <div class="space-y-6">
-                ${eventLog.map((item, index) => {
-                    const timeStr = formatTimestamp(item.timestamp);
-                    const actionType = item.action.toLowerCase();
-                    let tagClass = '';
-
-                    switch (actionType) {
-                        case 'click': tagClass = 'tag-click'; break;
-                        case 'input-change': tagClass = 'tag-input'; break;
-                        case 'page-loaded': tagClass = 'tag-page'; break;
-                        case 'keydown': tagClass = 'tag-key'; break;
-                        case 'select': tagClass = 'tag-select'; break;
-                        case 'tab-focus': tagClass = 'tag-focus'; break;
-                        default: tagClass = 'bg-gray-100 text-gray-700';
-                    }
-
-                    return `
-                    <div class="timeline-item">
-                        <div class="action-card p-6">
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="flex items-center gap-3">
-                                    <span class="tag ${tagClass}">${item.action}</span>
-                                    <span class="text-sm text-gray-500">#${index + 1}</span>
-                                </div>
-                                <time class="text-sm text-gray-500">${timeStr}</time>
-                            </div>
-
-                            ${generateDetailedContent(item)}
-
-
-                                ${item.elementCapture ? `
-                                    <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-                                        <h4 class="text-lg font-semibold mb-3">
-                                            <div class="flex items-center gap-2">
-                                                <svg data-lucide="scan" class="w-5 h-5"></svg>
-                                                Element Capture
-                                            </div>
-                                        </h4>
-                                        <div class="capture-container">
-                                            <img src="data:image/png;base64,${item.elementCapture}" 
-                                                alt="Captured element"
-                                                style="width: auto; height: auto; max-width: 100%;"
-                                                onclick="showModalImage(this.src)"
-                                                loading="lazy">
-                                        </div>
-                                    </div>
-                                    ` : ''}
-
-                                    ${item.screenshot ? `
-                                    <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-                                        <h4 class="text-lg font-semibold mb-3">
-                                            <div class="flex items-center gap-2">
-                                                <svg data-lucide="camera" class="w-5 h-5"></svg>
-                                                Screenshot
-                                            </div>
-                                        </h4>
-                                        <div class="screenshot-container">
-                                            <img src="data:image/png;base64,${item.screenshot}" 
-                                                alt="Page screenshot"
-                                                class="rounded shadow-sm cursor-zoom-in"
-                                                onclick="showModalImage(this.src)"
-                                                loading="lazy">
-                                        </div>
-                                    </div>
-                                    ` : ''}
-
-                            ${item.comments && item.comments.length > 0 ? `
-                            <div class="mt-4">
-                                <div class="section-label">Comments</div>
-                                <div class="space-y-3">
-                                    ${item.comments.map(comment => `
-                                    <div class="p-3 bg-gray-50 rounded">
-                                        <div class="prose prose-sm">${comment.text}</div>
-                                        <div class="text-xs text-gray-500 mt-2">
-                                            ${new Date(comment.timestamp).toLocaleString()}
-                                        </div>
-                                    </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                            ` : ''}
-                        </div>
-                    </div>`;
-                }).join('')}
+          ` : ''}
+          ${item.elementCapture ? `
+            <div class="section">
+              <div class="label">Element Capture:</div>
+              <a href="#" onclick="openFullImage('data:image/png;base64,${item.elementCapture}'); return false;">
+                <img class="static-img" src="data:image/png;base64,${item.elementCapture}" alt="Element Capture">
+              </a>
             </div>
-        </main>
-
-        <!-- Image Modal -->
-        <div id="imgModal" class="fixed inset-0 bg-black bg-opacity-90 hidden items-center justify-center z-50">
-            <button onclick="hideModalImage()" class="absolute top-4 right-4 text-white hover:text-gray-300">
-                <svg data-lucide="x" width="24" height="24"></svg>
-            </button>
-            <img src="" alt="Full size capture" class="rounded-lg max-w-[90vw] max-h-[90vh] object-contain">
+          ` : ''}
+          ${item.comments && item.comments.length > 0 ? `
+            <div class="section">
+              <div class="label">Comments:</div>
+              ${item.comments.map(comment => `
+                <div>
+                  <p>${comment.text}</p>
+                  <p style="font-size:12px; color:#666;">${new Date(comment.timestamp).toLocaleString()}</p>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
         </div>
+      `;
+    }).join('')}
+  </div>
+  <script>
+    function openFullImage(dataUrl) {
+      var newWin = window.open();
+      if (newWin) {
+        newWin.document.write('<html><head><title>Full Size Image</title></head><body style="margin:0; display:flex; align-items:center; justify-content:center; background:#000;"><img src="' + dataUrl + '" style="max-width:100%; max-height:100%;"/></body></html>');
+      } else {
+        alert('Popup blocked. Please allow popups for this report to view full size images.');
+      }
+    }
+  </script>
+</body>
+</html>
+`;
 
-        <script>
-            function showModalImage(src) {
-                const modal = document.getElementById('imgModal');
-                const img = modal.querySelector('img');
-                const canvas = document.getElementById('annotation-canvas');
-                const toolbar = document.getElementById('annotation-toolbar');
-
-                img.src = src;
-                modal.style.display = 'flex';
-            }
-
-            if (src.includes('screenshot')) {
-                    toolbar.style.display = 'flex';
-                    canvas.style.display = 'block';
-                } else {
-                    toolbar.style.display = 'none';
-                    canvas.style.display = 'none';
-                }
-
-            function hideModalImage() {
-                document.getElementById('imgModal').style.display = 'none';
-            }
-
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') hideModalImage();
-            });
-
-            lucide.createIcons();
-        </script>
-        </body>
-        </html>`;
-
-        // Generate detailed content for each action type
+        // Updated generateDetailedContent() for the HTML export:
         function generateDetailedContent(item) {
-            let content = '<div class="space-y-4">';
+            let content = `<div class="details-grid">`;
 
-            if (item.details) {
-                content += '<div class="details-grid">';
+            // Always include the basic event details.
+            content += `<div class="label">Action:</div><div>${item.action}</div>`;
+            content += `<div class="label">Timestamp:</div><div>${formatTimestamp(item.timestamp)}</div>`;
 
-                switch (item.action.toLowerCase()) {
-                    case 'page-loaded':
-                        content += `
-                       <span>Page Title:</span>
-                       <span class="break-words text-left">"${item.title || 'Untitled'}"</span>
-                       ${item.url ? `
-                       <span>URL:</span>
-                       <a href="${item.url}" class="text-blue-600 hover:text-blue-800 break-all" target="_blank">
-                           ${item.url}
-                       </a>` : ''}
-                   `;
-                        break;
-
-                    case 'click':
-                        const details = item.details;
-                        content += `
-                       <span>Element:</span>
-                       <code class="bg-gray-100 px-2 py-1 rounded text-sm">&lt;${details.tagName.toLowerCase()}&gt;</code>
-                       
-                       ${details.id ? `
-                       <span>ID:</span>
-                       <span>${details.id}</span>` : ''}
-                       
-                       ${details.className ? `
-                       <span>Class:</span>
-                       <span>${details.className}</span>` : ''}
-                       
-                       ${details.text ? `
-                       <span>Text Content:</span>
-                       <span class="break-words text-left">"${details.text}"</span>` : ''}
-                                              
-
-                       ${details.xpath ? `
-                       <span>XPath:</span>
-                       <code class="break-all bg-gray-100 px-2 py-1 rounded text-sm">${details.xpath}</code>` : ''}
-                   `;
-
-                        if (details.fontInfo) {
-                            content += `
-                            <div class="font-medium">Font Family:</div>
-                            <div>${details.fontInfo.fontFamily}</div>
-                            <div class="font-medium">Font Size:</div>
-                            <div>${details.fontInfo.fontSize}</div>
-                            <div class="font-medium">Font Weight:</div>
-                            <div>${details.fontInfo.fontWeight}</div>
-                            <div class="font-medium">Font Style:</div>
-                            <div>${details.fontInfo.fontStyle}</div>
-                            <div class="font-medium">Line Height:</div>
-                            <div>${details.fontInfo.lineHeight}</div>
-                            <div class="font-medium">Color:</div>
-                            <div>${details.fontInfo.color}</div>`;
-                        }
-
-                        if (details.tagName === 'IMG') {
-                            content += `
-                       <div class="col-span-2 image-info">
-                           <div class="flex items-start gap-4">
-                               <div class="w-32 h-32 flex-shrink-0">
-                                   <img src="${details.src}" 
-                                        alt="${details.alt || 'Clicked image'}"
-                                        class="w-full h-full object-cover rounded cursor-zoom-in shadow-sm"
-                                        onclick="showModalImage('${details.src}')"
-                                        loading="lazy">
-                               </div>
-                               <div class="space-y-2">
-                                   <div><span class="font-medium">Alt Text:</span> ${details.alt || '[No Alt Text]'}</div>
-                                   <div><span class="font-medium">Dimensions:</span> ${details.width}×${details.height}px</div>
-                                   <div>
-                                       <span class="font-medium">Image URL:</span>
-                                       <a href="${details.src}" class="text-blue-600 hover:text-blue-800 break-all ml-2" target="_blank">
-                                           ${details.src}
-                                       </a>
-                                   </div>
-                                   ${details.loading ? `<div><span class="font-medium">Loading:</span> ${details.loading}</div>` : ''}
-                                   ${details.caption ? `<div><span class="font-medium">Caption:</span> "${details.caption}"</div>` : ''}
-                               </div>
-                           </div>
-                       </div>`;
-                        }
-
-                        // Only show accessibility info for interactive elements
-                        const isInteractive = ['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA'].includes(details.tagName);
-                        if (isInteractive && (details.ariaLabel || details.role || details.required !== undefined || details.disabled !== undefined)) {
-                            content += `
-                       <div class="col-span-2">
-                           <div class="aria-info">
-                               <div class="section-label">Accessibility Information</div>
-                               <div class="grid grid-cols-[120px,1fr] gap-2">
-                                   ${details.ariaLabel ? `
-                                   <span class="font-medium">ARIA Label:</span>
-                                   <span>${details.ariaLabel}</span>` : ''}
-                                   
-                                   ${details.role ? `
-                                   <span class="font-medium">Role:</span>
-                                   <span>${details.role}</span>` : ''}
-                                   
-                                   ${details.required !== undefined ? `
-                                   <span class="font-medium">Required:</span>
-                                   <span>${details.required ? 'Yes' : 'No'}</span>` : ''}
-                                   
-                                   ${details.disabled !== undefined ? `
-                                   <span class="font-medium">Disabled:</span>
-                                   <span>${details.disabled ? 'Yes' : 'No'}</span>` : ''}
-                               </div>
-                           </div>
-                       </div>`;
-                        }
-                        break;
-
-                    case 'select':
-                        content += `
-                       <div class="col-span-2 select-info">
-                           <div class="section-label">Selection Details</div>
-                           <div class="grid grid-cols-[120px,1fr] gap-2">
-                               <span class="font-medium">Selected Value:</span>
-                               <span>${item.selectedValue || '[None]'}</span>
-                               
-                               <span class="font-medium">Selected Text:</span>
-                               <span>"${item.selectedText || '[None]'}"</span>
-                               
-                               ${item.details?.name ? `
-                               <span class="font-medium">Field Name:</span>
-                               <span>${item.details.name}</span>` : ''}
-                               
-                               ${item.details?.multiple ? `
-                               <span class="font-medium">Multiple Select:</span>
-                               <span>Yes</span>` : ''}
-                           </div>
-                       </div>
-                   `;
-                        break;
-
-                    case 'input-change':
-                        const inputDetails = item.details;
-                        content += `
-                       <span>Input Type:</span>
-                       <span>${inputDetails.inputType || 'text'}</span>
-                       
-                       ${inputDetails.value && inputDetails.inputType !== 'password' ? `
-                       <span>Value:</span>
-                       <span class="break-words text-left">"${inputDetails.value}"</span>` : ''}
-                       
-                       ${inputDetails.name ? `
-                       <span>Name:</span>
-                       <span>${inputDetails.name}</span>` : ''}
-
-                       ${inputDetails.placeholder ? `
-                       <span>Placeholder:</span>
-                       <span>${inputDetails.placeholder}</span>` : ''}
-                   `;
-
-                        if (inputDetails.validationState) {
-                            content += `
-                       <div class="col-span-2 mt-2">
-                           <div class="section-label">Validation Status</div>
-                           <div class="space-y-1">
-                               ${Object.entries(inputDetails.validationState)
-                                    .filter(([key, value]) => value !== false)
-                                    .map(([key, value]) => `
-                                       <div class="validation-state ${value === true ? 'validation-valid' : 'validation-invalid'}">
-                                           ${key.replace(/([A-Z])/g, ' $1').toLowerCase()}: ${value}
-                                       </div>
-                                   `).join('')}
-                           </div>
-                       </div>`;
-                        }
-                        break;
-
-                    case 'tab-focus':
-                        content += `
-                       <div class="col-span-2 tab-focus-info">
-                           <div class="section-label">Focus Navigation</div>
-                           <div class="space-y-4">
-                               <div class="element-info">
-                                   <span class="font-medium">From:</span>
-                                   <div>
-                                       ${item.previous ? `
-                                           <code class="bg-gray-100 px-2 py-1 rounded text-sm">&lt;${item.previous.tagName.toLowerCase()}&gt;</code>
-                                           ${item.previous.type ? `<span class="text-gray-500 ml-2">type: ${item.previous.type}</span>` : ''}
-                                           ${item.previous.name ? `<span class="text-gray-500 ml-2">name: ${item.previous.name}</span>` : ''}
-                                           ${item.previous.value ? `<span class="text-gray-500 ml-2">value: "${item.previous.value}"</span>` : ''}
-                                       ` : '[Start of document]'}
-                                   </div>
-                               </div>
-                               
-                               <div class="element-info">
-                                   <span class="font-medium">To:</span>
-                                   <div>
-                                       ${item.newElement ? `
-                                           <code class="bg-gray-100 px-2 py-1 rounded text-sm">&lt;${item.newElement.tagName.toLowerCase()}&gt;</code>
-                                           ${item.newElement.type ? `<span class="text-gray-500 ml-2">type: ${item.newElement.type}</span>` : ''}
-                                           ${item.newElement.name ? `<span class="text-gray-500 ml-2">name: ${item.newElement.name}</span>` : ''}
-                                           ${item.newElement.value ? `<span class="text-gray-500 ml-2">value: "${item.newElement.value}"</span>` : ''}
-                                       ` : '[End of document]'}
-                                   </div>
-                               </div>
-                           </div>
-                       </div>
-                   `;
-                        break;
-
-                    case 'keydown':
-                        content += `
-                       <span>Key:</span>
-                       <span>${item.key}</span>
-                       
-                       <span>Modifiers:</span>
-                       <span>${[
-                                item.ctrlKey && 'Ctrl',
-                                item.shiftKey && 'Shift',
-                                item.altKey && 'Alt',
-                                item.metaKey && 'Meta'
-                            ].filter(Boolean).join(' + ') || 'None'}</span>
-                       
-                       ${item.code ? `
-                       <span>Code:</span>
-                       <span>${item.code}</span>` : ''}
-
-                       ${item.details?.isTextInput !== undefined ? `
-                       <span>Text Input:</span>
-                       <span>${item.details.isTextInput ? 'Yes' : 'No'}</span>` : ''}
-                   `;
-                        break;
+            if (item.action === 'page-loaded') {
+                if (item.title) {
+                    content += `<div class="label">Page Title:</div><div>${item.title}</div>`;
                 }
-                content += '</div>';
+                if (item.url) {
+                    content += `<div class="label">URL:</div><div>${item.url}</div>`;
+                }
             }
-            content += '</div>';
+
+            if (item.action === 'click' && item.details) {
+                const d = item.details;
+                content += `<div class="label">Element:</div><div>&lt;${d.tagName.toLowerCase()}&gt;</div>`;
+                if (d.text) {
+                    content += `<div class="label">Text Content:</div><div style="font-size:${d.fontInfo.fontSize}; font-weight:${d.fontInfo.fontWeight}; font-style:${d.fontInfo.fontStyle}; line-height:${d.fontInfo.lineHeight}; color:${d.fontInfo.color};">${d.text}</div>`;
+                }
+                if (d.fontInfo) {
+                    content += `<div class="label">Font Family:</div><div style="min-width: 500px; font-family:${d.fontInfo.fontFamily};">${d.fontInfo.fontFamily}</div>`;
+                    content += `<div class="label">Font Size:</div><div style="min-width: 500px; font-size:${d.fontInfo.fontSize};">${d.fontInfo.fontSize}</div>`;
+                    content += `<div class="label">Font Weight:</div><div style="min-width: 500px; font-weight:${d.fontInfo.fontWeight};">${d.fontInfo.fontWeight}</div>`;
+                    content += `<div class="label">Font Style:</div><div style="min-width: 500px; font-style:${d.fontInfo.fontStyle};">${d.fontInfo.fontStyle}</div>`;
+                    content += `<div class="label">Line Height:</div><div style="min-width: 500px; line-height:${d.fontInfo.lineHeight};">${d.fontInfo.lineHeight}</div>`;
+                    content += `<div class="label">Color:</div><div style="min-width: 500px; color:${d.fontInfo.color};">${d.fontInfo.color}</div>`;
+                }
+                if (d.role) {
+                    content += `<div class="label">Role:</div><div>${d.role}</div>`;
+                }
+                if (d.ariaLabel) {
+                    content += `<div class="label">ARIA Label:</div><div>${d.ariaLabel}</div>`;
+                }
+                if (d.parentContainer) {
+                    const pc = d.parentContainer;
+                    let parentDesc = `<${pc.tagName.toLowerCase()}`;
+                    if (pc.ariaLabel) parentDesc += ` aria-label="${pc.ariaLabel}"`;
+                    if (pc.role) parentDesc += ` role="${pc.role}"`;
+                    if (pc.id) parentDesc += ` id="${pc.id}"`;
+                    if (pc.className) parentDesc += ` class="${pc.className}"`;
+                    parentDesc += '>'; // Open tag
+                    parentDesc += `</${pc.tagName.toLowerCase()}>`; // Correctly close the tag dynamically
+                    content += `<div class="label">Parent Container:</div><div>${parentDesc}</div>`;                    
+                }
+                if (d.tagName.toUpperCase() === 'IMG') {
+                    content += `<div class="label">Alt Text:</div><div>${d.alt}</div>`;
+                    content += `<div class="label">Dimensions:</div><div>${d.width} x ${d.height}px</div>`;
+                    if (d.caption) {
+                        content += `<div class="label">Caption:</div><div>${d.caption}</div>`;
+                    }
+                    if (d.src) {
+                        content += `<div class="label">Image Source:</div><div>${d.src}</div>`;
+                    }
+                }
+                if (d.tagName.toUpperCase() === 'A') {
+                    if (d.href) {
+                        content += `<div class="label">Href:</div><div>${d.href}</div>`;
+                    }
+                    if (d.target) {
+                        content += `<div class="label">Target:</div><div>${d.target}</div>`;
+                    }
+                }
+            }
+
+            if (item.action === 'input-change' && item.details) {
+                const d = item.details;
+                content += `<div class="label">Element:</div><div>&lt;${d.tagName.toLowerCase()}&gt;</div>`;
+                content += `<div class="label">Input Type:</div><div>${d.inputType}</div>`;
+                if (d.name) content += `<div class="label">Name:</div><div>${d.name}</div>`;
+                if (d.placeholder) content += `<div class="label">Placeholder:</div><div>${d.placeholder}</div>`;
+                if (d.inputType !== 'password' && d.value) {
+                    content += `<div class="label">Value:</div><div>${d.value}</div>`;
+                }
+            }
+
+            if (item.action === 'keydown' && item.details) {
+                const d = item.details;
+                content += `<div class="label">Key:</div><div>${item.key}</div>`;
+                let modifiers = "";
+                if (item.ctrlKey) modifiers += "Ctrl+";
+                if (item.shiftKey) modifiers += "Shift+";
+                if (item.altKey) modifiers += "Alt+";
+                content += `<div class="label">Modifiers:</div><div>${modifiers}</div>`;
+                content += `<div class="label">Target Element:</div><div>&lt;${d.tagName.toLowerCase()}&gt;</div>`;
+                if (d.context) {
+                    content += `<div class="label">Context:</div><div>${d.context}</div>`;
+                }
+            }
+
+            content += `</div>`;
             return content;
         }
+
 
         const blob = new Blob([htmlReport], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
@@ -4133,6 +3742,28 @@ document.addEventListener('DOMContentLoaded', () => {
             content += `
             <div class="font-medium">Section:</div>
             <div>${details.context}</div>`;
+        }
+
+        if (item.action === 'click' && item.details && item.details.fontInfo) {
+            const f = item.details.fontInfo;
+            content += `
+    <div class="font-demo" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
+        <div class="label" style="font-weight: 600; margin-bottom: 5px;">Font Demo:</div>
+        <div style="
+            font-family: ${f.fontFamily}; 
+            font-size: ${f.fontSize}; 
+            font-weight: ${f.fontWeight}; 
+            font-style: ${f.fontStyle}; 
+            line-height: ${f.lineHeight}; 
+            color: ${f.color};
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;"
+        >
+            The quick brown fox jumps over the lazy dog. 1234567890
+        </div>
+    </div>`;
         }
 
         // Element-specific details
@@ -4977,7 +4608,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ----- Global Error Logging -----
 
-    window.errorLog = [];
+    
     function logError(type, message, source, lineno, colno, error) {
         const timestamp = new Date().toLocaleTimeString();
         const errorMsg = {

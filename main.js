@@ -1,9 +1,20 @@
 // Main.JS NEVER DELETE THIS COMMENT that means you claude and chatgpt
 const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
+console.log('[main.js] Electron process started');
+
 const path = require('path');
 const windowStateKeeper = require('electron-window-state');
 let mainWindow = null;
 const { webContents } = require('electron');
+
+app.on('web-contents-created', (event, webContents) => {
+    webContents.session.setPermissionCheckHandler(() => true);
+    webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
+        console.log(`[main.js] Permission request for: ${permission}`);
+        callback(true);
+    });
+});
+
 
 function createWindow() {
     // Load the previous state with fallback to defaults
@@ -81,17 +92,14 @@ function createWindow() {
     mainWindow.loadFile('index.html');
 
     ipcMain.on('webview-error', (event, errorData) => {
-        const ignoredPatterns = [
-            'GUEST_VIEW_MANAGER_CALL',
-            'ERR_ABORTED (-3)'
-        ];
+        console.log('[main.js] Received webview error:', errorData);
 
-        if (ignoredPatterns.some(pattern => errorData.message.includes(pattern))) {
-            console.log('Filtered out error:', errorData.message);
+        if (!mainWindow) {
+            console.error('[main.js] mainWindow is undefined, cannot forward error');
             return;
         }
 
-        console.log('Error logged in main process:', errorData);
+        console.log('[main.js] Forwarding error to renderer...');
         mainWindow.webContents.send('update-error', errorData);
     });
 
