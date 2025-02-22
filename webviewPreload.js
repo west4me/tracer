@@ -104,7 +104,8 @@ contextBridge.exposeInMainWorld('electron', {
         send: (...args) => ipcRenderer.send(...args),
         sendShortcut: (shortcut) => ipcRenderer.send("shortcut-triggered", shortcut),
         sendToHost: (...args) => ipcRenderer.sendToHost(...args),
-        removeListener: (...args) => ipcRenderer.removeListener(...args)
+        removeListener: (...args) => ipcRenderer.removeListener(...args),
+        removeUrl: (url) => ipcRenderer.sendToHost('remove-url', url) 
     },
     clipboard: {
         writeText: (text) => {

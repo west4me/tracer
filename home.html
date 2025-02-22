@@ -7,12 +7,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>tracer - Interactive Testing Tool</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
+        rel="stylesheet">
     <style>
         body {
             margin: 0;
             padding: 0;
             overflow: hidden;
-            font-family: system-ui, -apple-system, sans-serif;
+            font-family: "Inter", serif;
             background-color: #fafafa;
         }
 
@@ -72,7 +77,7 @@
             <!-- Header -->
             <div class="text-left mb-16">
                 <h1 class="text-4xl font-bold mb-3 text-gray-900">
-                    Bugs? Yeah, well, you know, that's just, like, your opinion, man. We have proof.
+                    Bugs? Yeah, well, you know, that's just, like, your opinion, man.</br> We have proof.
                 </h1>
             </div>
 
@@ -89,7 +94,7 @@
                                     <path d="M3 3v18h18" />
                                     <path d="m19 9-5 5-4-4-3 3" />
                                 </svg>
-                                Recent Sites
+                                Recent tracks
                             </h2>
                         </div>
 
@@ -122,7 +127,7 @@
                                     d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                                 <circle cx="12" cy="13" r="4" />
                             </svg>
-                            Capturing Evidence
+                            Capturing evidence
                         </h2>
                         <ul class="space-y-3 text-gray-600">
                             <li class="flex items-center gap-2">
@@ -203,7 +208,7 @@
                                         L14.086,12L12,14.086L9.914,12L12,9.914z M9.402,5.512c0.091,1.03,0.507,2.014,1.23,2.941L7.086,12l4.207,4.207
                                         c0.894,0.894,1.339,1.826,1.325,2.771c-0.012,0.817-0.359,1.531-0.691,2.034L2.914,12L9.402,5.512z" />
                             </svg>
-                            JIRA Integration
+                            JIRA integration
                         </h2>
                         <p class="text-gray-600 mb-4">
                             Export your test sessions directly to JIRA with custom fields, formatted descriptions, and
@@ -228,8 +233,8 @@
             <p class="text-sm text-gray-500 mt-16">
                 For additional info, see
                 <a href="docs.html" class="underline text-[#FF8A65] hover:text-[#ff7043]">
-                    documentation
-                </a>.
+                    documentation.
+                </a>
             </p>
         </main>
     </div>
@@ -243,6 +248,8 @@
                     console.error('Container not found!');
                     return;
                 }
+                const recentUrls = JSON.parse(localStorage.getItem('recentUrls') || '[]');
+                console.log('Updating recent sites list with:', recentUrls);
 
                 // Get URLs from localStorage
                 let urls = [];
@@ -305,9 +312,11 @@
                     });
 
                     listContainer.querySelectorAll('.delete-site').forEach(btn => {
-                        btn.addEventListener('click', () => {
+                        btn.addEventListener('click', (e) => {
+                            e.stopPropagation();
                             const url = btn.dataset.url;
-                            window.parent.postMessage({ type: 'removeUrl', url }, '*');
+                            console.log('Delete button clicked, removing URL:', url);
+                            window.electron.ipcRenderer.removeUrl(url);
                         });
                     });
                 }
@@ -331,6 +340,172 @@
                 }
             });
         });
+    </script>    
+    <script>
+        // Konami Code sequence
+        const konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+        let konamiIndex = 0;
+
+        // Keep track of keys pressed
+        document.addEventListener('keydown', function (e) {
+            // Check if the key matches the expected key in sequence
+            if (e.key === konamiCode[konamiIndex]) {
+                konamiIndex++;
+                // If we've matched the full sequence
+                if (konamiIndex === konamiCode.length) {
+                    releaseBeetle();
+                    // Reset the index
+                    konamiIndex = 0;
+                }
+            } else {
+                // Reset if wrong key
+                konamiIndex = 0;
+            }
+        });
+
+        function releaseBeetle() {
+            // Create the beetle element
+            const beetle = document.createElement('div');
+            beetle.className = 'konami-beetle';
+            beetle.style.position = 'fixed';
+            beetle.style.zIndex = '1000';
+            beetle.style.width = '40px';
+            beetle.style.height = '40px';
+            beetle.style.pointerEvents = 'none'; // So it doesn't interfere with user interaction
+            beetle.style.transition = 'transform 0.1s ease';
+
+            // Random starting position on the edge of the screen
+            const startPositions = [
+                { x: -40, y: Math.random() * window.innerHeight }, // Left edge
+                { x: window.innerWidth, y: Math.random() * window.innerHeight }, // Right edge
+                { x: Math.random() * window.innerWidth, y: -40 }, // Top edge
+                { x: Math.random() * window.innerWidth, y: window.innerHeight } // Bottom edge
+            ];
+
+            const startPos = startPositions[Math.floor(Math.random() * startPositions.length)];
+            beetle.style.left = startPos.x + 'px';
+            beetle.style.top = startPos.y + 'px';
+
+            // Load the beetle SVG - assuming the beetle's natural orientation is facing upward (0 degrees)
+            beetle.innerHTML = `<img src="assets/beetle.svg" width="100%" height="100%" style="transform: rotate(90deg);" />`; // Adjust initial rotation to face right
+            document.body.appendChild(beetle);
+
+            // Keep track of beetle's position and movement
+            let pos = { x: startPos.x, y: startPos.y };
+            let destination = {
+                x: Math.random() * (window.innerWidth - 100) + 50,
+                y: Math.random() * (window.innerHeight - 100) + 50
+            };
+            let velocity = { x: 0, y: 0 };
+            let isActive = true;
+            let scuttleOffset = 0;
+            let lastTimestamp = 0;
+
+            // Animation function with timestamp for smoother animation
+            function moveBeetle(timestamp) {
+                if (!isActive) return;
+
+                // Calculate delta time for smooth animation regardless of frame rate
+                const deltaTime = lastTimestamp ? (timestamp - lastTimestamp) / 1000 : 0.016; // in seconds
+                lastTimestamp = timestamp;
+
+                // Calculate direction and distance to destination
+                const dx = destination.x - pos.x;
+                const dy = destination.y - pos.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                // If we're close to the destination, pick a new one
+                if (distance < 5) {
+                    destination = {
+                        x: Math.random() * (window.innerWidth - 100) + 50,
+                        y: Math.random() * (window.innerHeight - 100) + 50
+                    };
+                }
+
+                // Update velocity with a bit of easing
+                velocity.x = velocity.x * 0.95 + dx * 0.006;
+                velocity.y = velocity.y * 0.95 + dy * 0.006;
+
+                // Apply some max speed
+                const maxSpeed = 2;
+                const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+                if (speed > maxSpeed) {
+                    velocity.x = (velocity.x / speed) * maxSpeed;
+                    velocity.y = (velocity.y / speed) * maxSpeed;
+                }
+
+                // Update position
+                pos.x += velocity.x;
+                pos.y += velocity.y;
+
+                // Update CSS position
+                beetle.style.left = pos.x + 'px';
+                beetle.style.top = pos.y + 'px';
+
+                // Calculate angle for rotation based on movement direction
+                const angleRadians = Math.atan2(velocity.y, velocity.x);
+                const angleDegrees = angleRadians * (180 / Math.PI);
+
+                // SMOOTHER SCUTTLE: Update scuttle with smoother sine wave and speed-based amplitude
+                // Use elapsed time for consistent frequency regardless of frame rate
+                // Lower frequency (0.5-2Hz) makes it less jittery
+                const scuttleFrequency = 1.5; // Hz - lower value for smoother oscillation
+                scuttleOffset = Math.sin(timestamp * 0.002 * Math.PI * scuttleFrequency);
+
+                // Make scuttle amount proportional to speed but capped and with a minimum
+                // This ensures some movement even when nearly stopped
+                const minScuttle = 0.5;
+                const maxScuttle = 1.5;
+                const scuttleAmount = minScuttle + Math.min(maxScuttle - minScuttle, speed * 0.5);
+
+                // Apply rotation to the beetle container
+                beetle.style.transform = `rotate(${angleDegrees}deg)`;
+
+                // Apply separate scuttle effect to the SVG inside with smoother movement
+                const beetleImg = beetle.querySelector('img');
+                if (beetleImg) {
+                    beetleImg.style.transform = `rotate(90deg) translateX(${scuttleOffset * scuttleAmount}px)`;
+                }
+
+                // Check if beetle should exit the screen
+                if (pos.x < -50 || pos.x > window.innerWidth + 50 ||
+                    pos.y < -50 || pos.y > window.innerHeight + 50) {
+                    // 5% chance to exit per frame when near edge
+                    if (Math.random() < 0.05) {
+                        document.body.removeChild(beetle);
+                        isActive = false;
+                        return;
+                    }
+                }
+
+                // Schedule next animation frame
+                requestAnimationFrame(moveBeetle);
+            }
+
+            // Start the animation
+            requestAnimationFrame(moveBeetle);
+
+            // After 10-20 seconds, make beetle leave the screen
+            setTimeout(() => {
+                // Head toward an exit
+                const exits = [
+                    { x: -50, y: Math.random() * window.innerHeight },
+                    { x: window.innerWidth + 50, y: Math.random() * window.innerHeight },
+                    { x: Math.random() * window.innerWidth, y: -50 },
+                    { x: Math.random() * window.innerWidth, y: window.innerHeight + 50 }
+                ];
+
+                destination = exits[Math.floor(Math.random() * exits.length)];
+
+                // Remove after a delay to ensure it moves offscreen
+                setTimeout(() => {
+                    if (beetle.parentNode) {
+                        document.body.removeChild(beetle);
+                    }
+                    isActive = false;
+                }, 5000);
+            }, 10000 + Math.random() * 10000);
+        }
     </script>
 </body>
 

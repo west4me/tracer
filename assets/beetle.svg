@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <!-- Main body (thorax) -->
+  <ellipse cx="200" cy="150" rx="50" ry="70" fill="#543800" stroke="#000000" stroke-width="2"/>
+  
+  <!-- Head -->
+  <circle cx="200" cy="70" r="30" fill="#654200" stroke="#000000" stroke-width="2"/>
+  
+  <!-- Eyes -->
+  <ellipse cx="185" cy="60" rx="8" ry="10" fill="#000000"/>
+  <ellipse cx="215" cy="60" rx="8" ry="10" fill="#000000"/>
+  
+  <!-- Antennae -->
+  <path d="M185 45 Q165 20 155 5" fill="none" stroke="#000000" stroke-width="2"/>
+  <path d="M215 45 Q235 20 245 5" fill="none" stroke="#000000" stroke-width="2"/>
+  <circle cx="155" cy="5" r="3" fill="#000000"/>
+  <circle cx="245" cy="5" r="3" fill="#000000"/>
+  
+  <!-- Wing cases (elytra) -->
+  <path d="M160 100 Q150 150 175 220" fill="#76520E" stroke="#000000" stroke-width="2"/>
+  <path d="M240 100 Q250 150 225 220" fill="#76520E" stroke="#000000" stroke-width="2"/>
+  <!-- Wing dividing line -->
+  <path d="M200 100 L200 220" fill="none" stroke="#000000" stroke-width="1.5"/>
+  <!-- Wing patterns -->
+  <path d="M175 120 L185 140 L175 160" fill="none" stroke="#3A2100" stroke-width="1"/>
+  <path d="M225 120 L215 140 L225 160" fill="none" stroke="#3A2100" stroke-width="1"/>
+  
+  <!-- Legs (left side) -->
+  <path d="M160 110 Q120 100 100 90" fill="none" stroke="#000000" stroke-width="2.5"/>
+  <path d="M160 150 Q110 150 80 160" fill="none" stroke="#000000" stroke-width="2.5"/>
+  <path d="M160 190 Q120 200 100 220" fill="none" stroke="#000000" stroke-width="2.5"/>
+  
+  <!-- Legs (right side) -->
+  <path d="M240 110 Q280 100 300 90" fill="none" stroke="#000000" stroke-width="2.5"/>
+  <path d="M240 150 Q290 150 320 160" fill="none" stroke="#000000" stroke-width="2.5"/>
+  <path d="M240 190 Q280 200 300 220" fill="none" stroke="#000000" stroke-width="2.5"/>
+  
+  <!-- Mandibles -->
+  <path d="M190 90 Q180 100 185 110" fill="none" stroke="#000000" stroke-width="1.5"/>
+  <path d="M210 90 Q220 100 215 110" fill="none" stroke="#000000" stroke-width="1.5"/>
+  
+  <!-- Highlights for a bit of shine -->
+  <ellipse cx="190" cy="140" rx="10" ry="20" fill="#8A6800" opacity="0.6"/>
+  <ellipse cx="210" cy="140" rx="10" ry="20" fill="#8A6800" opacity="0.6"/>
+</svg>
