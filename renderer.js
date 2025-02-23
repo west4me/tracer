@@ -8,7 +8,7 @@ let isResetting = false;
 let emptyStateMessage = null;
 let isFirstLog = true;
 let urlInput;
-window.errorLog = [];
+
 // Annotation state
 let isDrawing = false;
 let currentTool = null;
@@ -43,7 +43,7 @@ let typedIssueType = '';
 let typedSummary = 'Make this a good default summary';
 
 let loggingEnabled = false;
-
+const toggleErrorDrawer = document.getElementById("toggle-error-drawer");
 
 // Load or initialize an empty array for storing previously used issue types
 let storedIssueTypes = JSON.parse(localStorage.getItem('issueTypesHistory') || '[]');
@@ -1214,6 +1214,13 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleBtn.setAttribute('title', 'Start Logging');
         lucide.createIcons();
     }
+
+    if (toggleErrorDrawer) {
+        // Set default lowered state styling
+        toggleErrorDrawer.style.transform = 'translateY(34px)';
+        toggleErrorDrawer.classList.remove("bg-red-600", "text-white", "p-2", "rounded");
+        toggleErrorDrawer.classList.add("bg-white", "border", "border-gray-300", "rounded-full", "p-1", "text-gray-700");
+    }
     urlInput = document.getElementById('url-input');
     webview = document.getElementById('my-webview');
 
@@ -1267,6 +1274,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     let previousUrl = webview.src; // store the initial URL
+    
 
     // Listen for navigation completion
     // Add this to your webview event listeners in renderer.js where you're handling navigation:
@@ -1375,7 +1383,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Make sure this is in your DOMContentLoaded or initialization section
     webview.addEventListener('ipc-message', (event) => {
-      //  console.log('Received ipc-message:', event.channel, event.args); // Add this for debugging
+        //  console.log('Received ipc-message:', event.channel, event.args); // Add this for debugging
         if (event.channel === 'shortcut-triggered' && event.args[0] === 'F1') {
             openKeyboardShortcutsModal();
         }
@@ -1450,7 +1458,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let resetLogButton = document.getElementById('reset-log');
     const errorContainer = document.getElementById("error-log");
     const errorCount = document.getElementById("error-count");
-    const toggleErrorDrawer = document.getElementById("toggle-error-drawer");
+
     const errorDrawer = document.getElementById("error-drawer");
     const errorIcon = document.getElementById("error-icon");
     const exportErrorButton = document.createElement("button");
@@ -1482,22 +1490,24 @@ document.addEventListener('DOMContentLoaded', () => {
         addErrorToLog(errorData);
     });
 
-// THIS IS WHAT ADDS THE ACTUAL ERROR TO THE ERROR DRAWER
+    // THIS IS WHAT ADDS THE ACTUAL ERROR TO THE ERROR DRAWER
     function addErrorToLog(errorData) {
-
         const errorContainer = document.getElementById('error-log');
-        if (!errorContainer) {
-            console.error('[renderer.js] error-log element not found.');
+        const toggleButton = document.getElementById('toggle-error-drawer');
+
+        if (!errorContainer || !toggleButton) {
+            console.error('[renderer.js] Required elements not found.');
             return;
         }
+
         if (!errorData.message.toLowerCase().includes('error') &&
             !errorData.type.toLowerCase().includes('error')) {
             return;
         }
 
-        if (!errorContainer) {
-            console.error('[renderer.js] error-log element not found.');
-            return;
+        // Move toggle button up when there are errors
+        if (!window.errorLog || window.errorLog.length === 0) {
+            toggleButton.style.transform = 'translateY(0)';
         }
 
         console.log("Error Data Received:", errorData);  // Debugging step
@@ -1557,7 +1567,7 @@ ${errorData.stack}`.trim();
                 copyButton.innerHTML = '<svg data-lucide="clipboard" width="16" height="16"></svg>';
                 lucide.createIcons(copyButton);  // Refresh icons again for clipboard
             }, 1500);
-            
+
             // Update button title temporarily
             const originalTitle = copyButton.title;
             copyButton.title = 'Copied!';
@@ -1622,7 +1632,7 @@ ${errorData.stack}`.trim();
             background-color: transparent;
         }
     `);
-        
+
     });
 
     webview.addEventListener('crashed', (e) => {
@@ -1652,20 +1662,21 @@ ${errorData.stack}`.trim();
         clearErrorsButton.addEventListener('click', () => {
             showModal('confirm-clear-errors-modal', {
                 onConfirm: () => {
-                    // This code runs if the user clicks "Clear Errors"
-                    window.errorLog = []; // Wipe the error log
-                    updateErrorDrawer();  // Refresh the UI to show no errors
+                    window.errorLog = [];
+                    updateErrorDrawer();
                     showToast('Errors Cleared!');
                     errorDrawer.classList.add('hidden');
                     errorIcon.setAttribute("data-lucide", "panel-bottom-open");
                     lucide.createIcons();
-                },
-                onCancel: () => {
-                    // Optionally, you can do something when cancel is clicked (or leave it empty)
+
+                    // Move toggle button back to bottom when no errors
+                    const toggleButton = document.getElementById('toggle-error-drawer');
+                    if (toggleButton) {
+                        toggleButton.style.transform = 'translateY(34px)';
+                    }
                 }
             });
         });
-
     }
 
 
@@ -1871,7 +1882,7 @@ ${errorData.stack}`.trim();
         webview.src = url;
         saveRecentUrl(url);
     });
-    
+
     ipcRenderer.on('update-error', (_, errorData) => {
         console.log('[renderer.js] Received error from main process:', errorData);
 
@@ -1950,35 +1961,35 @@ ${errorData.stack}`.trim();
                     <button
                         class="text-blue-600 hover:text-blue-800 underline flex items-center"
                         title="${isElementCapture
-                        ? 'Element capture - full size'
-                        : (activeScreenshotEvent.fullPage
-                            ? 'Full-page screenshot - full size'
-                            : 'Screenshot - full size')}"
+                ? 'Element capture - full size'
+                : (activeScreenshotEvent.fullPage
+                    ? 'Full-page screenshot - full size'
+                    : 'Screenshot - full size')}"
                     >
                         <svg
                             data-lucide="${isElementCapture
-                        ? 'scan'
-                        : (activeScreenshotEvent.fullPage ? 'camera' : 'image')}"
+                ? 'scan'
+                : (activeScreenshotEvent.fullPage ? 'camera' : 'image')}"
                             width="16"
                             height="16"
                             class="mr-2"
                         ></svg>
                         <span>
                             ${isElementCapture
-                        ? 'Capture...png'
-                        : (activeScreenshotEvent.fullPage
-                            ? 'FullScreenshot...png'
-                            : 'Screenshot...png')}
+                ? 'Capture...png'
+                : (activeScreenshotEvent.fullPage
+                    ? 'FullScreenshot...png'
+                    : 'Screenshot...png')}
                         </span>
                     </button>
                     <button
                         class="delete-screenshot-btn text-gray-500 hover:text-red-500 transition-colors"
                         title="Delete ${isElementCapture
-                        ? 'capture'
-                        : (activeScreenshotEvent.fullPage
-                            ? 'full-page screenshot'
-                            : 'screenshot')
-                    }"
+                ? 'capture'
+                : (activeScreenshotEvent.fullPage
+                    ? 'full-page screenshot'
+                    : 'screenshot')
+            }"
                     >
                         <svg data-lucide="trash" width="16" height="16"></svg>
                     </button>
@@ -2675,12 +2686,12 @@ ${errorData.stack}`.trim();
         });
     }
 
-            document.addEventListener('keydown', (e) => {
-            if (e.key === 'F1') {
-                e.preventDefault(); // Prevent default browser help
-                showModal('keyboard-shortcuts-modal');
-            }
-        });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'F1') {
+            e.preventDefault(); // Prevent default browser help
+            showModal('keyboard-shortcuts-modal');
+        }
+    });
 
 
 
@@ -2822,7 +2833,7 @@ ${errorData.stack}`.trim();
                             >
                             <div class="bg-gray-900 text-white text-[10px] px-2 py-1 rounded shadow-lg relative whitespace-nowrap">
                                 Shortcut:
-                                <kbd class="bg-gray-200 text-gray-900 px-1 py-[1px] rounded">Ctrl+Enter</kbd>
+                                <kbd class="kbc-button">Ctrl+Enter</kbd>
 
                                 <!-- Arrow pointing down -->
                                 <span class="absolute bottom-0 left-5 transform translate-y-full -translate-x-1/2 border-[6px] border-transparent border-t-gray-900"></span>
@@ -2843,7 +2854,7 @@ ${errorData.stack}`.trim();
                     <div class="flex space-x-2 text-[10px] text-gray-500 leading-tight">
                     <!-- Ctrl+K -->
                     <div class="relative group">
-                        <kbd class="bg-gray-200 px-1 py-[1px] rounded whitespace-nowrap">
+                        <kbd class="kbc-button">
                         Ctrl+K
                         </kbd>
                         <!-- Tooltip -->
@@ -2864,7 +2875,7 @@ ${errorData.stack}`.trim();
 
                     <!-- Shift+Enter -->
                     <div class="relative group">
-                        <kbd class="bg-gray-200 px-1 py-[1px] rounded whitespace-nowrap">
+                        <kbd class="kbc-button">
                         Shift+Enter
                         </kbd>
                         <!-- Tooltip -->
@@ -2885,7 +2896,7 @@ ${errorData.stack}`.trim();
 
                     <!-- Enter -->
                     <div class="relative group">
-                    <kbd class="bg-gray-200 px-1 py-[1px] rounded whitespace-nowrap">
+                    <kbd class="kbc-button">
                         Enter
                     </kbd>
                     <!-- Tooltip -->
@@ -3598,7 +3609,7 @@ ${errorData.stack}`.trim();
   </div>
   <div class="events">
     ${eventLog.map((item, index) => {
-      return `
+            return `
         <div class="event">
           <div class="details-grid">
             <div class="label">Event #:</div>
@@ -3634,7 +3645,7 @@ ${errorData.stack}`.trim();
           ` : ''}
         </div>
       `;
-    }).join('')}
+        }).join('')}
   </div>
   <script>
     function openFullImage(dataUrl) {
@@ -3696,7 +3707,7 @@ ${errorData.stack}`.trim();
                     if (pc.className) parentDesc += ` class="${pc.className}"`;
                     parentDesc += '>'; // Open tag
                     parentDesc += `</${pc.tagName.toLowerCase()}>`; // Correctly close the tag dynamically
-                    content += `<div class="label">Parent Container:</div><div>${parentDesc}</div>`;                    
+                    content += `<div class="label">Parent Container:</div><div>${parentDesc}</div>`;
                 }
                 if (d.tagName.toUpperCase() === 'IMG') {
                     content += `<div class="label">Alt Text:</div><div>${d.alt}</div>`;
@@ -4081,8 +4092,6 @@ ${errorData.stack}`.trim();
     // Attach export HTML functionality to both buttons (if they exist)
     if (exportHtmlButton) { exportHtmlButton.addEventListener('click', exportHtmlReport); }
     if (exportHtmlLogButton) { exportHtmlLogButton.addEventListener('click', exportHtmlReport); }
-
-    // document.getElementById("export-jira-log").addEventListener("click", exportJiraLog);
 
     // Remove any existing click handlers
     document.removeEventListener('click', exportJiraLog);
@@ -4709,7 +4718,7 @@ ${errorData.stack}`.trim();
 
     // ----- Global Error Logging -----
 
-    
+
     function logError(type, message, source, lineno, colno, error) {
         const timestamp = new Date().toLocaleTimeString();
         const errorMsg = {
@@ -4807,11 +4816,15 @@ ${errorData.stack}`.trim();
         errorCount.style.display = count > 0 ? "block" : "none";
 
         if (count > 0) {
-            toggleErrorDrawer.classList.add("bg-red-600", "text-white");
-            toggleErrorDrawer.classList.remove("bg-gray-200", "text-gray-700");
+            // Error state - raised position with red background
+            toggleErrorDrawer.style.transform = 'translateY(0)';
+            toggleErrorDrawer.classList.remove("bg-white", "border", "border-gray-300", "rounded-full", "p-1", "text-gray-700");
+            toggleErrorDrawer.classList.add("bg-red-600", "text-white", "p-2", "rounded");
         } else {
-            toggleErrorDrawer.classList.remove("bg-red-600", "text-white");
-            toggleErrorDrawer.classList.add("bg-gray-200", "text-gray-700");
+            // No errors - lowered position with white background
+            toggleErrorDrawer.style.transform = 'translateY(34px)';
+            toggleErrorDrawer.classList.remove("bg-red-600", "text-white", "p-2", "rounded");
+            toggleErrorDrawer.classList.add("bg-white", "border", "border-gray-300", "rounded-full", "p-1", "text-gray-700");
         }
     }
 
@@ -5348,11 +5361,21 @@ ${errorData.stack}`.trim();
             <button id="open-devtools" class="p-2 hover:bg-gray-100 rounded-lg" title="Open DevTools">
                 <svg data-lucide="code" width="20" height="20"></svg>
             </button>
+            <a id="help-icon" href="#" class="p-2 hover:bg-gray-100 rounded-lg text-gray-600 hover:text-[#FF8A65] transition-colors" title="Documentation">
+                <svg data-lucide="help-circle" width="20" height="20"></svg>
+            </a>
+
         </div>
         `;
         // Insert the viewport bar before the webview container
         container.insertBefore(viewportBar, webviewContainer);
         lucide.createIcons(viewportBar);
+
+        const helpIcon = viewportBar.querySelector('#help-icon');
+        helpIcon.addEventListener('click', (event) => {
+            event.preventDefault();
+            webview.src = 'docs.html'; // load docs.html in the same webview
+        });
 
         // Set up preset button references
         buttons = {
@@ -5477,6 +5500,7 @@ ${errorData.stack}`.trim();
         });
         resizeObserver.observe(webview);
     }
+    // Get our help icon by ID
 
     function showCustomBreakpointModal() {
         // Create an overlay that dims the background.

@@ -15,9 +15,10 @@
   },
   "dependencies": {
     "electron-window-state": "^5.0.3",
-    "sharp": "^0.33.5",
-        "jspdf": "^2.5.1",
-    "html2canvas": "^1.4.1"
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.1",
+    "keyboard-css": "^1.2.4",
+    "sharp": "^0.33.5"
   },
   "build": {
     "appId": "com.yourcompany.myelectronapp",

@@ -12,6 +12,8 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
         rel="stylesheet">
+        <link rel="stylesheet" href="./node_modules/keyboard-css/dist/css/main.min.css" />
+
     <style>
         body {
             margin: 0;
@@ -35,8 +37,8 @@
             min-height: 100vh;
             width: 100vw;
             display: flex;
-            align-items: center;
-            justify-content: center;
+            align-items: stretch;
+            overflow: auto;
         }
 
         @keyframes drawLine {
@@ -73,7 +75,7 @@
 
 <body>
     <div class="content-wrapper">
-        <main class="container mx-auto px-6 py-12 max-w-6xl">
+        <main class="container mx-auto px-6 py-8 max-w-6xl flex-1 flex flex-col">
             <!-- Header -->
             <div class="text-left mb-16">
                 <h1 class="text-4xl font-bold mb-3 text-gray-900">
@@ -82,10 +84,10 @@
             </div>
 
             <!-- Two Column Layout -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <div class="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <!-- Left Column - Recent Sites -->
                 <div class="flex flex-col justify-start">
-                    <div class="bg-white p-8 rounded-lg border border-gray-200 shadow-sm">
+                    <div class="p-6 bg-white/50 backdrop-blur-sm rounded-lg hover:bg-white/80 transition-colors duration-200">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
@@ -102,23 +104,15 @@
                         <div class="recent-sites-list space-y-3">
                             <div class="text-sm text-gray-600 italic">
                                 Your recently visited sites will appear here
-                            </div>
-
-                            <!-- Empty state with helpful action -->
-                            <div class="mt-4 text-center">
-                                <button data-action="focus-url"
-                                    class="px-4 py-2 text-[#FF8A65] hover:bg-[#FFF3E0] rounded-lg transition-colors">
-                                    Enter a URL to begin testing
-                                </button>
-                            </div>
-                        </div>
+                            </div>                            
+                        </div>                        
                     </div>
                 </div>
 
                 <!-- Right Column - Additional Information -->
                 <div class="space-y-6">
                     <!-- Capturing Evidence Section -->
-                    <div class="bg-white p-6 rounded-lg border border-gray-200">
+                    <div class="p-6 bg-white/50 backdrop-blur-sm rounded-lg hover:bg-white/80 transition-colors duration-200">
                         <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
                                 fill="none" stroke="#FF8A65" stroke-width="2" stroke-linecap="round"
@@ -131,15 +125,14 @@
                         </h2>
                         <ul class="space-y-3 text-gray-600">
                             <li class="flex items-center gap-2">
-                                <kbd class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-sm">Ctrl</kbd> +
-                                <kbd class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-sm">Space</kbd>
+                                <kbd class="kbc-button">Ctrl</kbd> +
+                                <kbd class="kbc-button">Space</kbd>
                                 to start/pause logging
                             </li>
                             <li class="flex items-center gap-2">
-                                <kbd
-                                    class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-sm flex items-center gap-1">
-                                    <span class="pr-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                <kbd class="kbc-button">
+                                
+                                        <svg class="inline" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
                                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"
                                             stroke-linecap="round" stroke-linejoin="round"
                                             class="lucide lucide-mouse-pointer-click">
@@ -150,8 +143,8 @@
                                             <path
                                                 d="M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z" />
                                         </svg>
-                                    </span>
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                               
+                                    <svg class="inline" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <path
                                             d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
@@ -161,12 +154,10 @@
                                 for viewport capture
                             </li>
                             <li class="flex items-center gap-2">
-                                Hold <kbd
-                                    class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-sm">Ctrl</kbd> +
-                                <kbd
-                                    class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-sm flex items-center gap-1">
-                                    <span class="pr-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                Hold <kbd class="kbc-button">Ctrl</kbd> +
+                                <kbd class="kbc-button">
+                                    
+                                        <svg class="inline" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
                                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"
                                             stroke-linecap="round" stroke-linejoin="round"
                                             class="lucide lucide-mouse-pointer-click">
@@ -177,8 +168,8 @@
                                             <path
                                                 d="M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z" />
                                         </svg>
-                                    </span>
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    
+                                    <svg class="inline" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <path
                                             d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
@@ -187,9 +178,9 @@
                                 </kbd>
                                 for element capture
                             </li>
-                            
+
                             <li class="flex items-center gap-2">
-                                Press <kbd class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-sm">F1</kbd>
+                                Press <kbd class="kbc-button">F1</kbd>
                                 to view all
                                 keyboard shortcuts
                             </li>
@@ -197,7 +188,7 @@
                     </div>
 
                     <!-- JIRA Integration Section -->
-                    <div class="bg-white p-6 rounded-lg border border-gray-200">
+                    <div class="p-6 bg-white/50 backdrop-blur-sm rounded-lg hover:bg-white/80 transition-colors duration-200">
                         <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900">
                             <svg fill="none" stroke="#FF8A65" stroke-width="1.5" stroke-linecap="round"
                                 stroke-linejoin="round" width="20" height="20" viewBox="0 0 24 24"
@@ -228,14 +219,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Just a small, understated link to docs at the bottom -->
-            <p class="text-sm text-gray-500 mt-16">
-                For additional info, see
-                <a href="docs.html" class="underline text-[#FF8A65] hover:text-[#ff7043]">
-                    documentation.
-                </a>
-            </p>
         </main>
     </div>
 
@@ -340,7 +323,7 @@
                 }
             });
         });
-    </script>    
+    </script>
     <script>
         // Konami Code sequence
         const konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
