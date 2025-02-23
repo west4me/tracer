@@ -8,7 +8,7 @@ let isResetting = false;
 let emptyStateMessage = null;
 let isFirstLog = true;
 let urlInput;
-
+window.errorLog = [];
 // Annotation state
 let isDrawing = false;
 let currentTool = null;
@@ -1466,6 +1466,8 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Guest page logged a message:', e.message);
 
         const errorData = {
+            type: 'Console Error',
+            timestamp: new Date().toISOString(),
             message: e.message,
             source: 'webview',
             lineno: e.line || 0,
@@ -1480,28 +1482,124 @@ document.addEventListener('DOMContentLoaded', () => {
         addErrorToLog(errorData);
     });
 
-
+// THIS IS WHAT ADDS THE ACTUAL ERROR TO THE ERROR DRAWER
     function addErrorToLog(errorData) {
+
         const errorContainer = document.getElementById('error-log');
         if (!errorContainer) {
             console.error('[renderer.js] error-log element not found.');
             return;
         }
+        if (!errorData.message.toLowerCase().includes('error') &&
+            !errorData.type.toLowerCase().includes('error')) {
+            return;
+        }
+
+        if (!errorContainer) {
+            console.error('[renderer.js] error-log element not found.');
+            return;
+        }
+
+        console.log("Error Data Received:", errorData);  // Debugging step
+
 
         // Create the error entry
         const errorEntry = document.createElement('div');
         errorEntry.classList.add('error-entry', 'p-2', 'border-b', 'border-gray-300');
 
         errorEntry.innerHTML = `
-        <strong class="text-red-500">Error:</strong> ${errorData.message}<br>
-        <small>Source: ${errorData.source || 'Unknown'}</small><br>
-        <small>Line: ${errorData.lineno || 'N/A'}, Column: ${errorData.colno || 'N/A'}</small>
-        <pre class="text-xs bg-gray-100 p-2 rounded">${errorData.stack || 'No stack trace available'}</pre>
-    `;
+<div class="flex justify-between w-full">
+    <div class="w-full">
+    <div class="flex justify-between items-start">
+        <strong class="text-red-500 block">Error: ${errorData.type} - ${errorData.timestamp}</strong>
+        <button class="copy-error-btn text-gray-500 hover:text-gray-800 p-1 rounded ml-2" title="Copy Error">
+            <svg data-lucide="clipboard" width="16" height="16"></svg>
+        </button>
+    </div>
+    <span class="error-message block">${errorData.message}</span>
+    <small class="block mt-1">Source: ${errorData.source || 'Unknown'}</small>
+    <small class="block">Line: ${errorData.lineno || 'N/A'}, Column: ${errorData.colno || 'N/A'}</small>
+    <small class="block">
+        ${errorData.stack || 'No stack trace available'}
+    </small>
+</div>
+</div>
+`;
 
+        const copyButton = errorEntry.querySelector('.copy-error-btn');
+        copyButton.addEventListener('click', () => {
+            const textToCopy = `Time: ${errorData.timestamp}
+Type: ${errorData.type}
+Message: ${errorData.message}
+Source: ${errorData.source || "unknown"}
+Location: [${errorData.lineno}:${errorData.colno}]
+Stack Trace:
+${errorData.stack}`.trim();
+
+            window.electron.clipboard.writeText(textToCopy);
+
+            // Show feedback toast
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-4 left-4 bg-cyan-600 text-white px-4 py-2 rounded shadow-lg text-sm z-50';
+            toast.textContent = 'Copied to clipboard!';
+            document.body.appendChild(toast);
+
+            // Remove toast after 2 seconds
+            setTimeout(() => {
+                toast.remove();
+            }, 2000);
+
+            // Update button icon to checkmark
+            copyButton.innerHTML = '<svg data-lucide="check" width="16" height="16"></svg>';
+            lucide.createIcons(copyButton);  // Refresh icons immediately for checkmark
+
+            setTimeout(() => {
+                copyButton.innerHTML = '<svg data-lucide="clipboard" width="16" height="16"></svg>';
+                lucide.createIcons(copyButton);  // Refresh icons again for clipboard
+            }, 1500);
+            
+            // Update button title temporarily
+            const originalTitle = copyButton.title;
+            copyButton.title = 'Copied!';
+            setTimeout(() => {
+                copyButton.title = originalTitle;
+            }, 1500);
+
+            // Refresh Lucide icons for the new button state
+            lucide.createIcons(copyButton);
+        });
+
+        // Track the error in window.errorLog
+        if (!window.errorLog) {
+            window.errorLog = [];
+        }
+        window.errorLog.push(errorData);
+
+        // Update the error count badge
+        const errorCount = document.getElementById("error-count");
+        if (errorCount) {
+            const count = window.errorLog.length;
+            errorCount.textContent = count;
+            errorCount.style.display = count > 0 ? "block" : "none";
+
+            // Update toggle button styling
+            const toggleErrorDrawer = document.getElementById("toggle-error-drawer");
+            if (toggleErrorDrawer) {
+                if (count > 0) {
+                    toggleErrorDrawer.classList.add("bg-red-600", "text-white");
+                    toggleErrorDrawer.classList.remove("bg-gray-200", "text-gray-700");
+                } else {
+                    toggleErrorDrawer.classList.remove("bg-red-600", "text-white");
+                    toggleErrorDrawer.classList.add("bg-gray-200", "text-gray-700");
+                }
+            }
+        }
         // Append error to the container
         errorContainer.appendChild(errorEntry);
     }
+
+
+
 
 
     webview.addEventListener('dom-ready', () => {
@@ -1524,18 +1622,13 @@ document.addEventListener('DOMContentLoaded', () => {
             background-color: transparent;
         }
     `);
-        // If we're on home.html, update the recent sites list
-        if (webview.src.includes('home.html')) {
-            webview.executeJavaScript(`
-            console.log('Local Storage content:', localStorage.getItem('recentUrls'));
-            // Force an update of the recent sites list
-            document.querySelector('.recent-sites-list') && updateRecentSitesList();
-        `);
-        }
+        
     });
 
     webview.addEventListener('crashed', (e) => {
         window.electron.ipcRenderer.send('webview-error', {
+            type: 'Console Error',
+            timestamp: new Date().toISOString(),
             message: 'Webview crashed',
             source: 'webview',
             lineno: 0,
@@ -1784,7 +1877,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const ignoredPatterns = [
             'GUEST_VIEW_MANAGER_CALL',
-            'ERR_ABORTED (-3)'
+            'ERR_ABORTED (-3)',
+            'console.log',          // Add this to ignore console.log messages
+            'console.warn',         // Add this to ignore console.warn messages
+            'console.info'          // Add this to ignore console.info messages
         ];
 
         if (ignoredPatterns.some(pattern => errorData.message.includes(pattern))) {
@@ -1792,8 +1888,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        errorData.timestamp = errorData.timestamp || new Date().toISOString();
+        errorData.type = errorData.type || "Console Error";
+
         logError(
             "Webview Error",
+            errorData.timestamp,
+            errorData.type,
             errorData.message,
             errorData.source,
             errorData.lineno,
@@ -4627,7 +4728,10 @@ document.addEventListener('DOMContentLoaded', () => {
     window.onerror = (message, source, lineno, colno, error) => {
         const ignoredPatterns = [
             'GUEST_VIEW_MANAGER_CALL',
-            'ERR_ABORTED (-3)'
+            'ERR_ABORTED (-3)',
+            'console.log',          // Add this to ignore console.log messages
+            'console.warn',         // Add this to ignore console.warn messages
+            'console.info'          // Add this to ignore console.info messages
         ];
 
         if (ignoredPatterns.some(pattern => message.includes(pattern))) {
@@ -4636,6 +4740,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         ipcRenderer.sendToHost('webview-error', {
+            type: 'Console Error',
+            timestamp: new Date().toISOString(),
             message: message || 'Unknown error',
             source: source || location.href,
             lineno: lineno || 0,
@@ -4655,6 +4761,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             ipcRenderer.sendToHost('webview-error', {
+                type: 'Console Error',
+                timestamp: new Date().toISOString(),
                 message: `Console Error: ${errorMessage}`,
                 source: location.href,
                 lineno: 0,
@@ -4690,43 +4798,6 @@ document.addEventListener('DOMContentLoaded', () => {
     `)
             .join("");
 
-        // Add click handlers for copy buttons
-        const copyButtons = errorContainer.querySelectorAll('.copy-error-btn');
-        copyButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const errorData = JSON.parse(decodeURIComponent(e.currentTarget.dataset.error));
-                const textToCopy = `
-Time: ${errorData.timestamp}
-Type: ${errorData.type}
-Message: ${errorData.message}
-Source: ${errorData.source || "unknown"}
-Location: [${errorData.lineno}:${errorData.colno}]
-Stack Trace:
-${errorData.stack}
-`.trim();
-
-                window.electron.clipboard.writeText(textToCopy);
-
-                // Show feedback toast
-                const toast = document.createElement('div');
-                toast.className = 'fixed bottom-4 left-4 bg-cyan-600 text-white px-4 py-2 rounded shadow-lg text-sm z-50';
-                toast.textContent = 'Copied to clipboard!';
-                document.body.appendChild(toast);
-
-                // Remove toast after 2 seconds
-                setTimeout(() => {
-                    toast.remove();
-                }, 2000);
-
-                // Update button title temporarily
-                const btn = e.currentTarget;
-                const originalTitle = btn.title;
-                btn.title = 'Copied!';
-                setTimeout(() => {
-                    btn.title = originalTitle;
-                }, 1500);
-            });
-        });
 
         // Refresh Lucide icons for the new buttons
         lucide.createIcons(errorContainer);

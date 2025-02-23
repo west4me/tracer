@@ -280,6 +280,41 @@
     #modal-image {
       pointer-events: none;
     }
+
+#error-log {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    display: block !important;
+    width: 100%;
+}
+
+.error-entry {
+    display: block !important;
+    word-wrap: break-word;
+    overflow-wrap: anywhere; 
+    width: 100%;
+}
+
+.error-entry pre, .error-entry a {
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    max-width: 100%;
+    display: block;
+}
+.error-message {
+    display: block;
+    margin-bottom: 2px;
+}
+
+pre {
+    white-space: pre-wrap !important;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+
   </style>
 </head>
 
@@ -402,7 +437,7 @@
           <span class="ml-1">Clear</span>
         </button>
       </div>
-      <div id="error-log" class="text-sm text-gray-700"></div>
+      <div id="error-log" class="text-sm text-gray-700 break-words whitespace-normal"></div>
     </div>
 
     <!-- Floating Toggle Button for Error Drawer -->

@@ -37,9 +37,13 @@ ipcRenderer.on('reset-listeners', () => {
 
     console.log("Listeners fully reattached.");
 });
+
+
 // Forward unhandled errors and console errors from the webview to the host
 window.onerror = (message, source, lineno, colno, error) => {
     ipcRenderer.sendToHost('webview-error', {
+        type: 'JavaScript Error',
+        timestamp: new Date().toISOString(),
         message: message || 'Unknown error',
         source: source || location.href,
         lineno: lineno || 0,
@@ -89,7 +93,10 @@ console.error = (function (original) {
 
         const ignoredPatterns = [
             'GUEST_VIEW_MANAGER_CALL',
-            'ERR_ABORTED (-3)'
+            'ERR_ABORTED (-3)',
+            'console.log',          // Add this to ignore console.log messages
+            'console.warn',         // Add this to ignore console.warn messages
+            'console.info'          // Add this to ignore console.info messages
         ];
 
         if (ignoredPatterns.some(pattern => errorMessage.includes(pattern))) {
@@ -100,6 +107,8 @@ console.error = (function (original) {
         console.log('[webviewPreload.js] Sending error to main process:', errorMessage);
 
         ipcRenderer.send('webview-error', {
+            type: 'Console Error',
+            timestamp: new Date().toISOString(),
             message: `Console Error: ${errorMessage}`,
             source: location.href,
             lineno: 0,
