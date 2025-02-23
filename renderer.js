@@ -64,11 +64,11 @@ function showEmptyState() {
       <circle id="eye-pupil" cx="8" cy="8" r="3" fill="#1a1a1a"/>
       <circle id="eye-highlight" cx="9" cy="7" r="1" fill="white"/>
   </svg>
-  <h3 class="text-xl font-semibold text-gray-700 mb-2">Ready to start logging?</h3>
-  <p class="text-gray-500 mb-6">Click the button below to begin tracking interactions</p>
+  <h3 class="text-xl font-semibold text-gray-700 mb-2">Ready to start tracing?</h3>
+  <p class="text-gray-500 mb-6">Click the button below to begin tracings</p>
   <button id="start-logging-btn" class="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors">
       <svg data-lucide="play" class="w-5 h-5"></svg>
-      Start Logging
+      Start tracing
   </button>`;
 
     logArea.appendChild(messageDiv);
@@ -1216,10 +1216,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (toggleErrorDrawer) {
-        // Set default lowered state styling
-        toggleErrorDrawer.style.transform = 'translateY(34px)';
-        toggleErrorDrawer.classList.remove("bg-red-600", "text-white", "p-2", "rounded");
-        toggleErrorDrawer.classList.add("bg-white", "border", "border-gray-300", "rounded-full", "p-1", "text-gray-700");
+        // If there are no errors, style the toggle button as "lowered"
+        if (!window.errorLog || window.errorLog.length === 0) {
+            toggleErrorDrawer.style.transform = 'translateY(32px)';
+            toggleErrorDrawer.classList.remove(
+                "bg-red-600",
+                "text-white",
+                "p-2",
+                "rounded"
+            );
+            toggleErrorDrawer.classList.add(
+                "bg-white",
+                "border",
+                "border-gray-300",
+                "rounded-full",
+                "p-1",
+                "text-gray-700"
+            );
+        }
     }
     urlInput = document.getElementById('url-input');
     webview = document.getElementById('my-webview');
@@ -1594,13 +1608,54 @@ ${errorData.stack}`.trim();
 
             // Update toggle button styling
             const toggleErrorDrawer = document.getElementById("toggle-error-drawer");
-            if (toggleErrorDrawer) {
+            if (toggleButton) {
                 if (count > 0) {
-                    toggleErrorDrawer.classList.add("bg-red-600", "text-white");
-                    toggleErrorDrawer.classList.remove("bg-gray-200", "text-gray-700");
+                    // When we DO have errors:
+                    // 1) Move the button up
+                    toggleButton.style.transform = 'translateY(0)';
+                    // 2) Remove the default "no errors" classes
+                    toggleButton.classList.remove(
+                        'bg-white',
+                        'border',
+                        'border-gray-300',
+                        'rounded-full',
+                        'p-1',
+                        'text-gray-700'
+                    );
+                    // 3) Add the "error" style classes
+                    toggleButton.classList.add(
+                        'bg-red-600',
+                        'text-white',
+                        'rounded',       // can be .rounded or .rounded-lg if you like
+                        'px-2',
+                        'py-1'
+                    );
+                    // 4) Ensure the error count is visible
+                    errorCount.style.display = 'inline-block';
                 } else {
-                    toggleErrorDrawer.classList.remove("bg-red-600", "text-white");
-                    toggleErrorDrawer.classList.add("bg-gray-200", "text-gray-700");
+                    // When we have ZERO errors:
+                    // 1) Move the button down
+                    toggleButton.style.transform = 'translateY(32px)';
+                    // 2) Remove any error styling
+                    toggleButton.classList.remove(
+                        'bg-red-600',
+                        'text-white',
+                        'rounded',
+                        'px-2',
+                        'py-1'
+                    );
+                    // 3) Restore the default “no errors” style
+                    toggleButton.classList.add(
+                        'bg-white',
+                        'border',
+                        'border-gray-300',
+                        'rounded-full',
+                        'p-1',
+                        'text-gray-700'
+                    );
+                    // 4) Hide the numeric badge & reset it to 0
+                    errorCount.style.display = 'none';
+                    errorCount.textContent = 0;
                 }
             }
         }
@@ -1671,8 +1726,56 @@ ${errorData.stack}`.trim();
 
                     // Move toggle button back to bottom when no errors
                     const toggleButton = document.getElementById('toggle-error-drawer');
+                    const count = window.errorLog.length;
                     if (toggleButton) {
-                        toggleButton.style.transform = 'translateY(34px)';
+                        if (count > 0) {
+                            // When we DO have errors:
+                            // 1) Move the button up
+                            toggleButton.style.transform = 'translateY(0)';
+                            // 2) Remove the default "no errors" classes
+                            toggleButton.classList.remove(
+                                'bg-white',
+                                'border',
+                                'border-gray-300',
+                                'rounded-full',
+                                'p-1',
+                                'text-gray-700'
+                            );
+                            // 3) Add the "error" style classes
+                            toggleButton.classList.add(
+                                'bg-red-600',
+                                'text-white',
+                                'rounded',       // can be .rounded or .rounded-lg if you like
+                                'px-2',
+                                'py-1'
+                            );
+                            // 4) Ensure the error count is visible
+                            errorCount.style.display = 'inline-block';
+                        } else {
+                            // When we have ZERO errors:
+                            // 1) Move the button down
+                            toggleButton.style.transform = 'translateY(32px)';
+                            // 2) Remove any error styling
+                            toggleButton.classList.remove(
+                                'bg-red-600',
+                                'text-white',
+                                'rounded',
+                                'px-2',
+                                'py-1'
+                            );
+                            // 3) Restore the default “no errors” style
+                            toggleButton.classList.add(
+                                'bg-white',
+                                'border',
+                                'border-gray-300',
+                                'rounded-full',
+                                'p-1',
+                                'text-gray-700'
+                            );
+                            // 4) Hide the numeric badge & reset it to 0
+                            errorCount.style.display = 'none';
+                            errorCount.textContent = 0;
+                        }
                     }
                 }
             });
@@ -4822,7 +4925,7 @@ ${errorData.stack}`.trim();
             toggleErrorDrawer.classList.add("bg-red-600", "text-white", "p-2", "rounded");
         } else {
             // No errors - lowered position with white background
-            toggleErrorDrawer.style.transform = 'translateY(34px)';
+            toggleErrorDrawer.style.transform = 'translateY(32px)';
             toggleErrorDrawer.classList.remove("bg-red-600", "text-white", "p-2", "rounded");
             toggleErrorDrawer.classList.add("bg-white", "border", "border-gray-300", "rounded-full", "p-1", "text-gray-700");
         }

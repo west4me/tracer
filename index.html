@@ -423,6 +423,7 @@
       </div>
 
       <!-- Toggle Button (show/hide sidebar) -->
+       <!-- When the page refreshes this is what is giving the button the colors, not sure about red yet -->
       <button id="toggle-sidebar"
         class="absolute top-1/2 right-[-16px] transform -translate-y-1/2 bg-white border border-gray-300 shadow p-1 rounded-full z-50">
         <svg id="toggle-sidebar-icon" data-lucide="panel-right-close" width="24" height="24"></svg>
@@ -443,10 +444,11 @@
     </div>
 
     <!-- Floating Toggle Button for Error Drawer -->
-    <button id="toggle-error-drawer"
-      class="fixed transition-all duration-300 ease-in-out bottom-4 right-4 p-1 rounded shadow-lg bg-gray-200 text-gray-700 flex items-center">
+    <button id="toggle-error-drawer" class="fixed transition-all duration-300 ease-in-out bottom-4 right-4 
+       bg-white border border-gray-300 rounded-full p-1 text-gray-700 
+       flex items-center">
       <svg id="error-icon" data-lucide="panel-bottom-open" width="24" height="24"></svg>
-      <span id="error-count" class="ml-1 bg-red-600 text-white text-xs rounded-full px-2 py-1 hidden">0</span>
+      <span id="error-count" class="ml-1 text-xs rounded-full px-2 py-1 hidden">0</span>
     </button>
   </div>
 
