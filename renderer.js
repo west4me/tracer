@@ -1268,8 +1268,41 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     webview.addEventListener('did-start-loading', () => {
-        const isHomePage = webview.src.toLowerCase().includes('home.html');
+        // Clear errors on page refresh
+        window.errorLog = [];
+        updateErrorDrawer();
 
+        const toggleButton = document.getElementById('toggle-error-drawer');
+        if (toggleButton) {
+            toggleButton.style.transform = 'translateY(32px)';
+            toggleButton.classList.remove(
+                'bg-red-600',
+                'text-white',
+                'p-2',
+                'rounded'
+            );
+            toggleButton.classList.add(
+                'bg-white',
+                'border',
+                'border-gray-300',
+                'rounded-full',
+                'p-1',
+                'text-gray-700'
+            );
+        }
+
+        const errorCount = document.getElementById('error-count');
+        if (errorCount) {
+            errorCount.textContent = '0';
+            errorCount.style.display = 'none';
+        }
+
+        const errorDrawer = document.getElementById('error-drawer');
+        if (errorDrawer) {
+            errorDrawer.classList.add('hidden');
+        }
+
+        const isHomePage = webview.src.toLowerCase().includes('home.html');
         if (isHomePage) {
             urlInput.value = '';
             urlInput.placeholder = "Let's get tracing!";
@@ -1299,11 +1332,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Don't store home.html or about:blank
         if (!newUrl.includes('home.html') && newUrl !== 'about:blank') {
-            saveRecentUrl(newUrl);  // Use your existing saveRecentUrl function
+            saveRecentUrl(newUrl);
         }
 
         // Update the address bar
         document.getElementById('url-input').value = newUrl;
+
+        // Add these lines to clear error log when navigating
+        window.errorLog = []; // Reset the error array
+        updateErrorDrawer(); // Update the UI
+
+        // Move toggle button back down and reset styles
+        const toggleButton = document.getElementById('toggle-error-drawer');
+        if (toggleButton) {
+            toggleButton.style.transform = 'translateY(32px)';
+            toggleButton.classList.remove(
+                'bg-red-600',
+                'text-white',
+                'p-2',
+                'rounded'
+            );
+            toggleButton.classList.add(
+                'bg-white',
+                'border',
+                'border-gray-300',
+                'rounded-full',
+                'p-1',
+                'text-gray-700'
+            );
+        }
+
+        // Reset error count
+        const errorCount = document.getElementById('error-count');
+        if (errorCount) {
+            errorCount.textContent = '0';
+            errorCount.style.display = 'none';
+        }
+
+        // Hide error drawer if it's open
+        const errorDrawer = document.getElementById('error-drawer');
+        if (errorDrawer) {
+            errorDrawer.classList.add('hidden');
+        }
 
         // Update previousUrl for the next navigation
         previousUrl = newUrl;
@@ -1475,12 +1545,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const errorDrawer = document.getElementById("error-drawer");
     const errorIcon = document.getElementById("error-icon");
-    const exportErrorButton = document.createElement("button");
     const clearErrorsButton = document.getElementById('clear-errors');
-    exportErrorButton.textContent = "Export Errors";
-    exportErrorButton.className = "mt-2 px-3 py-1 bg-gray-800 text-white rounded";
-    exportErrorButton.addEventListener("click", exportErrors);
-    errorDrawer.appendChild(exportErrorButton);
+
     lucide.createIcons();
 
     // Add webview event listeners
@@ -1496,6 +1562,19 @@ document.addEventListener('DOMContentLoaded', () => {
             colno: 0,
             stack: 'From webview console'
         };
+
+        // Convert to a Date object
+        const date = new Date(errorData.timestamp);
+
+        // Extract each piece
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const year = String(date.getFullYear()).slice(-2); // last two digits
+
+        // Combine them into "HH:mm MM.dd.yy"
+        const formattedTime = `${hours}:${minutes} ${month}.${day}.${year}`;
 
         // Send error to the main process via IPC
         window.electron.ipcRenderer.send('webview-error', errorData);
@@ -1535,13 +1614,13 @@ document.addEventListener('DOMContentLoaded', () => {
 <div class="flex justify-between w-full">
     <div class="w-full">
     <div class="flex justify-between items-start">
-        <strong class="text-red-500 block">Error: ${errorData.type} - ${errorData.timestamp}</strong>
-        <button class="copy-error-btn text-gray-500 hover:text-gray-800 p-1 rounded ml-2" title="Copy Error">
+        <strong class="text-red-500 block">Error: ${errorData.type}</strong>
+        <button class="copy-error-btn text-gray-500 hover:text-gray-800 p-1 rounded ml-2" title="Copy error">
             <svg data-lucide="clipboard" width="16" height="16"></svg>
         </button>
     </div>
     <span class="error-message block">${errorData.message}</span>
-    <small class="block mt-1">Source: ${errorData.source || 'Unknown'}</small>
+    <small class="block mt-1">Source: ${errorData.source || 'Unknown'} - ${errorData.timestamp}</small>
     <small class="block">Line: ${errorData.lineno || 'N/A'}, Column: ${errorData.colno || 'N/A'}</small>
     <small class="block">
         ${errorData.stack || 'No stack trace available'}
@@ -1712,6 +1791,11 @@ ${errorData.stack}`.trim();
         }
         lucide.createIcons();
     });
+
+    const exportErrorsBtn = document.getElementById("export-errors");
+    if (exportErrorsBtn) {
+        exportErrorsBtn.addEventListener("click", exportErrors);
+    }
 
     if (clearErrorsButton) {
         clearErrorsButton.addEventListener('click', () => {
@@ -2291,20 +2375,20 @@ ${errorData.stack}`.trim();
             if (details.text) {
                 html += `
                 <span class="font-medium">Text Content:</span>
-                <span class="break-words text-left" style="font-size:${details.fontInfo.fontSize}; font-weight:${details.fontInfo.fontWeight}; font-style:${details.fontInfo.fontStyle}; line-height:${details.fontInfo.lineHeight}; color:${details.fontInfo.color};">"${details.text}"</span>`;
+                <span class="break-words text-left" >"${details.text}"</span>`;
             }
             if (details.fontInfo) {
                 html += `
             <span class="font-medium">Font Family:</span>
-            <span class="break-words text-left" style="font-family:${details.fontInfo.fontFamily};">${details.fontInfo.fontFamily}</span>
+            <span class="break-words text-left">${details.fontInfo.fontFamily}</span>
             <span class="font-medium">Font Size:</span>
-            <span class="break-words text-left" style="font-size:${details.fontInfo.fontSize};">${details.fontInfo.fontSize}</span>
+            <span class="break-words text-left">${details.fontInfo.fontSize}</span>
             <span class="font-medium">Font Weight:</span>
-            <span class="break-words text-left" style="font-weight:${details.fontInfo.fontWeight};">${details.fontInfo.fontWeight}</span>
+            <span class="break-words text-left">${details.fontInfo.fontWeight}</span>
             <span class="font-medium">Font Style:</span>
-            <span class="break-words text-left" style="font-style:${details.fontInfo.fontStyle};">${details.fontInfo.fontStyle}</span>
+            <span class="break-words text-left">${details.fontInfo.fontStyle}</span>
             <span class="font-medium">Line Height:</span>
-            <span class="break-words text-left" style="line-height:${details.fontInfo.lineHeight};">${details.fontInfo.lineHeight}</span>
+            <span class="break-words text-left">${details.fontInfo.lineHeight}</span>
             <span class="font-medium">Color:</span>
             <span class="break-words text-left" style="color:${details.fontInfo.color};">${details.fontInfo.color}</span>`;
             }
@@ -2360,14 +2444,19 @@ ${errorData.stack}`.trim();
                 || (details.role && details.role.toLowerCase() === 'button')
             ) {
                 // Show link-ish fields or role=button fields
+                function truncateUrl(url, maxLength = 25) {
+                    if (!url) return '';
+                    return url.length > maxLength ? url.slice(0, maxLength) + '…' : url;
+                }
                 if (details.href) {
+                    const truncatedHref = truncateUrl(details.href, 25);
                     html += `
             <span class="font-medium">Href:</span>
             <div class="flex items-center gap-2">
                 <a href="${details.href}" class="text-blue-600 hover:text-blue-800 underline break-all"
                    target="_blank" 
                    title="${details.href}">
-                    ${details.href}
+                    ${truncatedHref}
                 </a>
                 <button
                     class="copy-url-btn p-1 hover:bg-gray-100 rounded"
@@ -2535,12 +2624,12 @@ ${errorData.stack}`.trim();
 
                 html += `
                     <div class="col-span-2 mt-2">
-                    <div class="bg-gray-50 rounded p-2 border">
-                        <div class="text-sm font-semibold mb-1">Parent Container</div>
-                        <div class="text-sm break-words">
-                        ${containerDesc}
+                        <div class="bg-gray-50 rounded p-2 border break-words whitespace-normal overflow-x-hidden">
+                            <div class="text-sm font-semibold mb-1">Parent Container</div>
+                            <div class="text-sm break-words whitespace-normal overflow-x-hidden">
+                            ${containerDesc}
+                            </div>
                         </div>
-                    </div>
                     </div>
                     `;
             }
@@ -4932,6 +5021,7 @@ ${errorData.stack}`.trim();
     }
 
     // Exports errors as a plain text file
+
     function exportErrors() {
         const errorData = window.errorLog.map(e =>
             `${e.timestamp} - ${e.type}\n${e.message}\nSource: ${e.source} [${e.lineno}:${e.colno}]\nStack: ${e.stack}\n\n`
@@ -4943,7 +5033,19 @@ ${errorData.stack}`.trim();
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+        showToast("Error log exported!");
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const exportErrorsBtn = document.getElementById('export-errors');
+        if (exportErrorsBtn) {
+            exportErrorsBtn.addEventListener('click', exportErrors);
+        }
+
+        // ...any other existing init code...
+    });
+
+
 
     // ----- Modal and Annotation Code -----
 
