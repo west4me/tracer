@@ -175,32 +175,70 @@ function addInitialPageLoad() {
     const entry = document.createElement('div');
     entry.className = "p-3 rounded bg-gray-100 relative flex flex-col";
     entry.dataset.timestamp = logData.timestamp;
+    
 
     entry.innerHTML = `
-        <div class="flex items-center justify-between mb-4">
-            <div class="flex items-center gap-3">
-                <span class="tag bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-semibold">
-                    PAGE LOADED
-                </span>
-                <span class="text-sm text-gray-500">#1</span>
-            </div>
-            <time class="text-sm text-gray-500">${timeStr}</time>
+    <div class="flex-1">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] text-gray-500 border border-gray-200 rounded px-1 py-0.5">#1</span>
+          <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-semibold">
+            PAGE LOADED
+          </span>
         </div>
-        <div class="space-y-4">
-            <div class="details-grid">
-                <span class="font-medium">Page Title:</span>
-                <span class="break-words text-left">"${logData.title}"</span>
-                <span class="font-medium">URL:</span>
-                <span class="break-words text-left">${logData.url}</span>
+        <!-- Icon slot for comment, camera, trash icons -->
+        <div class="flex items-center gap-2" id="icon-slot"></div>
+      </div>
+      <div>
+        <div class="mt-2 space-y-1 text-sm">
+          <div class="grid grid-cols-[120px,1fr] gap-2 break-words">
+            <span class="font-medium">Page Title:</span>
+            <span class="break-words text-left">${logData.title}</span>
+            <span class="font-medium">URL:</span>
+            <div class="flex items-center gap-2">
+              <a href="${logData.url}" class="text-blue-600 hover:text-blue-800 underline break-words text-left" title="${logData.url}">
+                ${logData.url.length > 25 ? logData.url.substring(0, 25) + "..." : logData.url}
+              </a>
+              <button class="copy-url-btn ml-auto p-1 hover:bg-gray-100 rounded" title="Copy URL to clipboard" data-url="${logData.url}">
+                <svg data-lucide="clipboard" width="14" height="14"></svg>
+              </button>
             </div>
+          </div>
         </div>
-    `;
+      </div>
+    </div>
+  `;
 
     // Add to event log array
     eventLog.push(logData);
 
     // Add to UI
     logArea.appendChild(entry);
+
+    const copyButtons = entry.querySelectorAll('.copy-url-btn');
+    copyButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const url = e.currentTarget.dataset.url;
+            window.electron.clipboard.writeText(url);
+
+            // Toast notification for URL copy
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-4 left-4 bg-cyan-600 text-white px-4 py-2 rounded shadow-lg text-sm';
+            toast.textContent = 'URL copied to clipboard!';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+
+            // Temporarily change the button title to "Copied!"
+            const originalTitle = e.currentTarget.title;
+            e.currentTarget.title = 'Copied!';
+            setTimeout(() => {
+                e.currentTarget.title = originalTitle;
+            }, 1500);
+        });
+    });
+
+    lucide.createIcons(entry);
+    setupCommentFeature(entry, logData);
 
     // Scroll to bottom
     logArea.scrollTop = logArea.scrollHeight;
@@ -2358,22 +2396,23 @@ ${errorData.stack}`.trim();
         // branching for each action. We’ll wrap it in <div> so we can place
         // topBar above it.
 
-        html += `<div class="mt-2 space-y-1 text-sm">`;
-        html += `<div class="mt-2 space-y-1 text-sm">`;
-
         // --- Branches for Different Actions (identical to yours) ---
         if (logData.action === 'page-loaded' && logData.title && logData.url) {
-            html += `<div class="details-grid mt-2">
-                <span class="font-medium">Page Title:</span>
-                <span class="break-words text-left" title="${logData.title}">
-                    ${truncateUrl(logData.title, 50)}
-                </span>
-
-                <span class="font-medium">URL:</span>
-                <span class="break-words text-left" title="${logData.url}">
-                    ${truncateUrl(logData.url, 50)}
-                </span>
-            </div>`;
+            html += `<div class="grid grid-cols-[120px,1fr] gap-2 break-words mt-2">
+      <span class="font-medium">Page Title:</span>
+      <span class="break-words text-left" title="${logData.title}">
+        ${logData.title}
+      </span>
+      <span class="font-medium">URL:</span>
+      <div class="flex items-center gap-2">
+        <a href="${logData.url}" class="text-blue-600 hover:text-blue-800 underline break-words text-left" title="${logData.url}">
+          ${logData.url.length > 25 ? logData.url.substring(0, 25) + "..." : logData.url}
+        </a>
+        <button class="copy-url-btn ml-auto p-1 hover:bg-gray-100 rounded" title="Copy URL to clipboard" data-url="${logData.url}">
+          <svg data-lucide="clipboard" width="14" height="14"></svg>
+        </button>
+      </div>
+    </div>`;
         } else if (logData.action === 'select') {
             html += `<div class="grid grid-cols-[120px,1fr] gap-2 break-words">
             <span class="font-medium">Element:</span>
@@ -3387,6 +3426,7 @@ ${errorData.stack}`.trim();
             lucide.createIcons(commentButton);
         });
     }
+    window.setupCommentFeature = setupCommentFeature;
 
     function updateCommentsDisplay(entry, logData) {
         // 1) Check if container already exists; if not, create it
