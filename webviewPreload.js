@@ -41,6 +41,10 @@ ipcRenderer.on('reset-listeners', () => {
 
 // Forward unhandled errors and console errors from the webview to the host
 window.onerror = (message, source, lineno, colno, error) => {
+    if (!message.toLowerCase().includes('error')) {
+        return; // Skip non-error messages
+    }
+
     ipcRenderer.sendToHost('webview-error', {
         type: 'JavaScript Error',
         timestamp: new Date().toISOString(),
@@ -94,14 +98,21 @@ console.error = (function (original) {
         const ignoredPatterns = [
             'GUEST_VIEW_MANAGER_CALL',
             'ERR_ABORTED (-3)',
-            'console.log',          // Add this to ignore console.log messages
-            'console.warn',         // Add this to ignore console.warn messages
-            'console.info'          // Add this to ignore console.info messages
+            'console.log',
+            'console.warn',
+            'console.info'
         ];
 
+        // First check for ignored patterns
         if (ignoredPatterns.some(pattern => errorMessage.includes(pattern))) {
             console.log('Filtered out console error in webview:', errorMessage);
             return;
+        }
+
+        // Then ensure it's actually an error message (contains "error" in text)
+        if (!errorMessage.toLowerCase().includes('error')) {
+            console.log('Non-error message filtered from error drawer:', errorMessage);
+            return original.apply(console, args);
         }
 
         console.log('[webviewPreload.js] Sending error to main process:', errorMessage);

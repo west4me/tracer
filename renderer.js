@@ -1551,36 +1551,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add webview event listeners
     webview.addEventListener('console-message', (e) => {
-        console.log('Guest page logged a message:', e.message);
+        console.log('Guest page logged a message:', e.message, 'level:', e.level);
 
-        const errorData = {
-            type: 'Console Error',
-            timestamp: new Date().toISOString(),
-            message: e.message,
-            source: 'webview',
-            lineno: e.line || 0,
-            colno: 0,
-            stack: 'From webview console'
-        };
+        // ONLY process level 2 messages (actual errors)
+        if (e.level === 2) {
+            const errorData = {
+                type: 'Console Error',
+                timestamp: new Date().toISOString(),
+                message: e.message,
+                source: 'webview',
+                lineno: e.line || 0,
+                colno: 0,
+                stack: 'From webview console'
+            };
 
-        // Convert to a Date object
-        const date = new Date(errorData.timestamp);
+            // Convert to a Date object
+            const date = new Date(errorData.timestamp);
 
-        // Extract each piece
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const year = String(date.getFullYear()).slice(-2); // last two digits
+            // Extract each piece
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const year = String(date.getFullYear()).slice(-2); // last two digits
 
-        // Combine them into "HH:mm MM.dd.yy"
-        const formattedTime = `${hours}:${minutes} ${month}.${day}.${year}`;
+            // Combine them into "HH:mm MM.dd.yy"
+            const formattedTime = `${hours}:${minutes} ${month}.${day}.${year}`;
 
-        // Send error to the main process via IPC
-        window.electron.ipcRenderer.send('webview-error', errorData);
+            // Send error to the main process via IPC
+            window.electron.ipcRenderer.send('webview-error', errorData);
 
-        // Also send the error to #error-log
-        addErrorToLog(errorData);
+            // Also send the error to #error-log
+            addErrorToLog(errorData);
+        }
+        // Ignore all non-error messages (levels 0, 1, 3)
     });
 
     // THIS IS WHAT ADDS THE ACTUAL ERROR TO THE ERROR DRAWER
@@ -1598,6 +1602,21 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        const filterPatterns = [
+            'cdn.tailwindcss.com should not be used in production',
+            'Security Warning',
+            'Content-Security-Policy',
+            'font-weight: bold',
+            'unsafe-eval',
+            'warning will not show up',
+            'unnecessary security risks'
+        ];
+
+        if (filterPatterns.some(pattern => errorData.message.includes(pattern))) {
+            console.log('Filtered out false error message:', errorData.message);
+            return;
+        }
+        
         // Move toggle button up when there are errors
         if (!window.errorLog || window.errorLog.length === 0) {
             toggleButton.style.transform = 'translateY(0)';
