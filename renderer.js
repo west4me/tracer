@@ -175,39 +175,41 @@ function addInitialPageLoad() {
     const entry = document.createElement('div');
     entry.className = "p-3 rounded bg-gray-100 relative flex flex-col";
     entry.dataset.timestamp = logData.timestamp;
-    
 
     entry.innerHTML = `
-    <div class="flex-1">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <span class="text-[10px] text-gray-500 border border-gray-200 rounded px-1 py-0.5">#1</span>
-          <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-semibold">
-            PAGE LOADED
-          </span>
-        </div>
-        <!-- Icon slot for comment, camera, trash icons -->
-        <div class="flex items-center gap-2" id="icon-slot"></div>
-      </div>
-      <div>
-        <div class="mt-2 space-y-1 text-sm">
-          <div class="grid grid-cols-[120px,1fr] gap-2 break-words">
-            <span class="font-medium">Page Title:</span>
-            <span class="break-words text-left">${logData.title}</span>
-            <span class="font-medium">URL:</span>
-            <div class="flex items-center gap-2">
-              <a href="${logData.url}" class="text-blue-600 hover:text-blue-800 underline break-words text-left" title="${logData.url}">
-                ${logData.url.length > 25 ? logData.url.substring(0, 25) + "..." : logData.url}
-              </a>
-              <button class="copy-url-btn ml-auto p-1 hover:bg-gray-100 rounded" title="Copy URL to clipboard" data-url="${logData.url}">
-                <svg data-lucide="clipboard" width="14" height="14"></svg>
-              </button>
+        <div class="flex-1">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] text-gray-500 border border-gray-200 rounded px-1 py-0.5">#1</span>
+                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-semibold">
+                        PAGE LOADED
+                    </span>
+                </div>
+                <div class="flex items-center gap-2" id="icon-slot"></div>
             </div>
-          </div>
+            <div>
+                <div class="mt-2 space-y-1 text-sm">
+                    <div class="grid grid-cols-[120px,1fr] gap-2 break-words">
+                        <span class="font-medium">Page Title:</span>
+                        <span class="break-words text-left">${logData.title}</span>
+                        <span class="font-medium">URL:</span>
+                        <div class="flex items-center gap-2">
+                            <a href="${logData.url}" class="text-blue-600 hover:text-blue-800 underline break-words text-left" title="${logData.url}">
+                                ${logData.url.length > 25 ? logData.url.substring(0, 25) + "..." : logData.url}
+                            </a>
+                            <button class="copy-url-btn ml-auto p-1 hover:bg-gray-100 rounded" title="Copy URL to clipboard" data-url="${logData.url}">
+                                <svg data-lucide="clipboard" width="14" height="14"></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  `;
+        <!-- Add Footer with Timestamp -->
+        <div class="flex justify-end mt-4 pt-2 border-t border-gray-200">
+            <span class="text-gray-400 text-[11px]">${timeStr}</span>
+        </div>
+    `;
 
     // Add to event log array
     eventLog.push(logData);
@@ -243,6 +245,7 @@ function addInitialPageLoad() {
     // Scroll to bottom
     logArea.scrollTop = logArea.scrollHeight;
 }
+
 
 // Modal utility function (unchanged)
 function showModal(modalId, { message = '', title = '', onConfirm = () => { }, onCancel = () => { } } = {}) {
@@ -2128,7 +2131,13 @@ ${errorData.stack}`.trim();
     });
 
     ipcRenderer.on('update-error', (_, errorData) => {
-        console.log('[renderer.js] Received error from main process:', errorData);
+        ipcRenderer.on('update-error', (_, errorData) => {
+            console.log('🔥 [DEBUG] Error received in renderer:', errorData);
+            console.log('[🔥DEBUG] Message:', errorData.message);
+            console.log('[🔥DEBUG] Source:', errorData.source);
+            console.log('[🔥DEBUG] Stack:', errorData.stack);
+        });
+
 
         const ignoredPatterns = [
             'GUEST_VIEW_MANAGER_CALL',
@@ -2396,23 +2405,25 @@ ${errorData.stack}`.trim();
         // branching for each action. We’ll wrap it in <div> so we can place
         // topBar above it.
 
-        // --- Branches for Different Actions (identical to yours) ---
+        // --- Branches for Different Actions ---
         if (logData.action === 'page-loaded' && logData.title && logData.url) {
-            html += `<div class="grid grid-cols-[120px,1fr] gap-2 break-words mt-2">
-      <span class="font-medium">Page Title:</span>
-      <span class="break-words text-left" title="${logData.title}">
-        ${logData.title}
-      </span>
-      <span class="font-medium">URL:</span>
-      <div class="flex items-center gap-2">
-        <a href="${logData.url}" class="text-blue-600 hover:text-blue-800 underline break-words text-left" title="${logData.url}">
-          ${logData.url.length > 25 ? logData.url.substring(0, 25) + "..." : logData.url}
-        </a>
-        <button class="copy-url-btn ml-auto p-1 hover:bg-gray-100 rounded" title="Copy URL to clipboard" data-url="${logData.url}">
-          <svg data-lucide="clipboard" width="14" height="14"></svg>
-        </button>
-      </div>
-    </div>`;
+            html += `
+                <div class="grid grid-cols-[120px,1fr] gap-2 break-words mt-2">
+                    <span class="font-medium">Page Title:</span>
+                    <span class="break-words text-left" title="${logData.title}">
+                        ${logData.title}
+                    </span>
+                    <span class="font-medium">URL:</span>
+                    <div class="flex items-center gap-2">
+                        <a href="${logData.url}" class="text-blue-600 hover:text-blue-800 underline break-words text-left" title="${logData.url}">
+                        ${logData.url.length > 25 ? logData.url.substring(0, 25) + "..." : logData.url}
+                        </a>
+                        <button class="copy-url-btn ml-auto p-1 hover:bg-gray-100 rounded" title="Copy URL to clipboard" data-url="${logData.url}">
+                        <svg data-lucide="clipboard" width="14" height="14"></svg>
+                        </button>
+                    </div>
+                </div>
+            `;
         } else if (logData.action === 'select') {
             html += `<div class="grid grid-cols-[120px,1fr] gap-2 break-words">
             <span class="font-medium">Element:</span>
@@ -2429,7 +2440,7 @@ ${errorData.stack}`.trim();
                 <span class="font-medium">Element:</span>
                 <span class="break-words text-left">&lt;${(details.tagName || '').toUpperCase()}&gt;</span>`;
 
-            // Show the element's text content if available (and not empty)
+   
             if (details.text) {
                 html += `
                 <span class="font-medium">Text Content:</span>
@@ -2449,36 +2460,26 @@ ${errorData.stack}`.trim();
             <span class="break-words text-left">${details.fontInfo.lineHeight}</span>
             <span class="font-medium">Color:</span>
             <span class="break-words text-left" style="color:${details.fontInfo.color};">${details.fontInfo.color}</span>`;
-            }
-            // If it has a recognized ARIA role or we have role="button", show that
+            }  
             if (details.role) {
                 html += `
                 <span class="font-medium">Role:</span>
                 <span class="break-words text-left">${details.role}</span>`;
             }
 
-            // For certain interactive elements, show "Required?" or "Disabled?" if relevant
-            // We do this if tagName is input/button/select/textarea, or if ariaDisabled is relevant
             const interactiveTags = ['INPUT', 'BUTTON', 'SELECT', 'TEXTAREA'];
-            if (
-                interactiveTags.includes((details.tagName || '').toUpperCase())
-                || (details.role && details.role.toLowerCase().includes('button'))
-            ) {
-                // "Disabled" can come from HTML or aria
+            if (interactiveTags.includes((details.tagName || '').toUpperCase()) || (details.role && details.role.toLowerCase().includes('button'))) {                
                 if (details.disabled) {
                     html += `
-            <span class="font-medium">Disabled:</span>
-            <span class="break-words text-left">Yes</span>`;
+                    <span class="font-medium">Disabled:</span>
+                    <span class="break-words text-left">Yes</span>`;
                 }
-
                 if (details.required) {
                     html += `
-            <span class="font-medium">Required:</span>
-            <span class="break-words text-left">Yes</span>`;
+                <span class="font-medium">Required:</span>
+                <span class="break-words text-left">Yes</span>`;
                 }
             }
-
-            // If it's specifically a <button> or role=button anchor, show button-specific details
             if ((details.tagName || '').toUpperCase() === 'BUTTON') {
                 // Button type
                 html += `
@@ -2488,20 +2489,16 @@ ${errorData.stack}`.trim();
                 // If it has an icon
                 if (details.hasIcon && details.iconType) {
                     html += `
-            <span class="font-medium">Icon:</span>
-            <span class="break-words text-left">${details.iconType}</span>`;
-                }
+                    <span class="font-medium">Icon:</span>
+                    <span class="break-words text-left">${details.iconType}</span>`;
+                        }
 
                 if (details.form) {
                     html += `
-            <span class="font-medium">Form:</span>
-            <span class="break-words text-left">${details.form}</span>`;
+                    <span class="font-medium">Form:</span>
+                    <span class="break-words text-left">${details.form}</span>`;
                 }
-            } else if (
-                (details.tagName || '').toUpperCase() === 'A'
-                || (details.role && details.role.toLowerCase() === 'button')
-            ) {
-                // Show link-ish fields or role=button fields
+            } else if ((details.tagName || '').toUpperCase() === 'A' || (details.role && details.role.toLowerCase() === 'button')) {                
                 function truncateUrl(url, maxLength = 25) {
                     if (!url) return '';
                     return url.length > maxLength ? url.slice(0, maxLength) + '…' : url;
@@ -2509,28 +2506,29 @@ ${errorData.stack}`.trim();
                 if (details.href) {
                     const truncatedHref = truncateUrl(details.href, 25);
                     html += `
-            <span class="font-medium">Href:</span>
-            <div class="flex items-center gap-2">
-                <a href="${details.href}" class="text-blue-600 hover:text-blue-800 underline break-all"
-                   target="_blank" 
-                   title="${details.href}">
-                    ${truncatedHref}
-                </a>
-                <button
-                    class="copy-url-btn p-1 hover:bg-gray-100 rounded"
-                    title="Copy link URL"
-                    data-url="${details.href}">
-                    <svg data-lucide="clipboard" width="14" height="14"></svg>
-                </button>
-            </div>`;
+                    <span class="font-medium">Href:</span>
+                    <div class="flex items-center gap-2">
+                        <a href="${details.href}" class="text-blue-600 hover:text-blue-800 underline break-all"
+                        target="_blank" 
+                        title="${details.href}">
+                            ${truncatedHref}
+                        </a>
+                        <button
+                            class="copy-url-btn p-1 hover:bg-gray-100 rounded"
+                            title="Copy link URL"
+                            data-url="${details.href}">
+                            <svg data-lucide="clipboard" width="14" height="14"></svg>
+                        </button>
+                    </div>
+                    `;
                 }
 
                 if (details.target) {
                     html += `
-            <span class="font-medium">Target:</span>
-            <span class="break-words text-left">${details.target}</span>`;
+                    <span class="font-medium">Target:</span>
+                    <span class="break-words text-left">${details.target}</span>`;
                 }
-            }
+        }
 
             // If it's an <img>, show alt text, dimensions, caption, etc.
             if ((details.tagName || '').toUpperCase() === 'IMG') {
@@ -2741,25 +2739,29 @@ ${errorData.stack}`.trim();
         } else if (logData.action === 'tab-focus') {
             const from = logData.previous || {};
             const to = logData.newElement || {};
-            html += `<div class="grid grid-cols-[120px,1fr] gap-2 break-words">
-            <span class="font-medium">Action:</span>
-            <span class="break-words text-left">Tab Focus</span>
-            <span class="font-medium">From:</span>
-            <span class="break-words text-left">
-                ${from.tagName || '[Unknown]'}${from.id ? ' (#' + from.id + ')' : ''}${from.ariaLabel ? ' - ' + from.ariaLabel : ''}${from.text ? ' - ' + from.text : ''}
-            </span>
-            <span class="font-medium">To:</span>
-            <span class="break-words text-left">
-                ${to.tagName || '[Unknown]'}${to.id ? ' (#' + to.id + ')' : ''}${to.ariaLabel ? ' - ' + to.ariaLabel : ''}${to.text ? ' - ' + to.text : ''}
-            </span>
-            <span class="font-medium">Key:</span>
-            <span class="break-words text-left">${logData.key || 'Tab'}</span>
-        </div>`;
+            html += `
+                <div class="grid grid-cols-[120px,1fr] gap-2 break-words">
+                    <span class="font-medium">Action:</span>
+                    <span class="break-words text-left">Tab Focus</span>
+                    <span class="font-medium">From:</span>
+                    <span class="break-words text-left">
+                        ${from.tagName || '[Unknown]'}${from.id ? ' (#' + from.id + ')' : ''}${from.ariaLabel ? ' - ' + from.ariaLabel : ''}${from.text ? ' - ' + from.text : ''}
+                    </span>
+                    <span class="font-medium">To:</span>
+                    <span class="break-words text-left">
+                        ${to.tagName || '[Unknown]'}${to.id ? ' (#' + to.id + ')' : ''}${to.ariaLabel ? ' - ' + to.ariaLabel : ''}${to.text ? ' - ' + to.text : ''}
+                    </span>
+                    <span class="font-medium">Key:</span>
+                    <span class="break-words text-left">${logData.key || 'Tab'}</span>
+                </div>
+            `;
         } else if (logData.action === 'input-change') {
             const details = logData.details;
-            html += `<div class="grid grid-cols-[120px,1fr] gap-2 break-words">
-            <span class="font-medium">Element:</span>
-            <span class="break-words text-left">&lt;${details.tagName}&gt;</span>`;
+            html += `
+                <div class="grid grid-cols-[120px,1fr] gap-2 break-words">
+                <span class="font-medium">Element:</span>
+                <span class="break-words text-left">&lt;${details.tagName}&gt;</span>
+            `;
             if (details.tagName === 'SELECT') {
                 html += `
                 <span class="font-medium">Type:</span>
@@ -2807,24 +2809,25 @@ ${errorData.stack}`.trim();
 
             html += `</div>`;
         } else if (logData.action === 'keydown') {
-            html += `<div class="grid grid-cols-[120px,1fr] gap-2 break-words">
-                <span class="font-medium">Key:</span>
-                <span class="break-words text-left">${logData.key}</span>
-                <span class="font-medium">With Modifiers:</span>
-                <span class="break-words text-left">
-                    ${logData.ctrlKey ? 'Ctrl+' : ''}${logData.shiftKey ? 'Shift+' : ''}${logData.altKey ? 'Alt+' : ''}${logData.key}
-                </span>
-                <span class="font-medium">Element:</span>
-                <span class="break-words text-left">&lt;${logData.details.tagName}&gt;</span>
-                ${logData.details.context ? `
-                    <span class="font-medium">Context:</span>
-                    <span class="break-words text-left">${logData.details.context}</span>
-                ` : ''}
-                ${logData.details.inputType ? `
-                    <span class="font-medium">Input Type:</span>
-                    <span class="break-words text-left">${logData.details.inputType}</span>
-                ` : ''}
-        </div>`;
+            html += `
+                <div class="grid grid-cols-[120px,1fr] gap-2 break-words">
+                    <span class="font-medium">Key:</span>
+                    <span class="break-words text-left">${logData.key}</span>
+                    <span class="font-medium">With Modifiers:</span>
+                    <span class="break-words text-left">
+                        ${logData.ctrlKey ? 'Ctrl+' : ''}${logData.shiftKey ? 'Shift+' : ''}${logData.altKey ? 'Alt+' : ''}${logData.key}
+                    </span>
+                    <span class="font-medium">Element:</span>
+                    <span class="break-words text-left">&lt;${logData.details.tagName}&gt;</span>
+                    ${logData.details.context ? `
+                        <span class="font-medium">Context:</span>
+                        <span class="break-words text-left">${logData.details.context}</span>
+                    ` : ''}
+                    ${logData.details.inputType ? `
+                        <span class="font-medium">Input Type:</span>
+                        <span class="break-words text-left">${logData.details.inputType}</span>
+                    ` : ''}
+                </div>`;
         }
         // --- End Branches ---
         html += `</div></div>`;

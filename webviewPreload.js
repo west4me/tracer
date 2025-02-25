@@ -48,9 +48,7 @@ ipcRenderer.on('reset-listeners', () => {
 
 // Forward unhandled errors and console errors from the webview to the host
 window.onerror = (message, source, lineno, colno, error) => {
-    if (!message.toLowerCase().includes('error')) {
-        return; // Skip non-error messages
-    }
+    console.log('🔥 [DEBUG] window.onerror triggered:', message, source, lineno, colno, error);
 
     ipcRenderer.sendToHost('webview-error', {
         type: 'JavaScript Error',
@@ -62,6 +60,7 @@ window.onerror = (message, source, lineno, colno, error) => {
         stack: error?.stack || 'No stack trace available'
     });
 };
+
 
 function logInputChange(element, finalValue) {
     const details = {
@@ -799,4 +798,15 @@ window.addEventListener('message', (event) => {
         ipcRenderer.send('load-url-in-main', event.data.url);
     }
 });
+
+window.addEventListener('unhandledrejection', (event) => {
+    console.log('🔥 [DEBUG] Unhandled promise rejection:', event.reason);
+
+    ipcRenderer.sendToHost('webview-error', {
+        type: 'Test Message',
+        message: 'If you see this in renderer.js, ipcRenderer.sendToHost is working!'
+    });
+
+});
+
 // End of snippet
