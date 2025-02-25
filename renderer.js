@@ -2674,22 +2674,38 @@ ${errorData.stack}`.trim();
 
             if (details.parentContainer) {
                 const pc = details.parentContainer;
-                let containerDesc = `</${pc.tagName.toLowerCase()}>`;
-                if (pc.ariaLabel) containerDesc += ` aria-label="${pc.ariaLabel}"`;
-                if (pc.role) containerDesc += ` role="${pc.role}"`;
-                if (pc.id) containerDesc += ` #${pc.id}`;
-                if (pc.className) containerDesc += ` .${pc.className}`;
+
+                // Use the snippet property directly if it exists
+                let containerDesc = pc.snippet || `<${pc.tagName.toLowerCase()}>`;
+
+                // If you still want to add the ID and there's no snippet
+                if (!pc.snippet && pc.id) {
+                    containerDesc = `<${pc.tagName.toLowerCase()} id="${pc.id}">`;
+                }
+
+                // Make sure we have a closing tag if snippet doesn't include it
+                if (!containerDesc.includes('</')) {
+                    containerDesc += `</${pc.tagName.toLowerCase()}>`;
+                }
+
+                // Escape HTML characters so they display as text
+                const escapedDesc = containerDesc
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
 
                 html += `
-                    <div class="col-span-2 mt-2">
-                        <div class="bg-gray-50 rounded p-2 border break-words whitespace-normal overflow-x-hidden">
-                            <div class="text-sm font-semibold mb-1">Parent Container</div>
-                            <div class="text-sm break-words whitespace-normal overflow-x-hidden">
-                            ${containerDesc}
-                            </div>
-                        </div>
-                    </div>
-                    `;
+        <div class="col-span-2 mt-2">
+            <div class="bg-gray-50 rounded p-2 border break-words whitespace-normal overflow-x-hidden">
+                <div class="text-sm font-semibold mb-1">Parent Container</div>
+                <div class="text-sm break-words whitespace-normal overflow-x-hidden">
+                ${escapedDesc}
+                </div>
+            </div>
+        </div>
+        `;
             }
 
 

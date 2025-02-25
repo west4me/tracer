@@ -6,6 +6,13 @@ let typedBuffer = '';
 let typedBufferTimer = null;
 const TYPED_BUFFER_DELAY = 500;
 
+// (Insert at the top of findParentContainer.js, around line 1 or so)
+function shortenAttr(value) {
+    if (!value) return '';
+    return value.length <= 25 ? value : value.slice(0, 25) + '...';
+}
+
+
 // In webviewPreload.js, update the reset handler
 ipcRenderer.on('reset-listeners', () => {
     console.log("Resetting listeners...");
@@ -199,6 +206,26 @@ const getIframeContext = (element) => {
 };
 
 function findParentContainer(el) {
+    // First, try to get the immediate parent
+    let parent = el.parentElement;
+    if (parent && parent.tagName !== 'BODY' && parent.tagName !== 'HTML') {
+        return {
+            tagName: parent.tagName,
+            ariaLabel: parent.getAttribute('aria-label') || null,
+            role: parent.getAttribute('role') || null,
+            id: parent.id || null,
+            className: parent.className || null,
+            snippet: `<${parent.tagName.toLowerCase()}`
+                + (parent.id ? ` id="${shortenAttr(parent.id)}"` : '')
+                + (parent.className ? ` class="${shortenAttr(parent.className)}"` : '')
+                + (parent.getAttribute('role') ? ` role="${shortenAttr(parent.getAttribute('role'))}"` : '')
+                + (parent.getAttribute('aria-label') ? ` aria-label="${shortenAttr(parent.getAttribute('aria-label'))}"` : '')
+                + `></${parent.tagName.toLowerCase()}>`
+
+        };
+    }
+
+    // If immediate parent wasn't useful, fall back to the current semantically significant container search
     let current = el.parentElement;
 
     // Semantically significant container elements
@@ -223,26 +250,24 @@ function findParentContainer(el) {
             (role && role.trim() !== '') ||
             (label && label.trim() !== '')
         ) {
-            // Build a minimal HTML-like string (no classes)
-            // We'll convert `tag` back to lowercase to match normal HTML
+            // Build the snippet
             const lowerTag = tag.toLowerCase();
             const idPart = current.id ? ` id="${current.id}"` : '';
-            const rolePart = role ? ` role="${role}"` : '';
-            const labelPart = label ? ` aria-label="${label}"` : '';
-            const labelledByPart = labelledBy ? ` aria-labelledby="${labelledBy}"` : '';
+            const snippet = `<${lowerTag}`
+                + (current.id ? ` id="${shortenAttr(current.id)}"` : '')
+                + (current.className ? ` class="${shortenAttr(current.className)}"` : '')
+                + (role ? ` role="${shortenAttr(role)}"` : '')
+                + (label ? ` aria-label="${shortenAttr(label)}"` : '')
+                + (labelledBy ? ` aria-labelledby="${shortenAttr(labelledBy)}"` : '')
+                + `></${lowerTag}>`;
 
-            const snippet = `<${lowerTag}${idPart}${rolePart}${labelPart}${labelledByPart}>`;
-
-            // Return your existing object + the new `snippet` field
             return {
                 tagName: tag,
                 ariaLabel: label || null,
                 role: role || null,
                 id: current.id || null,
                 className: current.className || null,
-
-                // The key addition: a clean HTML-like snippet
-                snippet
+                snippet: snippet
             };
         }
         current = current.parentElement;
