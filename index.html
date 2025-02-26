@@ -479,6 +479,10 @@
           <button class="annotation-tool p-2 hover:bg-gray-100 rounded" data-tool="stamp" title="Add Stamp (W)">
             <svg data-lucide="stamp" width="20" height="20"></svg>
           </button>
+          <button id="view-full-size" class="absolute top-2 right-10 text-gray-500 hover:text-gray-700"
+            title="View Full Size in New Window">
+            <svg data-lucide="maximize" width="24" height="24"></svg>
+          </button>
 
           <!-- Add the stamp selector panel -->
           <div id="stamp-selector"
@@ -674,29 +678,32 @@
       <button id="close-shortcuts-x" class="absolute top-4 right-4 text-gray-600 hover:text-gray-800">
         <svg data-lucide="x" width="24" height="24"></svg>
       </button>
-
-      <h3 class="text-2xl font-semibold text-gray-900 mb-6">Keyboard shortcuts</h3>
-
+    
+      <h2 class="text-2xl font-semibold text-gray-900 mb-6">Keyboard shortcuts</h2>
+    
       <div class="grid grid-cols-2 gap-x-12 gap-y-8">
         <!-- Left Column -->
         <div class="space-y-6">
           <!-- Logging & Navigation -->
           <div>
-            <h4 class="font-medium text-gray-800 mb-3 flex items-center gap-2">
+            <h3 class="text-lg font-medium text-gray-800 mb-3 flex items-center gap-2">
               <svg data-lucide="keyboard" width="18" height="18" class="text-[#FF8A65]"></svg>
               Global shortcuts
-            </h4>
+            </h3>
             <div class="space-y-2.5">
               <div class="flex items-center gap-3">
-                <div class="min-w-[100px]">
-                  <kbd class="kbc-button">Ctrl + Space</kbd>
+                <div class="min-w-[100px] flex items-center gap-1">
+                  <kbd class="kbc-button">Ctrl</kbd>
+                  <span>+</span>
+                  <kbd class="kbc-button">Space</kbd>
                 </div>
                 <span class="text-gray-600">Toggle logging</span>
               </div>
               <div class="flex items-center gap-3">
-                <div class="min-w-[100px]">
-                  <kbd class="kbc-button">Ctrl
-                    + T</kbd>
+                <div class="min-w-[100px] flex items-center gap-1">
+                  <kbd class="kbc-button">Ctrl</kbd>
+                  <span>+</span>
+                  <kbd class="kbc-button">T</kbd>
                 </div>
                 <span class="text-gray-600">Toggle sidebar</span>
               </div>
@@ -714,78 +721,90 @@
               </div>
             </div>
           </div>
-
+    
           <!-- Comments Section -->
           <div>
-            <h4 class="font-medium text-gray-800 mb-3 flex items-center gap-2">
+            <h3 class="text-lg font-medium text-gray-800 mb-3 flex items-center gap-2">
               <svg data-lucide="message-square" width="18" height="18" class="text-[#FF8A65]"></svg>
               Comments
-            </h4>
+            </h3>
             <div class="space-y-2.5">
               <div class="flex items-center gap-3">
-                <div class="min-w-[100px]">
-                  <kbd class="kbc-button">Ctrl
-                    + K</kbd>
+                <div class="min-w-[100px] flex items-center gap-1">
+                  <kbd class="kbc-button">Ctrl</kbd>
+                  <span>+</span>
+                  <kbd class="kbc-button">K</kbd>
                 </div>
                 <span class="text-gray-600">Insert/edit link</span>
               </div>
               <div class="flex items-center gap-3">
-                <div class="min-w-[100px]">
-                  <kbd class="kbc-button">Ctrl
-                    + Enter</kbd>
+                <div class="min-w-[100px] flex items-center gap-1">
+                  <kbd class="kbc-button">Ctrl</kbd>
+                  <span>+</span>
+                  <kbd class="kbc-button">Enter</kbd>
                 </div>
                 <span class="text-gray-600">Save comment</span>
               </div>
               <div class="flex items-center gap-3">
-                <div class="min-w-[100px]">
-                  <kbd class="kbc-button">Shift
-                    + Enter</kbd>
+                <div class="min-w-[100px] flex items-center gap-1">
+                  <kbd class="kbc-button">Shift</kbd>
+                  <span>+</span>
+                  <kbd class="kbc-button">Enter</kbd>
                 </div>
                 <span class="text-gray-600">Insert line break</span>
               </div>
             </div>
           </div>
         </div>
-
+    
         <!-- Right Column -->
         <div class="space-y-6">
           <!-- Screenshots Section -->
           <div>
-            <h4 class="font-medium text-gray-800 mb-3 flex items-center gap-2">
+            <h3 class="text-lg font-medium text-gray-800 mb-3 flex items-center gap-2">
               <svg data-lucide="camera" width="18" height="18" class="text-[#FF8A65]"></svg>
               Screenshots
-            </h4>
+            </h3>
             <div class="space-y-2.5">
               <div class="flex items-center gap-3">
-                <div class="min-w-[100px]">
-                  <kbd class="kbc-button">Ctrl
-                    + S</kbd>
+                <div class="min-w-[100px] flex items-center gap-1">
+                  <kbd class="kbc-button">Ctrl</kbd>
+                  <span>+</span>
+                  <kbd class="kbc-button">S</kbd>
                 </div>
                 <span class="text-gray-600">Take screenshot</span>
               </div>
               <div class="flex items-center gap-3">
-                <div class="min-w-[100px]">
-                  <kbd class="kbc-button"></kbd>Ctrl
-                  + Click</kbd>
+                <div class="min-w-[100px] flex items-center gap-1">
+                  <kbd class="kbc-button">Ctrl</kbd>
+                  <span>+</span>
+                  
+                    <svg class="inline" data-lucide="camera" width="24" height="24"></svg>
+                  
                 </div>
                 <span class="text-gray-600">Element capture</span>
               </div>
               <div class="flex items-center gap-3">
-                <div class="min-w-[100px]">
-                  <kbd class="kbc-button">Ctrl
-                    + Shift + Click</kbd>
+                <div class="min-w-[100px] flex items-center gap-1">
+                  <kbd class="kbc-button">Ctrl</kbd>
+                  <span>+</span>
+                  <kbd class="kbc-button">Shift</kbd>
+                  <span>+</span>
+                  
+                    <svg class="inline" data-lucide="camera" width="24" height="24"></svg>
+                  
                 </div>
                 <span class="text-gray-600">Full page capture</span>
               </div>
             </div>
           </div>
-
+    
           <!-- Annotation Tools Section -->
           <div>
-            <h4 class="font-medium text-gray-800 mb-3 flex items-center gap-2">
+            <h3 class="text-lg font-medium text-gray-800 mb-3 flex items-center gap-2">
               <svg data-lucide="pen-tool" width="18" height="18" class="text-[#FF8A65]"></svg>
               Annotation tools
-            </h4>
+            </h3>
             <div class="space-y-2.5">
               <div class="flex items-center gap-3">
                 <div class="min-w-[100px] flex justify-center">
@@ -812,16 +831,20 @@
                 <span class="text-gray-600">Stamp tool</span>
               </div>
               <div class="flex items-center gap-3">
-                <div class="min-w-[100px]">
-                  <kbd class="kbc-button">Ctrl
-                    + Z</kbd>
+                <div class="min-w-[100px] flex items-center gap-1">
+                  <kbd class="kbc-button">Ctrl</kbd>
+                  <span>+</span>
+                  <kbd class="kbc-button">Z</kbd>
                 </div>
                 <span class="text-gray-600">Undo</span>
               </div>
               <div class="flex items-center gap-3">
-                <div class="min-w-[100px]">
-                  <kbd class="kbc-button">Ctrl
-                    + Shift + Z</kbd>
+                <div class="min-w-[100px] flex items-center gap-1">
+                  <kbd class="kbc-button">Ctrl</kbd>
+                  <span>+</span>
+                  <kbd class="kbc-button">Shift</kbd>
+                  <span>+</span>
+                  <kbd class="kbc-button">Z</kbd>
                 </div>
                 <span class="text-gray-600">Redo</span>
               </div>
@@ -829,14 +852,14 @@
           </div>
         </div>
       </div>
-
+    
       <div class="flex justify-end mt-8">
         <button id="close-shortcuts-modal"
           class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors">
           Close
         </button>
       </div>
-    </div>
+    </div>s
 
 
     <!-- JIRA Settings Modal Container -->

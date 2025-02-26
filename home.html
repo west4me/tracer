@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>tracer - Interactive testing tool</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -130,52 +131,14 @@
                                 to start/pause logging
                             </li>
                             <li class="flex items-center gap-2">
-                                <kbd class="kbc-button">
-                                
-                                        <svg class="inline" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"
-                                            stroke-linecap="round" stroke-linejoin="round"
-                                            class="lucide lucide-mouse-pointer-click">
-                                            <path d="M14 4.1 12 6" />
-                                            <path d="m5.1 8-2.9-.8" />
-                                            <path d="m6 12-1.9 2" />
-                                            <path d="M7.2 2.2 8 5.1" />
-                                            <path
-                                                d="M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z" />
-                                        </svg>
                                
-                                    <svg class="inline" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path
-                                            d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                                        <circle cx="12" cy="13" r="4" />
-                                    </svg>
-                                </kbd>
+                                <svg class="inline" data-lucide="camera" width="24" height="24" stroke="currentColor"></svg>
+                                
                                 for viewport capture
                             </li>
                             <li class="flex items-center gap-2">
                                 Hold <kbd class="kbc-button">Ctrl</kbd> +
-                                <kbd class="kbc-button">
-                                    
-                                        <svg class="inline" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"
-                                            stroke-linecap="round" stroke-linejoin="round"
-                                            class="lucide lucide-mouse-pointer-click">
-                                            <path d="M14 4.1 12 6" />
-                                            <path d="m5.1 8-2.9-.8" />
-                                            <path d="m6 12-1.9 2" />
-                                            <path d="M7.2 2.2 8 5.1" />
-                                            <path
-                                                d="M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z" />
-                                        </svg>
-                                    
-                                    <svg class="inline" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path
-                                            d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                                        <circle cx="12" cy="13" r="4" />
-                                    </svg>
-                                </kbd>
+                                <svg class="inline" data-lucide="camera" width="24" height="24" stroke="currentColor"></svg>
                                 for element capture
                             </li>
 
@@ -493,6 +456,7 @@
                 }, 5000);
             }, 10000 + Math.random() * 10000);
         }
+        lucide.createIcons();
     </script>
 </body>
 

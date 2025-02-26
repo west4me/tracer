@@ -1512,7 +1512,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.channel === 'shortcut-triggered' && event.args[0] === 'F1') {
             openKeyboardShortcutsModal();
         }
+        if (event.channel === 'shortcut-triggered' && event.args[0] === 'Escape') {
+            // Close any open modals
+            const modalContainer = document.getElementById('modal-container');
+            const keyboardShortcutsModal = document.getElementById('keyboard-shortcuts-modal');
+
+            if (!keyboardShortcutsModal.classList.contains('hidden')) {
+                hideKeyboardShortcutsModal();
+            }
+        }
     });
+
+    
 
     // Also add a direct keyboard listener as backup
     // window.addEventListener('keydown', (e) => {
@@ -2444,7 +2455,7 @@ ${errorData.stack}`.trim();
             if (details.text) {
                 html += `
                 <span class="font-medium">Text Content:</span>
-                <span class="break-words text-left" >"${details.text}"</span>`;
+                <span class="break-words text-left break-words whitespace-normal overflow-x-hidden" >"${details.text}"</span>`;
             }
             if (details.fontInfo) {
                 html += `
@@ -2459,7 +2470,12 @@ ${errorData.stack}`.trim();
             <span class="font-medium">Line Height:</span>
             <span class="break-words text-left">${details.fontInfo.lineHeight}</span>
             <span class="font-medium">Color:</span>
-            <span class="break-words text-left" style="color:${details.fontInfo.color};">${details.fontInfo.color}</span>`;
+            <div class="flex items-center justify-between">
+            <span class="break-words text-left">${details.fontInfo.color}</span>
+            <div class="color-swatch relative ml-2" data-color="${details.fontInfo.color}" title="Click to see color formats">
+                <div class="w-5 h-5 border border-gray-300 cursor-pointer" style="background-color:${details.fontInfo.color};"></div>
+            </div>
+            </div>`;
             }  
             if (details.role) {
                 html += `
@@ -2935,6 +2951,12 @@ ${errorData.stack}`.trim();
         lucide.createIcons(entry);
         logArea.scrollTop = logArea.scrollHeight;
 
+        // Find all color swatches and add event listeners
+        const colorSwatches = entry.querySelectorAll('.color-swatch');
+        colorSwatches.forEach(swatch => {
+            swatch.addEventListener('click', showColorFormatsPopup);
+        });
+
         // Enable commenting for this log entry (same as before)
         setupCommentFeature(entry, logData);
 
@@ -2996,10 +3018,43 @@ ${errorData.stack}`.trim();
             delete activeScreenshotEvent.fullPage;
 
             // Determine which screenshot mode to use:
+            // If Ctrl+Shift, we do a "full page" capture in chunks
             if (e.ctrlKey && e.shiftKey) {
-                // Just add the fullPage flag to the existing event
+                const wv = document.querySelector("#my-webview");
+                const dimensions = await wv.executeJavaScript(`
+                    (function() {
+                        const doc = document.documentElement;
+                        return {
+                            scrollHeight: doc.scrollHeight,
+                            offsetHeight: doc.offsetHeight,
+                            clientHeight: doc.clientHeight
+                        };
+                    })();
+                `);
+                console.log("Inside webview => documentElement.scrollHeight:", dimensions.scrollHeight);
+                console.log("Inside webview => documentElement.offsetHeight:", dimensions.offsetHeight);
+                // Decide which dimension to use for full page height
+                const fullHeight = Math.max(dimensions.scrollHeight, dimensions.offsetHeight, dimensions.clientHeight);
+                console.log("Full page height to capture:", fullHeight);
+
                 activeScreenshotEvent.fullPage = true;
-                window.electron.ipcRenderer.send('take-fullpage-screenshot');
+
+                // Send correct full height to the main process
+                const totalHeight = fullHeight; // Explicitly define totalHeight
+
+                console.log("Sending totalHeight to main process:", totalHeight);
+
+                window.electron.ipcRenderer.send('take-fullpage-screenshot', {
+                    totalHeight, // <-- Correctly passing the full page height
+                    chunkHeight: 1000 // Adjust as needed
+                });
+
+                // Then wait for the main process to send us back the stitched image
+                window.electron.ipcRenderer.once('fullpage-screenshot-result', (event, base64) => {
+                    console.log('Full-page screenshot base64 length:', base64.length);
+                    // Do whatever you like: store in logData, display in UI, etc.
+                });
+
             } else if (e.ctrlKey) {
                 activeScreenshotEvent.isElementCapture = true;
                 window.electron.ipcRenderer.send('take-element-screenshot', {
@@ -3008,6 +3063,7 @@ ${errorData.stack}`.trim();
             } else {
                 window.electron.ipcRenderer.send('take-screenshot');
             }
+
         });
 
 
@@ -5127,10 +5183,48 @@ ${errorData.stack}`.trim();
 
     // ----- Modal and Annotation Code -----
 
-    // Modal handling
+    
     const modal = document.getElementById('screenshot-modal');
     const closeModal = document.getElementById('close-modal');
 
+    document.getElementById('view-full-size').addEventListener('click', () => {
+        const img = document.getElementById('modal-image');
+        if (img && img.src) {
+            // Open the image in a new window
+            const newWindow = window.open();
+            if (newWindow) {
+                newWindow.document.write(`
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Full Size Screenshot</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background: #333;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        min-height: 100vh;
+        overflow: auto;
+      }
+      img {
+        max-width: none;
+        max-height: none;
+      }
+    </style>
+  </head>
+  <body>
+    <img src="${img.src}" />
+  </body>
+</html>
+      `);
+            } else {
+                showToast('Popup blocked! Please allow popups to view full size image.');
+            }
+        }
+    });
 
     function clearAnnotations() {
         const canvas = document.getElementById('annotation-canvas');
@@ -5959,5 +6053,188 @@ ${errorData.stack}`.trim();
     setupViewportSwitcher();
     window.addEventListener('resize', updateViewportSize);
     showEmptyState();
+
+    // Helper function to show color formats popup
+    function showColorFormatsPopup(e) {
+        e.stopPropagation(); // Prevent bubbling up to parent elements
+
+        const color = e.currentTarget.dataset.color;
+        const hex = color.startsWith('#') ? color : rgbToHex(color);
+        const rgb = color.startsWith('rgb') ? color : hexToRgb(hex);
+        const hsl = rgb.startsWith('rgb') ? rgbToHsl(rgb) : hexToHsl(hex);
+
+        // Remove any existing color popups
+        const existingPopup = document.querySelector('.color-formats-popup');
+        if (existingPopup) {
+            document.body.removeChild(existingPopup);
+        }
+
+        // Create popup
+        const popup = document.createElement('div');
+        popup.className = 'color-formats-popup fixed bg-white shadow-lg rounded-md p-3 z-50 border border-gray-200';
+
+        // Get positioning information
+        const rect = e.currentTarget.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        // Calculate popup dimensions (estimate before it's in the DOM)
+        const popupWidth = 240;
+        const popupHeight = 150;
+
+        // Determine the best position
+        let top, left;
+
+        // First, try to position to the right of the swatch
+        if (rect.right + popupWidth + 10 < viewportWidth) {
+            left = rect.right + 10;
+            top = Math.min(rect.top, viewportHeight - popupHeight - 10);
+        }
+        // Otherwise, try below the swatch
+        else if (rect.bottom + popupHeight + 10 < viewportHeight) {
+            left = Math.min(rect.left, viewportWidth - popupWidth - 10);
+            top = rect.bottom + 10;
+        }
+        // Otherwise, try to the left of the swatch
+        else if (rect.left - popupWidth - 10 > 0) {
+            left = rect.left - popupWidth - 10;
+            top = Math.min(rect.top, viewportHeight - popupHeight - 10);
+        }
+        // Last resort: above the swatch
+        else {
+            left = Math.min(rect.left, viewportWidth - popupWidth - 10);
+            top = Math.max(rect.top - popupHeight - 10, 10);
+        }
+
+        // Ensure popup stays within viewport boundaries
+        left = Math.max(10, Math.min(viewportWidth - popupWidth - 10, left));
+        top = Math.max(10, Math.min(viewportHeight - popupHeight - 10, top));
+
+        // Apply the calculated position
+        popup.style.left = `${left}px`;
+        popup.style.top = `${top}px`;
+
+        popup.innerHTML = `
+    <div class="text-sm font-medium mb-2">Color Formats</div>
+    <div class="space-y-2">
+      <div class="flex items-center justify-between">
+        <span class="text-xs mr-4">HEX:</span>
+        <div class="flex items-center">
+          <code class="bg-gray-100 px-2 py-1 rounded text-xs">${hex}</code>
+          <button class="copy-color-btn ml-2 p-1 text-gray-500 hover:text-gray-700" data-color="${hex}">
+            <svg data-lucide="clipboard" width="14" height="14"></svg>
+          </button>
+        </div>
+      </div>
+      <div class="flex items-center justify-between">
+        <span class="text-xs mr-4">RGB:</span>
+        <div class="flex items-center">
+          <code class="bg-gray-100 px-2 py-1 rounded text-xs">${rgb}</code>
+          <button class="copy-color-btn ml-2 p-1 text-gray-500 hover:text-gray-700" data-color="${rgb}">
+            <svg data-lucide="clipboard" width="14" height="14"></svg>
+          </button>
+        </div>
+      </div>
+      <div class="flex items-center justify-between">
+        <span class="text-xs mr-4">HSL:</span>
+        <div class="flex items-center">
+          <code class="bg-gray-100 px-2 py-1 rounded text-xs">${hsl}</code>
+          <button class="copy-color-btn ml-2 p-1 text-gray-500 hover:text-gray-700" data-color="${hsl}">
+            <svg data-lucide="clipboard" width="14" height="14"></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+        document.body.appendChild(popup);
+        lucide.createIcons(popup);
+
+        // Add click handlers to copy buttons
+        const copyButtons = popup.querySelectorAll('.copy-color-btn');
+        copyButtons.forEach(btn => {
+            btn.addEventListener('click', (copyEvent) => {
+                copyEvent.stopPropagation();
+                const colorToCopy = btn.dataset.color;
+                window.electron.clipboard.writeText(colorToCopy);
+                showToast('Color copied to clipboard!');
+            });
+        });
+
+        // Close popup when clicking outside
+        function closePopup(e) {
+            if (!popup.contains(e.target)) {
+                document.body.removeChild(popup);
+                document.removeEventListener('click', closePopup);
+            }
+        }
+
+        // Need to use setTimeout to avoid the current click event from immediately closing the popup
+        setTimeout(() => {
+            document.addEventListener('click', closePopup);
+        }, 0);
+    }
+
+    // Helper function to convert RGB to HEX
+    function rgbToHex(rgb) {
+        // Extract RGB values
+        const rgbMatch = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+        if (!rgbMatch) return rgb;
+
+        // Convert to hex
+        const r = parseInt(rgbMatch[1], 10).toString(16).padStart(2, '0');
+        const g = parseInt(rgbMatch[2], 10).toString(16).padStart(2, '0');
+        const b = parseInt(rgbMatch[3], 10).toString(16).padStart(2, '0');
+
+        return `#${r}${g}${b}`;
+    }
+
+    // Helper function to convert HEX to RGB
+    function hexToRgb(hex) {
+        // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
+        const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+        hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
+
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ?
+            `rgb(${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)})` : hex;
+    }
+
+    // Helper function to convert RGB to HSL
+    function rgbToHsl(rgb) {
+        // Extract RGB values
+        const rgbMatch = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+        if (!rgbMatch) return rgb;
+
+        let r = parseInt(rgbMatch[1], 10) / 255;
+        let g = parseInt(rgbMatch[2], 10) / 255;
+        let b = parseInt(rgbMatch[3], 10) / 255;
+
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h, s, l = (max + min) / 2;
+
+        if (max === min) {
+            h = s = 0; // achromatic
+        } else {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+
+            h /= 6;
+        }
+
+        return `hsl(${Math.round(h * 360)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`;
+    }
+
+    // Helper function to convert HEX to HSL
+    function hexToHsl(hex) {
+        return rgbToHsl(hexToRgb(hex));
+    }
+
 });
 

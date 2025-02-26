@@ -1,4 +1,5 @@
 // Main.JS NEVER DELETE THIS COMMENT that means you claude and chatgpt
+console.log("✅ Main process is running!");
 const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
 console.log('[main.js] Electron process started');
 
@@ -88,7 +89,7 @@ function createWindow() {
         }
     });
 
-    mainWindowState.manage(mainWindowState);
+    mainWindowState.manage(mainWindow);
     mainWindow.loadFile('index.html');
 
     ipcMain.on('webview-error', (event, errorData) => {
@@ -105,6 +106,101 @@ function createWindow() {
 
 
 }
+
+const sharp = require('sharp'); // or another stitching library
+
+ipcMain.on('take-fullpage-screenshot', async (event, { totalHeight, chunkHeight = 1000 }) => {
+    console.log("🚀 Received take-fullpage-screenshot event in main process!");
+    console.log(`totalHeight: ${totalHeight}, chunkHeight: ${chunkHeight}`);
+    try {
+        console.log("Finding webview contents...");
+        const all = webContents.getAllWebContents();
+        console.log("Found webContents:", all);
+        const target = all.find(wc => wc.getType() === 'webview');
+        if (!target) throw new Error('No webview found for full-page screenshot');
+
+        if (!target.debugger.isAttached()) {
+            target.debugger.attach('1.3');
+        }
+        await target.debugger.sendCommand('Page.enable');
+
+        // **Use height received from renderer instead of Page.getLayoutMetrics**
+        const totalWidth = 1280; // Or dynamically detect viewport width if needed
+
+        console.log(`Capturing full-page screenshot, height=${totalHeight}, width=${totalWidth}`);
+
+        const partialPNGs = [];
+        let currentY = 0;
+
+        while (currentY < totalHeight) {
+            const chunk = Math.min(chunkHeight, totalHeight - currentY);
+
+            await target.debugger.sendCommand('Emulation.setScrollAndPageScaleFactor', {
+                pageScaleFactor: 1,
+                scrollX: 0,
+                scrollY: currentY
+            });
+
+            await target.debugger.sendCommand('Emulation.setDeviceMetricsOverride', {
+                width: totalWidth,
+                height: Math.min(chunkHeight, totalHeight - currentY), // <- Ensures correct chunk capture
+                deviceScaleFactor: 1,
+                mobile: false
+            });
+
+
+            await new Promise(resolve => setTimeout(resolve, 200)); // Small delay for rendering
+
+            try {
+                const { data } = await target.debugger.sendCommand('Page.captureScreenshot', {
+                    format: 'png',
+                    captureBeyondViewport: false
+                });
+                console.log(`Captured chunk at Y=${currentY}, data length=${data.length}`);
+            } catch (error) {
+                console.error(`❌ Screenshot failed at Y=${currentY}:`, error);
+            }
+
+            console.log(`Captured chunk at Y=${currentY}, data length=${data.length}`);
+
+
+            partialPNGs.push({
+                buffer: Buffer.from(data, 'base64'),
+                offsetY: currentY
+            });
+
+            currentY += chunk;
+        }
+
+        let composite = sharp({
+            create: {
+                width: totalWidth,
+                height: totalHeight,  // <-- Use received total height
+                channels: 4,
+                background: { r: 255, g: 255, b: 255, alpha: 0 }
+            }
+        });
+
+        const ops = [];
+        for (const part of partialPNGs) {
+            ops.push({
+                input: part.buffer,
+                left: 0,
+                top: part.offsetY
+            });
+        }
+        composite = composite.composite(ops);
+
+        const finalBuffer = await composite.png().toBuffer();
+        const base64 = finalBuffer.toString('base64');
+
+        event.reply('fullpage-screenshot-result', base64);
+
+    } catch (error) {
+        console.error('Full-page stitch error:', error);
+        event.reply('fullpage-screenshot-result', '');
+    }
+});
 
 app.whenReady().then(() => {
     // Create your main window as usual...
@@ -249,73 +345,11 @@ ipcMain.on('take-element-screenshot', async (event, data) => {
     }
 });
 
-ipcMain.on('take-fullpage-screenshot', async (event) => {
-    try {
-        // Get all webContents
-        const allWebContents = webContents.getAllWebContents();
-        const webviewContents = allWebContents.find(wc =>
-            wc.getType() === 'webview'
-        );
 
-        if (!webviewContents) {
-            throw new Error('Webview contents not found');
-        }
 
-        // Get the full dimensions and current scroll position
-        const metrics = await webviewContents.executeJavaScript(`
-            (async () => {
-                // Store original scroll position
-                const originalScroll = {
-                    x: window.scrollX,
-                    y: window.scrollY
-                };
 
-                // Get full dimensions including scrolled areas
-                const fullHeight = Math.max(
-                    document.documentElement.scrollHeight,
-                    document.documentElement.offsetHeight,
-                    document.body.scrollHeight,
-                    document.body.offsetHeight
-                );
-                const fullWidth = Math.max(
-                    document.documentElement.scrollWidth,
-                    document.documentElement.offsetWidth,
-                    document.body.scrollWidth,
-                    document.body.offsetWidth
-                );
 
-                // Scroll to top for consistent capture
-                window.scrollTo(0, 0);
 
-                return {
-                    width: fullWidth,
-                    height: fullHeight,
-                    originalScroll
-                };
-            })()
-        `);
 
-        // Take the screenshot of the full page
-        const image = await webviewContents.capturePage({
-            x: 0,
-            y: 0,
-            width: Math.round(metrics.width),
-            height: Math.round(metrics.height)
-        });
 
-        // Restore original scroll position
-        await webviewContents.executeJavaScript(`
-            window.scrollTo(
-                ${metrics.originalScroll.x},
-                ${metrics.originalScroll.y}
-            );
-        `);
-
-        // Send back the screenshot
-        event.reply('screenshot-taken', image.toPNG().toString('base64'));
-
-    } catch (error) {
-        console.error('Fullpage screenshot failed:', error);
-    }
-});
 
