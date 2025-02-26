@@ -2098,6 +2098,11 @@ ${errorData.stack}`.trim();
                 updateLogUI(logData);
                 return;
             }
+            if (logData.action === 'toggle-logging') {
+                console.log('Toggle logging action received from webview');
+                toggleLogging();
+                return;
+            }
 
             // For non-screenshot events, respect the logging state
             if (!loggingEnabled) {
