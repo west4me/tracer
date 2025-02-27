@@ -8,6 +8,19 @@ let isResetting = false;
 let emptyStateMessage = null;
 let isFirstLog = true;
 let urlInput;
+let finalIssueType = ''; // For JIRA export
+let finalSummary = ''; // For JIRA export
+let lastFolderPath = '';
+let lastScreenshotBase64 = '';
+
+// List of patterns to ignore in error logs
+const ignoredPatterns = [
+    'GUEST_VIEW_MANAGER_CALL',
+    'ERR_ABORTED (-3)',
+    'console.log',
+    'console.warn',
+    'console.info'
+];
 
 // Annotation state
 let isDrawing = false;
@@ -971,6 +984,7 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+
 function hideKeyboardShortcutsModal() {
     const modalContainer = document.getElementById('modal-container');
     const keyboardShortcutsModal = document.getElementById('keyboard-shortcuts-modal');
@@ -1029,6 +1043,15 @@ document.addEventListener("keydown", (e) => {
 });
 
 const ipcRenderer = window.electron.ipcRenderer;
+
+
+ipcRenderer.on('screenshot-save-result', (_, result) => {
+    if (result.success) {
+        showToast(`Screenshot saved successfully at: ${result.path}`);
+    } else {
+        showToast(`Failed to save screenshot: ${result.error}`);
+    }
+});
 
 
 ipcRenderer.on('reset-listeners', () => {
@@ -4609,7 +4632,7 @@ ${errorData.stack}`.trim();
         showToast('JIRA CSV log (single Defect) exported!');
     }
 
-    function exportJiraLogSingleDefectWithCustomFields(customFields, issueType, summary) {
+    function exportJiraLogSingleDefectWithCustomFields(customFields, issueType, summary, imageMap = null) {
         if (eventLog.length === 0) {
             showModal('alert-modal', {
                 message: 'No logs to export.',
@@ -4792,6 +4815,8 @@ ${errorData.stack}`.trim();
                 }
             }
 
+
+            // Screenshots / Element Captures
             // Screenshots / Element Captures
             if (log.screenshot) {
                 let shotContent = log.isElementCapture
@@ -4802,6 +4827,14 @@ ${errorData.stack}`.trim();
                 if (log.details?.xpath) {
                     shotContent += `*Element Location:* {{${log.details.xpath}}}\n`;
                 }
+
+                // If we have a SharePoint/OneDrive URL for this screenshot, include it
+                if (imageMap && imageMap.has(log.timestamp)) {
+                    const imageInfo = imageMap.get(log.timestamp);
+                    shotContent += `\n!${imageInfo.url}!\n`;
+                    shotContent += `\n[Download Full Size|${imageInfo.url}]\n`;
+                }
+
                 description += '\n' + createPanel('Visual Evidence', shotContent);
             }
 
@@ -4847,7 +4880,7 @@ ${errorData.stack}`.trim();
         showToast('JIRA CSV log with Atlassian Wiki markup exported!');
     }
 
-    // “Save & Export” => hide modal, then run our CSV export
+    // "Save & Export" => hide modal, then run our CSV export
     document.getElementById('save-jira-fields').addEventListener('click', () => {
         // For each non-blank custom field, update the persistent history in localStorage.
         jiraFields.forEach(field => {
@@ -4864,40 +4897,35 @@ ${errorData.stack}`.trim();
                 localStorage.setItem('jiraFieldsHistory', JSON.stringify(history));
             }
         });
-        // 1) Grab the user’s selection
+
+        // The rest of your existing code for issue type, etc.
         const selectedIssueType = document.getElementById('issue-type-select').value.trim();
         const newIssueType = document.getElementById('issue-type-new').value.trim();
 
-        // 2) Decide which to use. If the user typed a new type, use that. Otherwise use the dropdown selection.
-        let finalIssueType = '';
+        finalIssueType = '';
         if (newIssueType) {
             finalIssueType = newIssueType;
         } else if (selectedIssueType) {
             finalIssueType = selectedIssueType;
         } else {
-            // If neither is provided, fallback to something or just leave it empty
-            finalIssueType = ''; // or "Defect" if you want a default
-        } // After we decide finalIssueType:
+            finalIssueType = '';
+        }
+
         if (newIssueType) {
-            // The user typed something new
             typedIssueType = newIssueType;
             currentIssueType = '';
         } else if (selectedIssueType) {
-            // The user picked from the dropdown
             typedIssueType = '';
             currentIssueType = selectedIssueType;
         } else {
-            // They left both empty => fallback
             typedIssueType = '';
             currentIssueType = 'Defect';
         }
 
-        // 3) Store finalIssueType in localStorage if not empty
         if (finalIssueType) {
             let storedIssueTypes = JSON.parse(localStorage.getItem('issueTypesHistory') || '[]');
             if (!storedIssueTypes.includes(finalIssueType)) {
                 storedIssueTypes.push(finalIssueType);
-                // Optionally limit to last 10
                 if (storedIssueTypes.length > 10) {
                     storedIssueTypes = storedIssueTypes.slice(storedIssueTypes.length - 10);
                 }
@@ -4905,13 +4933,155 @@ ${errorData.stack}`.trim();
             }
         }
 
-        let finalSummary = typedSummary.trim() || 'No Summary Entered';
+        finalSummary = typedSummary.trim() || 'No Summary Entered';
 
-        // 4) Finally call your export function with the chosen issue type
-        hideExportJiraSettingsModal();
+        // Check if we have any screenshots to handle
+        const screenshotEvents = eventLog.filter(event => event.screenshot);
+
+        if (screenshotEvents.length > 0) {
+            // Hide the JIRA settings modal first
+            hideExportJiraSettingsModal();
+
+            // Show confirmation for saving screenshots
+            const modalContainer = document.getElementById('modal-container');
+            const confirmDialog = document.createElement('div');
+            confirmDialog.id = 'screenshot-save-modal';
+            confirmDialog.className = 'bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4';
+            confirmDialog.innerHTML = `
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                Save Screenshots for JIRA
+            </h3>
+            <p class="text-gray-600 mb-4">
+                Your log contains ${screenshotEvents.length} screenshot${screenshotEvents.length > 1 ? 's' : ''}. To include them in JIRA, they need to be saved to a SharePoint/OneDrive folder.
+            </p>            
+            <div class="flex justify-end space-x-3">
+                <button id="skip-screenshots" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                    Skip Screenshots
+                </button>
+                <button id="choose-folder" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    Choose Folder
+                </button>
+            </div>
+        `;
+
+            // Show the dialog
+            modalContainer.classList.remove('hidden');
+            modalContainer.classList.add('flex');
+            modalContainer.appendChild(confirmDialog);
+
+            
+            // Handle Skip button
+            document.getElementById('skip-screenshots').addEventListener('click', () => {
+                modalContainer.classList.add('hidden');
+                modalContainer.removeChild(confirmDialog);
+
+                // Export without screenshots
+                exportJiraLogSingleDefectWithCustomFields(jiraFields, finalIssueType, finalSummary);
+            });
+
+            // Handle Choose Folder button
+            document.getElementById('choose-folder').addEventListener('click', () => {
+                // Remove the dialog
+                modalContainer.classList.add('hidden');
+                modalContainer.removeChild(confirmDialog);
+                window.electron.ipcRenderer.send('open-folder-dialog');
+            });
+            
+        } else {
+            // No screenshots, export directly
+            hideExportJiraSettingsModal();
+            exportJiraLogSingleDefectWithCustomFields(jiraFields, finalIssueType, finalSummary);
+        }
+    });
+
+    async function saveScreenshotsForJira(screenshotEvents, folderPath) {
+        const imageMap = new Map();
+        const sanitizedSummary = typedSummary.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30) || 'Screenshot';
+
+        console.log(`Starting to process ${screenshotEvents.length} screenshots to folder: ${folderPath}`);
+
+        for (let i = 0; i < screenshotEvents.length; i++) {
+            const event = screenshotEvents[i];
+            try {
+                console.log(`Processing screenshot ${i + 1}, has data: ${!!event.screenshot}`);
+
+                // Create a unique filename
+                const timestamp = new Date(event.timestamp).toISOString().replace(/[-:]/g, '').replace(/\..+/, '');
+                const filename = `${sanitizedSummary}_${i + 1}_${timestamp}.png`;
+                console.log(`Created filename: ${filename}`);
+
+                if (!event.screenshot) {
+                    console.error(`Screenshot data is missing for event ${i + 1}`);
+                    continue;
+                }
+
+                // *** SIMPLIFIED: Just send the raw base64 data! ***
+                window.electron.ipcRenderer.send('save-screenshot-base64', {
+                    folderPath,
+                    filename,
+                    base64Data: event.screenshot
+                });
+
+                console.log(`Sent base64 screenshot data to main process, length: ${event.screenshot.length}`);
+
+                // Rest of your URL building code...
+                const oneDrivePath = folderPath;
+                const usernameMatch = oneDrivePath.match(/C:\\Users\\([^\\]+)/);
+                const username = usernameMatch ? usernameMatch[1] : 'unknown';
+
+                const sharepointBaseUrl = `https://shelterinsurance-my.sharepoint.com/personal/${username.toLowerCase()}_shelterinsurance_com`;
+
+                let relativePath = '';
+                if (oneDrivePath.includes('Documents\\')) {
+                    relativePath = 'Documents/' + oneDrivePath.split('Documents\\').pop().replace(/\\/g, '/');
+                } else {
+                    relativePath = 'Documents/' + oneDrivePath.split('OneDrive - Shelter Insurance Companies\\').pop().replace(/\\/g, '/');
+                }
+
+                const encodedPath = relativePath.split('/').map(part => encodeURIComponent(part)).join('/');
+                const fullUrl = `${sharepointBaseUrl}/${encodedPath}/${filename}`;
+                console.log(`Generated SharePoint URL: ${fullUrl}`);
+
+                imageMap.set(event.timestamp, {
+                    filename,
+                    url: fullUrl
+                });
+
+                showToast(`Processed screenshot ${i + 1} of ${screenshotEvents.length}`);
+                await new Promise(resolve => setTimeout(resolve, 200));
+
+            } catch (error) {
+                console.error(`Error processing screenshot ${i + 1}:`, error);
+                showToast(`Error saving screenshot ${i + 1}: ${error.message}`);
+            }
+        }
+
+        showToast('All screenshots processed');
+        return imageMap;
+    }
+
+    ipcRenderer.on('folder-selected', (event, data) => {
+        const { folderPath } = data;
+        console.log('Attempting to open folder dialog, sending IPC message...');
+        console.log('Renderer received folder-selected, folderPath =', folderPath);
+        // Show processing message
+        showToast('Processing screenshots...');
+
+        // Save all screenshots
+        saveScreenshotsForJira(eventLog.filter(event => event.screenshot), folderPath).then(imageMap => {
+            exportJiraLogSingleDefectWithCustomFields(jiraFields, finalIssueType, finalSummary, imageMap);
+        });
+    });
+
+    ipcRenderer.on('folder-selection-canceled', () => {
+        // User canceled folder selection
         exportJiraLogSingleDefectWithCustomFields(jiraFields, finalIssueType, finalSummary);
     });
 
+    ipcRenderer.on('folder-selection-error', () => {
+        showToast('Error selecting folder. Exporting without screenshots.');
+        exportJiraLogSingleDefectWithCustomFields(jiraFields, finalIssueType, finalSummary);
+    });
 
     // Toggle sidebar visibility
     function toggleSidebar() {
@@ -4944,6 +5114,8 @@ ${errorData.stack}`.trim();
             showModal('keyboard-shortcuts-modal');
         }
     });
+
+    
 
     // Reset log content with confirmation
     if (resetLogButton && logArea) {
@@ -6242,4 +6414,20 @@ ${errorData.stack}`.trim();
     }
 
 });
+// Add this where appropriate in your code
+const emergencySaveBtn = document.createElement('button');
+emergencySaveBtn.textContent = 'Emergency Screenshot Save';
+emergencySaveBtn.className = 'p-2 bg-red-600 text-white rounded';
+emergencySaveBtn.addEventListener('click', () => {
+    window.electron.ipcRenderer.send('emergency-save-debug');
+});
+document.querySelector('#log-sidebar').appendChild(emergencySaveBtn);
 
+// Listen for results
+ipcRenderer.on('emergency-save-result', (_, result) => {
+    if (result.success) {
+        showToast(`Emergency save successful: ${result.path}`);
+    } else {
+        showToast(`Emergency save failed: ${result.error}`);
+    }
+});

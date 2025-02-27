@@ -150,6 +150,9 @@ contextBridge.exposeInMainWorld('electron', {
         removeListener: (...args) => ipcRenderer.removeListener(...args),
         removeUrl: (url) => ipcRenderer.sendToHost('remove-url', url) 
     },
+    dialog: {
+        showOpenDialog: (options) => ipcRenderer.invoke('show-folder-dialog', options)
+    },
     clipboard: {
         writeText: (text) => {
             require('electron').clipboard.writeText(text)
