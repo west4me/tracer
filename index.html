@@ -456,108 +456,135 @@
     </button>
   </div>
 
-  <!-- Screenshot Modal -->
-  <div id="screenshot-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="relative bg-white p-4 rounded-lg max-w-[90vw] max-h-[90vh]">
-      <button id="close-modal" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700">
-        <svg data-lucide="x" width="24" height="24"></svg>
+<!-- Screenshot Modal -->
+<div id="screenshot-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+  <div class="relative bg-white rounded-lg max-w-[90vw] max-h-[90vh] flex flex-col p-4 overflow-hidden">
+
+    <!-- Close Button (spaced away from edges) -->
+    <button id="close-modal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 z-50">
+      <svg data-lucide="x" width="24" height="24"></svg>
+    </button>
+
+    <!-- Screenshot & Annotation Canvas -->
+    <div class="relative flex-grow overflow-auto">
+      <img id="modal-image" class="max-w-full max-h-full object-contain" src="" alt="Screenshot" />
+      <canvas id="annotation-canvas" class="pointer-events-none absolute top-0 left-0">
+      </canvas>
+    </div>
+
+    <!-- Toolbar at the bottom -->
+    <div id="annotation-toolbar"
+      class="mt-4 flex items-center gap-2 bg-gray-100 rounded shadow p-2 border border-gray-300">
+
+      <!-- Tools -->
+      <button class="annotation-tool p-2 hover:bg-gray-200 rounded" data-tool="arrow" title="Draw Arrow (A)">
+        <svg data-lucide="arrow-right" width="20" height="20"></svg>
       </button>
-      <img id="modal-image" class="max-w-full max-h-[85vh] object-contain" src="" alt="Screenshot" />
-      <!-- Annotation Toolbar -->
-      <div id="annotation-toolbar"
-        class="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-2 flex items-center gap-2">
-        <button class="annotation-tool p-2 hover:bg-gray-100 rounded" data-tool="arrow" title="Draw Arrow (A)">
-          <svg data-lucide="arrow-right" width="20" height="20"></svg>
+      <button class="annotation-tool p-2 hover:bg-gray-200 rounded" data-tool="rectangle" title="Draw Rectangle (R)">
+        <svg data-lucide="square" width="20" height="20"></svg>
+      </button>
+      <button class="annotation-tool p-2 hover:bg-gray-200 rounded" data-tool="circle" title="Draw Circle (C)">
+        <svg data-lucide="circle" width="20" height="20"></svg>
+      </button>
+
+      <!-- Stamp with popout -->
+      <div class="relative">
+        <button class="annotation-tool p-2 hover:bg-gray-200 rounded" data-tool="stamp" title="Add Stamp (W)">
+          <svg data-lucide="stamp" width="20" height="20"></svg>
         </button>
-        <button class="annotation-tool p-2 hover:bg-gray-100 rounded" data-tool="rectangle" title="Draw Rectangle (R)">
-          <svg data-lucide="square" width="20" height="20"></svg>
-        </button>
-        <button class="annotation-tool p-2 hover:bg-gray-100 rounded" data-tool="circle" title="Draw Circle (C)">
-          <svg data-lucide="circle" width="20" height="20"></svg>
-        </button>
-        <div class="relative"> <!-- Wrap in relative div for positioning -->
-          <button class="annotation-tool p-2 hover:bg-gray-100 rounded" data-tool="stamp" title="Add Stamp (W)">
-            <svg data-lucide="stamp" width="20" height="20"></svg>
+        <div id="stamp-selector"
+          class="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-lg p-2 flex flex-col gap-2 z-50 hidden">
+          <button class="stamp-option p-2 hover:bg-gray-100 rounded flex items-center gap-2 w-full" data-stamp="pass">
+            <span class="inline-block px-2 py-1 text-xs font-bold rounded bg-green-500 text-white 
+                         border-2 border-green-600 w-full text-center">PASS</span>
           </button>
-
-          <!-- Add the stamp selector panel -->
-          <div id="stamp-selector"
-            class="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-lg p-2 flex flex-col gap-2 z-50 hidden">
-            <button class="stamp-option p-2 hover:bg-gray-100 rounded flex items-center gap-2 w-full" data-stamp="pass">
-              <span
-                class="inline-block px-2 py-1 text-xs font-bold rounded bg-green-500 text-white border-2 border-green-600 w-full text-center">PASS</span>
-            </button>
-            <button class="stamp-option p-2 hover:bg-gray-100 rounded flex items-center gap-2 w-full" data-stamp="fail">
-              <span
-                class="inline-block px-2 py-1 text-xs font-bold rounded bg-red-500 text-white border-2 border-red-600 w-full text-center">FAIL</span>
-            </button>
-          </div>
+          <button class="stamp-option p-2 hover:bg-gray-100 rounded flex items-center gap-2 w-full" data-stamp="fail">
+            <span class="inline-block px-2 py-1 text-xs font-bold rounded bg-red-500 text-white 
+                         border-2 border-red-600 w-full text-center">FAIL</span>
+          </button>
         </div>
-        <div class="h-6 w-px bg-gray-200"></div>
-        <button id="annotation-undo" class="p-2 hover:bg-gray-100 rounded" title="Undo (Ctrl+Z)" disabled>
-          <svg data-lucide="undo-2" width="20" height="20"></svg>
-        </button>
-        <button id="annotation-redo" class="p-2 hover:bg-gray-100 rounded" title="Redo (Ctrl+Shift+Z)" disabled>
-          <svg data-lucide="redo-2" width="20" height="20"></svg>
-        </button>
-        <div class="h-6 w-px bg-gray-200"></div>
-        <input type="color" id="annotation-color" value="#FF0000" class="w-8 h-8 rounded cursor-pointer"
-          title="Annotation Color" />
-        <div class="h-6 w-px bg-gray-200"></div>
+      </div>
 
-        <button id="save-annotation" class="p-2 hover:bg-gray-100 rounded" title="Save Annotations (Ctrl+S)">
-          <svg data-lucide="save" width="20" height="20"></svg>
-        </button>
-        <div class="h-6 w-px bg-gray-200"></div>
-        <button id="show-shortcuts" class="p-2 hover:bg-gray-100 rounded relative group"
-          title="Show Keyboard Shortcuts">
-          <svg data-lucide="keyboard" width="20" height="20"></svg>
+      <!-- Divider -->
+      <div class="h-6 w-px bg-gray-300"></div>
 
-          <!-- Shortcuts tooltip -->
-          <div
-            class="hidden group-hover:block absolute bottom-full left-0 mb-2 p-3 bg-white rounded-lg shadow-lg border border-gray-200 whitespace-nowrap z-50">
-            <div class="text-sm font-medium mb-2 text-left">Annotation shortcuts</div>
-            <div class="space-y-2 text-xs text-gray-600">
-              <div class="grid grid-cols-[80px,1fr] gap-2">
-                <span class="font-mono bg-gray-100 px-2 rounded text-center">A</span>
-                <span>Arrow tool</span>
-              </div>
-              <div class="grid grid-cols-[80px,1fr] gap-2">
-                <span class="font-mono bg-gray-100 px-2 rounded text-center">R</span>
-                <span>Rectangle tool</span>
-              </div>
-              <div class="grid grid-cols-[80px,1fr] gap-2">
-                <span class="font-mono bg-gray-100 px-2 rounded text-center">C</span>
-                <span>Circle tool</span>
-              </div>
-              <div class="grid grid-cols-[80px,1fr] gap-2">
-                <span class="font-mono bg-gray-100 px-2 rounded text-center">W</span>
-                <span>Stamp tool</span>
-              </div>
-              <div class="grid grid-cols-[80px,1fr] gap-2">
-                <span class="font-mono bg-gray-100 px-2 rounded text-center">Ctrl+Z</span>
-                <span>Undo</span>
-              </div>
-              <div class="grid grid-cols-[80px,1fr] gap-2">
-                <span class="font-mono bg-gray-100 px-2 rounded text-center">Ctrl+Shift+Z</span>
-                <span>Redo</span>
-              </div>
-              <div class="grid grid-cols-[80px,1fr] gap-2">
-                <span class="font-mono bg-gray-100 px-2 rounded text-center">Ctrl+S</span>
-                <span>Save</span>
-              </div>
-              <div class="grid grid-cols-[80px,1fr] gap-2">
-                <span class="font-mono bg-gray-100 px-2 rounded text-center">Esc</span>
-                <span>Close</span>
-              </div>
+      <!-- Undo/Redo -->
+      <button id="annotation-undo" class="p-2 hover:bg-gray-200 rounded" title="Undo (Ctrl+Z)" disabled>
+        <svg data-lucide="undo-2" width="20" height="20"></svg>
+      </button>
+      <button id="annotation-redo" class="p-2 hover:bg-gray-200 rounded" title="Redo (Ctrl+Shift+Z)" disabled>
+        <svg data-lucide="redo-2" width="20" height="20"></svg>
+      </button>
+
+      <!-- Divider -->
+      <div class="h-6 w-px bg-gray-300"></div>
+
+      <!-- Color Picker -->
+      <input type="color" id="annotation-color" value="#FF0000" class="w-8 h-8 rounded cursor-pointer"
+        title="Annotation Color" />
+
+      <!-- Divider -->
+      <div class="h-6 w-px bg-gray-300"></div>
+
+      <!-- Save -->
+      <button id="save-annotation" class="p-2 hover:bg-gray-200 rounded" title="Save Annotations (Ctrl+S)">
+        <svg data-lucide="save" width="20" height="20"></svg>
+      </button>
+
+      <!-- Divider -->
+      <div class="h-6 w-px bg-gray-300"></div>
+
+      <!-- Shortcuts -->
+      <button id="show-shortcuts" class="p-2 hover:bg-gray-200 rounded relative group" title="Show Keyboard Shortcuts">
+        <svg data-lucide="keyboard" width="20" height="20"></svg>
+
+        <!-- Shortcut definitions tooltip -->
+        <div class="hidden group-hover:block absolute bottom-full left-0 mb-2 p-3 bg-white 
+                    rounded-lg shadow-lg border border-gray-300 whitespace-nowrap z-50">
+          <div class="text-sm font-medium mb-2 text-left">Annotation shortcuts</div>
+          <div class="space-y-2 text-xs text-gray-600">
+            <div class="grid grid-cols-[80px,1fr] gap-2">
+              <span class="font-mono bg-gray-100 px-2 rounded text-center">A</span>
+              <span>Arrow tool</span>
+            </div>
+            <div class="grid grid-cols-[80px,1fr] gap-2">
+              <span class="font-mono bg-gray-100 px-2 rounded text-center">R</span>
+              <span>Rectangle tool</span>
+            </div>
+            <div class="grid grid-cols-[80px,1fr] gap-2">
+              <span class="font-mono bg-gray-100 px-2 rounded text-center">C</span>
+              <span>Circle tool</span>
+            </div>
+            <div class="grid grid-cols-[80px,1fr] gap-2">
+              <span class="font-mono bg-gray-100 px-2 rounded text-center">W</span>
+              <span>Stamp tool</span>
+            </div>
+            <div class="grid grid-cols-[80px,1fr] gap-2">
+              <span class="font-mono bg-gray-100 px-2 rounded text-center">Ctrl+Z</span>
+              <span>Undo</span>
+            </div>
+            <div class="grid grid-cols-[80px,1fr] gap-2">
+              <span class="font-mono bg-gray-100 px-2 rounded text-center">Ctrl+Shift+Z</span>
+              <span>Redo</span>
+            </div>
+            <div class="grid grid-cols-[80px,1fr] gap-2">
+              <span class="font-mono bg-gray-100 px-2 rounded text-center">Ctrl+S</span>
+              <span>Save</span>
+            </div>
+            <div class="grid grid-cols-[80px,1fr] gap-2">
+              <span class="font-mono bg-gray-100 px-2 rounded text-center">Esc</span>
+              <span>Close</span>
             </div>
           </div>
-        </button>
-      </div>
-      <!-- Canvas Overlay -->
-      <canvas id="annotation-canvas" class="absolute inset-0 pointer-events-none"></canvas>
+        </div>
+      </button>
     </div>
   </div>
+</div>
+
+
+
+
   <!-- Modal Container for all dialogs -->
   <div id="modal-container" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 hidden">
     <!-- Reset Log Modal -->
