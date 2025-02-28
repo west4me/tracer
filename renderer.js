@@ -4871,8 +4871,6 @@ ${errorData.stack}`.trim();
                 }
             }
 
-
-            // Screenshots / Element Captures
             // Screenshots / Element Captures
             if (log.screenshot) {
                 let shotContent = log.isElementCapture
@@ -4884,15 +4882,15 @@ ${errorData.stack}`.trim();
                     shotContent += `*Element Location:* {{${log.details.xpath}}}\n`;
                 }
 
-                // If we have a SharePoint/OneDrive URL for this screenshot, include it
+                // If we have a SharePoint/OneDrive URL for this screenshot, include a clearly labeled link
                 if (imageMap && imageMap.has(log.timestamp)) {
                     const imageInfo = imageMap.get(log.timestamp);
-                    shotContent += `\n!${imageInfo.url}!\n`;
-                    shotContent += `\n[Download Full Size|${imageInfo.url}]\n`;
+                    shotContent += `\n[Download Full-Size Screenshot|${imageInfo.url}]\n`;
                 }
 
                 description += '\n' + createPanel('Visual Evidence', shotContent);
             }
+
 
             // Comments
             if (log.comments && log.comments.length > 0) {
@@ -5409,10 +5407,12 @@ ${errorData.stack}`.trim();
             }
 
             // Convert each file URL to a SharePoint URL
+            // Convert each file URL to a SharePoint URL that works better with Confluence
             imageMap.forEach((imgInfo, timestamp) => {
                 const filename = imgInfo.filename || `screenshot_${timestamp}.png`;
-                const encodedPath = relativePath.split('/').map(part => encodeURIComponent(part)).join('/');
-                const sharePointUrl = `${sharepointBaseUrl}/${encodedPath}/${encodeURIComponent(filename)}`;
+
+                // Create a SharePoint URL with the web=1 parameter which helps with embedding
+                const sharePointUrl = `${sharepointBaseUrl}/${relativePath}/${filename}?web=1`;
 
                 sharepointImageMap.set(timestamp, {
                     ...imgInfo,
