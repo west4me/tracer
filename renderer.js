@@ -5199,77 +5199,103 @@ ${errorData.stack}`.trim();
         showToast('Processing screenshots...');
 
         // Get all events with screenshots
-        const screenshotEvents = eventLog.filter(event => {
-            const hasScreenshot = !!event.screenshot;
-            console.log(`Event ${event.timestamp}: has screenshot = ${hasScreenshot}`);
-            return hasScreenshot;
-        });
-
+        const screenshotEvents = eventLog.filter(event => !!event.screenshot);
         console.log(`Found ${screenshotEvents.length} events with screenshots`);
 
-        // Simple direct approach - one screenshot at a time
+        // If no screenshots, just export
+        if (screenshotEvents.length === 0) {
+            exportJiraLogSingleDefectWithCustomFields(jiraFields, finalIssueType, finalSummary);
+            return;
+        }
+
+        // Create a map to store saved image info
+        const imageMap = new Map();
         let processedCount = 0;
-        let imageMap = new Map();
 
-        // Process one screenshot, then move to the next
-        const processNextScreenshot = (index) => {
-            // If we're done, export and return
-            if (index >= screenshotEvents.length) {
-                console.log(`Finished processing ${processedCount} screenshots`);
-                exportJiraLogSingleDefectWithCustomFields(jiraFields, finalIssueType, finalSummary, imageMap);
-                return;
-            }
+        // Process each screenshot sequentially with promises
+        const processScreenshots = async () => {
+            for (let i = 0; i < screenshotEvents.length; i++) {
+                const event = screenshotEvents[i];
 
-            const event = screenshotEvents[index];
+                // Generate filename
+                const timestamp = new Date(event.timestamp).toISOString()
+                    .replace(/[-:]/g, '')
+                    .replace(/\..+/, '');
+                const filename = `screenshot_${i + 1}_${timestamp}.png`;
 
-            // Generate filename
-            const timestamp = new Date(event.timestamp).toISOString()
-                .replace(/[-:]/g, '')
-                .replace(/\..+/, '');
-            const filename = `screenshot_${index + 1}_${timestamp}.png`;
-
-            // Prepare base64 data
-            let base64Data = event.screenshot;
-            if (!base64Data.startsWith('data:image/png;base64,')) {
-                base64Data = 'data:image/png;base64,' + base64Data;
-            }
-
-            console.log(`Saving screenshot ${index + 1}/${screenshotEvents.length}`);
-
-            // Set up a one-time listener for this specific save
-            ipcRenderer.once('screenshot-save-result', (result) => {
-                console.log(`Got result for screenshot ${index + 1}:`, result);
-
-                if (result && result.success) {
-                    processedCount++;
-
-                    // Create URL for JIRA
-                    const fileUrl = `file://${result.path.replace(/\\/g, '/')}`;
-
-                    // Add to imageMap
-                    imageMap.set(event.timestamp, {
-                        filename,
-                        url: fileUrl,
-                        path: result.path
-                    });
-
-                    showToast(`Saved screenshot ${index + 1}`);
+                // Prepare base64 data
+                let base64Data = event.screenshot;
+                if (!base64Data.startsWith('data:image/png;base64,')) {
+                    base64Data = 'data:image/png;base64,' + base64Data;
                 }
 
-                // Process next screenshot, regardless of success
-                setTimeout(() => processNextScreenshot(index + 1), 200);
-            });
+                console.log(`Saving screenshot ${i + 1}/${screenshotEvents.length}`);
 
-            // Send the save request
-            ipcRenderer.send('save-screenshot-base64', {
-                folderPath,
-                filename,
-                base64Data
-            });
+                try {
+                    // Create a promise for this screenshot save
+                    const result = await new Promise((resolve) => {
+                        // Set up handler for save result
+                        const handleSaveResult = (_, saveResult) => {
+                            ipcRenderer.removeListener('screenshot-save-result', handleSaveResult);
+                            resolve(saveResult);
+                        };
+
+                        // Listen for result
+                        ipcRenderer.on('screenshot-save-result', handleSaveResult);
+
+                        // Initiate save
+                        ipcRenderer.send('save-screenshot-base64', {
+                            folderPath,
+                            filename,
+                            base64Data
+                        });
+
+                        // Safety timeout
+                        setTimeout(() => {
+                            ipcRenderer.removeListener('screenshot-save-result', handleSaveResult);
+                            resolve({ success: false, error: 'Timeout' });
+                        }, 5000);
+                    });
+
+                    // Process result
+                    if (result && result.success) {
+                        processedCount++;
+                        const fileUrl = `file://${result.path.replace(/\\/g, '/')}`;
+
+                        // Add to imageMap
+                        imageMap.set(event.timestamp, {
+                            filename,
+                            url: fileUrl,
+                            path: result.path
+                        });
+
+                        showToast(`Saved screenshot ${i + 1}`);
+                    } else {
+                        console.error(`Failed to save screenshot ${i + 1}:`,
+                            result?.error || 'Unknown error');
+                    }
+                } catch (error) {
+                    console.error(`Error processing screenshot ${i + 1}:`, error);
+                }
+
+                // Small delay between saves
+                await new Promise(r => setTimeout(r, 200));
+            }
+
+            console.log(`Finished processing ${processedCount} screenshots`);
+
+            // Now show the SharePoint username modal
+            if (processedCount > 0) {
+                continueWithSharePointModal(imageMap);
+            } else {
+                // If no screenshots were processed, just export without images
+                showToast('No screenshots were saved successfully');
+                exportJiraLogSingleDefectWithCustomFields(jiraFields, finalIssueType, finalSummary);
+            }
         };
 
-        // Start processing with the first screenshot
-        processNextScreenshot(0);
+        // Start processing
+        processScreenshots();
     });
 
     ipcRenderer.on('folder-selection-canceled', () => {
@@ -5281,6 +5307,130 @@ ${errorData.stack}`.trim();
         showToast('Error selecting folder. Exporting without screenshots.');
         exportJiraLogSingleDefectWithCustomFields(jiraFields, finalIssueType, finalSummary);
     });
+
+    function continueWithSharePointModal(imageMap) {
+        console.log("Showing SharePoint username modal, imageMap entries:", imageMap.size);
+
+        // Create a brand new modal element
+        const modalHTML = `
+        <div id="temp-username-modal" class="fixed inset-0 flex items-center justify-center" 
+             style="background: rgba(0,0,0,0.5); z-index: 10000;">
+            <div class="bg-white rounded-lg p-6 shadow-xl" style="width: 400px;">
+                <h2 class="text-xl font-bold mb-4">Enter SharePoint Username</h2>
+                
+                <label class="block text-sm font-medium mb-1">
+                    Username (without "_shelterinsurance_com")
+                </label>
+                <input id="temp-username-input" type="text" 
+                       class="w-full border border-gray-300 rounded px-3 py-2 mb-4"
+                       placeholder="e.g. willcunningham" />
+                
+                <div class="flex justify-end space-x-2">
+                    <button id="temp-username-cancel" 
+                            class="px-3 py-1.5 border border-gray-300 rounded text-gray-700 hover:bg-gray-100">
+                        Cancel
+                    </button>
+                    <button id="temp-username-confirm"
+                            class="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        Confirm
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+        // Insert directly into body
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        const tempModal = document.getElementById('temp-username-modal');
+        const input = document.getElementById('temp-username-input');
+        const confirmBtn = document.getElementById('temp-username-confirm');
+        const cancelBtn = document.getElementById('temp-username-cancel');
+
+        // Focus the input
+        setTimeout(() => input.focus(), 100);
+
+        // Set up confirm button
+        confirmBtn.addEventListener('click', () => {
+            const username = input.value.trim();
+            if (!username) {
+                showToast('Username required');
+                return;
+            }
+
+            // Remove the temp modal
+            document.body.removeChild(tempModal);
+
+            // Process with username
+            processWithSharePointUsername(username, imageMap);
+        });
+
+        // Set up cancel button
+        cancelBtn.addEventListener('click', () => {
+            // Remove the temp modal
+            document.body.removeChild(tempModal);
+
+            // Fall back to local paths
+            showToast('Using local file paths');
+            exportJiraLogSingleDefectWithCustomFields(jiraFields, finalIssueType, finalSummary, imageMap);
+        });
+
+        // Click outside to cancel
+        tempModal.addEventListener('click', (e) => {
+            if (e.target === tempModal) {
+                document.body.removeChild(tempModal);
+                showToast('Using local file paths');
+                exportJiraLogSingleDefectWithCustomFields(jiraFields, finalIssueType, finalSummary, imageMap);
+            }
+        });
+    }
+    // Function to process the image map with SharePoint URLs
+    function processWithSharePointUsername(username, imageMap) {
+        console.log("Processing with SharePoint username:", username);
+
+        // Convert local file paths to SharePoint URLs
+        const sharepointBaseUrl = `https://shelterinsurance-my.sharepoint.com/personal/${username.toLowerCase()}_shelterinsurance_com/Documents`;
+
+        // Create a new map with SharePoint URLs
+        const sharepointImageMap = new Map();
+
+        // Get relative path from the folderPath
+        const oneDrivePath = lastFolderPath;
+        let relativePath = '';
+
+        try {
+            if (oneDrivePath.includes('Documents\\')) {
+                relativePath = 'Documents/' + oneDrivePath.split('Documents\\').pop().replace(/\\/g, '/');
+            } else {
+                relativePath = 'Documents/' + oneDrivePath
+                    .split('OneDrive - Shelter Insurance Companies\\')
+                    .pop()
+                    .replace(/\\/g, '/');
+            }
+
+            // Convert each file URL to a SharePoint URL
+            imageMap.forEach((imgInfo, timestamp) => {
+                const filename = imgInfo.filename || `screenshot_${timestamp}.png`;
+                const encodedPath = relativePath.split('/').map(part => encodeURIComponent(part)).join('/');
+                const sharePointUrl = `${sharepointBaseUrl}/${encodedPath}/${encodeURIComponent(filename)}`;
+
+                sharepointImageMap.set(timestamp, {
+                    ...imgInfo,
+                    url: sharePointUrl
+                });
+            });
+
+            console.log("Created SharePoint image map with entries:", sharepointImageMap.size);
+        } catch (error) {
+            console.error("Error creating SharePoint URLs:", error);
+            showToast("Error creating SharePoint URLs. Using local paths.");
+            // Fall back to the original map
+            sharepointImageMap = imageMap;
+        }
+
+        // Export with the SharePoint URLs
+        exportJiraLogSingleDefectWithCustomFields(jiraFields, finalIssueType, finalSummary, sharepointImageMap);
+    }
 
     // Toggle sidebar visibility
     function toggleSidebar() {
