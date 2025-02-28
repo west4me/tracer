@@ -5709,48 +5709,9 @@ ${errorData.stack}`.trim();
 
     // ----- Modal and Annotation Code -----
 
-    
+
     const modal = document.getElementById('screenshot-modal');
     const closeModal = document.getElementById('close-modal');
-
-    document.getElementById('view-full-size').addEventListener('click', () => {
-        const img = document.getElementById('modal-image');
-        if (img && img.src) {
-            // Open the image in a new window
-            const newWindow = window.open();
-            if (newWindow) {
-                newWindow.document.write(`
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Full Size Screenshot</title>
-    <style>
-      body {
-        margin: 0;
-        padding: 0;
-        background: #333;
-        display: flex;
-        align-items: flex-start;
-        justify-content: center;
-        min-height: 100vh;
-        overflow: auto;
-      }
-      img {
-        max-width: none;
-        max-height: none;
-      }
-    </style>
-  </head>
-  <body>
-    <img src="${img.src}" />
-  </body>
-</html>
-      `);
-            } else {
-                showToast('Popup blocked! Please allow popups to view full size image.');
-            }
-        }
-    });
 
     function clearAnnotations() {
         const canvas = document.getElementById('annotation-canvas');
@@ -6162,20 +6123,35 @@ ${errorData.stack}`.trim();
     // ----- Helper Drawing Functions -----
 
     function drawArrow(ctx, fromX, fromY, toX, toY) {
-        const headLength = 15;
-        const dx = toX - fromX;
-        const dy = toY - fromY;
-        const angle = Math.atan2(dy, dx);
+        const headLength = 15; // Arrowhead length
+        const angle = Math.atan2(toY - fromY, toX - fromX);
+
+        // Draw arrow shaft
         ctx.beginPath();
         ctx.moveTo(fromX, fromY);
         ctx.lineTo(toX, toY);
-        ctx.lineTo(toX - headLength * Math.cos(angle - Math.PI / 6),
-            toY - headLength * Math.sin(angle - Math.PI / 6));
-        ctx.moveTo(toX, toY);
-        ctx.lineTo(toX - headLength * Math.cos(angle + Math.PI / 6),
-            toY - headLength * Math.sin(angle + Math.PI / 6));
         ctx.stroke();
+
+        // Set the fill style to match the annotation color
+        ctx.fillStyle = annotationColor; // <-- Set fill style here
+
+        // Draw arrowhead as a filled triangle for a cleaner look
+        ctx.beginPath();
+        ctx.moveTo(toX, toY);
+        ctx.lineTo(
+            toX - headLength * Math.cos(angle - Math.PI / 7),
+            toY - headLength * Math.sin(angle - Math.PI / 7)
+        );
+        ctx.lineTo(
+            toX - headLength * Math.cos(angle + Math.PI / 7),
+            toY - headLength * Math.sin(angle + Math.PI / 7)
+        );
+        ctx.closePath();
+        ctx.fill();
     }
+
+
+
 
     function drawRectangle(ctx, startX, startY, endX, endY) {
         const width = endX - startX;
@@ -6186,11 +6162,22 @@ ${errorData.stack}`.trim();
     }
 
     function drawCircle(ctx, startX, startY, endX, endY) {
-        const radius = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+        const radiusX = (endX - startX) / 2;
+        const radiusY = (endY - startY) / 2;
+
+        // Find center point halfway between start and end points
+        const centerX = startX + radiusX;
+        const centerY = startY + radiusY;
+
+        // Calculate radius as average for uniform circle
+        const radius = Math.sqrt(radiusX * radiusX + radiusY * radiusY);
+
         ctx.beginPath();
-        ctx.arc(startX, startY, radius, 0, 2 * Math.PI);
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
         ctx.stroke();
     }
+
+
 
 
     // Viewport switching functionality
