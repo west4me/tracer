@@ -13,6 +13,7 @@ let finalSummary = ''; // For JIRA export
 let lastFolderPath = '';
 let lastScreenshotBase64 = '';
 
+
 // List of patterns to ignore in error logs
 const ignoredPatterns = [
     'GUEST_VIEW_MANAGER_CALL',
@@ -1052,6 +1053,61 @@ ipcRenderer.on('screenshot-save-result', (_, result) => {
         showToast(`Failed to save screenshot: ${result.error}`);
     }
 });
+
+function showSharepointUsernameModal() {
+    return new Promise((resolve, reject) => {
+        const modal = document.getElementById('sharepoint-username-modal');
+        const input = document.getElementById('sp-username-input');
+        const confirmBtn = document.getElementById('sp-username-confirm');
+        const cancelBtn = document.getElementById('sp-username-cancel');
+
+        // Show modal
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');  // Tailwind "flex" to center stuff
+
+        // Clear any old value
+        input.value = '';
+
+        // Focus the input right away
+        setTimeout(() => input.focus(), 100);
+
+        // Confirm => read the typed text, resolve, close modal
+        function handleConfirm() {
+            const typed = input.value.trim();
+            if (!typed) {
+                // If user left it blank, either reject or let them try again.
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                reject(new Error('No username typed'));
+                return;
+            }
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            resolve(typed);
+        }
+
+        // Cancel => just reject
+        function handleCancel() {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            reject(new Error('User canceled username entry'));
+        }
+
+        confirmBtn.addEventListener('click', handleConfirm, { once: true });
+        cancelBtn.addEventListener('click', handleCancel, { once: true });
+
+        // Also close if user clicks outside the box
+        modal.addEventListener('click', function clickOutside(e) {
+            if (e.target === modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                reject(new Error('Modal dismissed by outside click'));
+            }
+            // Remove the listener once we close
+        }, { once: true });
+    });
+}
+
 
 
 ipcRenderer.on('reset-listeners', () => {
@@ -4994,83 +5050,226 @@ ${errorData.stack}`.trim();
         }
     });
 
-    async function saveScreenshotsForJira(screenshotEvents, folderPath) {
-        const imageMap = new Map();
-        const sanitizedSummary = typedSummary.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30) || 'Screenshot';
+    // async function saveScreenshotsForJira(screenshotEvents, folderPath) {
+    //     const imageMap = new Map();
+    //     const sanitizedSummary = typedSummary.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30) || 'Screenshot';
 
-        console.log(`Starting to process ${screenshotEvents.length} screenshots to folder: ${folderPath}`);
+    //     console.log(`Starting to process ${screenshotEvents.length} screenshots to folder: ${folderPath}`);
 
-        for (let i = 0; i < screenshotEvents.length; i++) {
-            const event = screenshotEvents[i];
-            try {
-                console.log(`Processing screenshot ${i + 1}, has data: ${!!event.screenshot}`);
+    //     try {
+    //         // 1) Show the new modal to get typed username
+    //         const typedUsername = await showSharepointUsernameModal();
+    //         console.log("User typed username:", typedUsername);
 
-                // Create a unique filename
-                const timestamp = new Date(event.timestamp).toISOString().replace(/[-:]/g, '').replace(/\..+/, '');
-                const filename = `${sanitizedSummary}_${i + 1}_${timestamp}.png`;
-                console.log(`Created filename: ${filename}`);
+    //         // 2) Build the base URL as before
+    //         const sharepointBaseUrl = `https://shelterinsurance-my.sharepoint.com/personal/${typedUsername.toLowerCase()}_shelterinsurance_com/Documents/Documents`;
 
-                if (!event.screenshot) {
-                    console.error(`Screenshot data is missing for event ${i + 1}`);
-                    continue;
-                }
+    //         // 3) Build the relative path from folderPath, same as your old code
+    //         const oneDrivePath = folderPath;
+    //         let relativePath = '';
 
-                // *** SIMPLIFIED: Just send the raw base64 data! ***
-                window.electron.ipcRenderer.send('save-screenshot-base64', {
-                    folderPath,
-                    filename,
-                    base64Data: event.screenshot
-                });
+    //         if (oneDrivePath.includes('Documents\\')) {
+    //             relativePath = 'Documents/' + oneDrivePath.split('Documents\\').pop().replace(/\\/g, '/');
+    //         } else {
+    //             relativePath = 'Documents/' + oneDrivePath
+    //                 .split('OneDrive - Shelter Insurance Companies\\')
+    //                 .pop()
+    //                 .replace(/\\/g, '/');
+    //         }
 
-                console.log(`Sent base64 screenshot data to main process, length: ${event.screenshot.length}`);
+    //         const encodedPath = relativePath.split('/').map(part => encodeURIComponent(part)).join('/');
 
-                // Rest of your URL building code...
-                const oneDrivePath = folderPath;
-                const usernameMatch = oneDrivePath.match(/C:\\Users\\([^\\]+)/);
-                const username = usernameMatch ? usernameMatch[1] : 'unknown';
+    //         // 4) Loop over screenshots exactly as before
+    //         for (let i = 0; i < screenshotEvents.length; i++) {
+    //             const event = screenshotEvents[i];
+    //             try {
+    //                 if (!event || !event.screenshot) {
+    //                     console.error(`Event ${i} has no screenshot data`);
+    //                     continue;
+    //                 }
 
-                const sharepointBaseUrl = `https://shelterinsurance-my.sharepoint.com/personal/${username.toLowerCase()}_shelterinsurance_com`;
+    //                 console.log(`Processing screenshot ${i + 1}, has data: ${!!event.screenshot}`);
+    //                 console.log(`Screenshot data type: ${typeof event.screenshot}`);
 
-                let relativePath = '';
-                if (oneDrivePath.includes('Documents\\')) {
-                    relativePath = 'Documents/' + oneDrivePath.split('Documents\\').pop().replace(/\\/g, '/');
-                } else {
-                    relativePath = 'Documents/' + oneDrivePath.split('OneDrive - Shelter Insurance Companies\\').pop().replace(/\\/g, '/');
-                }
+    //                 // For debugging, log the beginning of the data
+    //                 if (typeof event.screenshot === 'string') {
+    //                     console.log(`Screenshot data starts with: ${event.screenshot.substring(0, 20)}...`);
+    //                 }
 
-                const encodedPath = relativePath.split('/').map(part => encodeURIComponent(part)).join('/');
-                const fullUrl = `${sharepointBaseUrl}/${encodedPath}/${filename}`;
-                console.log(`Generated SharePoint URL: ${fullUrl}`);
+    //                 const timestamp = new Date(event.timestamp).toISOString().replace(/[-:]/g, '').replace(/\..+/, '');
+    //                 const filename = `${sanitizedSummary}_${i + 1}_${timestamp}.png`;
+    //                 console.log(`Created filename: ${filename}`);
 
-                imageMap.set(event.timestamp, {
-                    filename,
-                    url: fullUrl
-                });
+    //                 // Process the base64 data correctly
+    //                 let base64Data = event.screenshot;
 
-                showToast(`Processed screenshot ${i + 1} of ${screenshotEvents.length}`);
-                await new Promise(resolve => setTimeout(resolve, 200));
+    //                 // Make sure we actually have a string
+    //                 if (typeof base64Data !== 'string') {
+    //                     console.error(`Screenshot ${i} data is not a string`);
+    //                     continue;
+    //                 }
 
-            } catch (error) {
-                console.error(`Error processing screenshot ${i + 1}:`, error);
-                showToast(`Error saving screenshot ${i + 1}: ${error.message}`);
-            }
-        }
+    //                 // Add the prefix if it doesn't exist
+    //                 if (!base64Data.includes('base64,')) {
+    //                     base64Data = 'data:image/png;base64,' + base64Data;
+    //                 }
 
-        showToast('All screenshots processed');
-        return imageMap;
-    }
+    //                 // Send direct IPC message to main process with the data
+    //                 console.log(`Sending base64 data for ${filename} (length: ${base64Data.length})`);
+
+    //                 // Create a promise we can await
+    //                 // Create a promise we can await
+    //                 const saveResult = await new Promise(resolve => {
+    //                     // Create a specific handler function for this screenshot
+    //                     function handleSaveResult(_, result) {
+    //                         console.log(`Save result received for ${filename}:`, result);
+    //                         // Immediately remove the listener to prevent memory leaks
+    //                         window.electron.ipcRenderer.removeListener('screenshot-save-result', handleSaveResult);
+    //                         resolve(result);
+    //                     }
+
+    //                     // Add the handler as a listener (not a once-listener)
+    //                     window.electron.ipcRenderer.on('screenshot-save-result', handleSaveResult);
+
+    //                     // Send the save request
+    //                     console.log(`Sending save request for ${filename}`);
+    //                     window.electron.ipcRenderer.send('save-screenshot-base64', {
+    //                         folderPath,
+    //                         filename,
+    //                         base64Data
+    //                     });
+
+    //                     // Set a timeout as a failsafe
+    //                     setTimeout(() => {
+    //                         // Check if our listener is still registered
+    //                         window.electron.ipcRenderer.removeListener('screenshot-save-result', handleSaveResult);
+    //                         console.log(`Timeout waiting for save result for ${filename}`);
+    //                         resolve({ success: false, error: 'Timeout waiting for response' });
+    //                     }, 5000);
+    //                 });
+
+    //                 // Log the save result
+    //                 if (saveResult && saveResult.success) {
+    //                     console.log(`Successfully saved screenshot to ${saveResult.path}`);
+
+    //                     // Create a URL for JIRA
+    //                     const fileUrl = `file://${saveResult.path.replace(/\\/g, '/')}`;
+
+    //                     // Store the mapping
+    //                     imageMap.set(event.timestamp, {
+    //                         filename,
+    //                         url: fileUrl,
+    //                         path: saveResult.path
+    //                     });
+
+    //                     showToast(`Saved screenshot ${i + 1}`);
+    //                 } else {
+    //                     console.error(`Failed to save screenshot ${i + 1}:`,
+    //                         saveResult?.error || 'No response received');
+    //                 }
+
+    //                 // Add a small delay between saves
+    //                 await new Promise(resolve => setTimeout(resolve, 300));
+
+    //             } catch (error) {
+    //                 console.error(`Error processing screenshot ${i + 1}:`, error);
+    //                 showToast(`Error saving screenshot ${i + 1}: ${error.message}`);
+    //             }
+    //         }
+
+    //         showToast('All screenshots processed');
+    //         return imageMap;
+    //     } catch (userCancelOrError) {
+    //         console.warn("Username entry canceled or error:", userCancelOrError);
+    //         showToast("SharePoint username entry canceled. Skipping screenshots.");
+    //         return imageMap; // Return whatever you had so far
+    //     }
+    // }
+
+
 
     ipcRenderer.on('folder-selected', (event, data) => {
         const { folderPath } = data;
-        console.log('Attempting to open folder dialog, sending IPC message...');
         console.log('Renderer received folder-selected, folderPath =', folderPath);
+
+        // Store the lastFolderPath for emergency saving
+        lastFolderPath = folderPath;
+
         // Show processing message
         showToast('Processing screenshots...');
 
-        // Save all screenshots
-        saveScreenshotsForJira(eventLog.filter(event => event.screenshot), folderPath).then(imageMap => {
-            exportJiraLogSingleDefectWithCustomFields(jiraFields, finalIssueType, finalSummary, imageMap);
+        // Get all events with screenshots
+        const screenshotEvents = eventLog.filter(event => {
+            const hasScreenshot = !!event.screenshot;
+            console.log(`Event ${event.timestamp}: has screenshot = ${hasScreenshot}`);
+            return hasScreenshot;
         });
+
+        console.log(`Found ${screenshotEvents.length} events with screenshots`);
+
+        // Simple direct approach - one screenshot at a time
+        let processedCount = 0;
+        let imageMap = new Map();
+
+        // Process one screenshot, then move to the next
+        const processNextScreenshot = (index) => {
+            // If we're done, export and return
+            if (index >= screenshotEvents.length) {
+                console.log(`Finished processing ${processedCount} screenshots`);
+                exportJiraLogSingleDefectWithCustomFields(jiraFields, finalIssueType, finalSummary, imageMap);
+                return;
+            }
+
+            const event = screenshotEvents[index];
+
+            // Generate filename
+            const timestamp = new Date(event.timestamp).toISOString()
+                .replace(/[-:]/g, '')
+                .replace(/\..+/, '');
+            const filename = `screenshot_${index + 1}_${timestamp}.png`;
+
+            // Prepare base64 data
+            let base64Data = event.screenshot;
+            if (!base64Data.startsWith('data:image/png;base64,')) {
+                base64Data = 'data:image/png;base64,' + base64Data;
+            }
+
+            console.log(`Saving screenshot ${index + 1}/${screenshotEvents.length}`);
+
+            // Set up a one-time listener for this specific save
+            ipcRenderer.once('screenshot-save-result', (result) => {
+                console.log(`Got result for screenshot ${index + 1}:`, result);
+
+                if (result && result.success) {
+                    processedCount++;
+
+                    // Create URL for JIRA
+                    const fileUrl = `file://${result.path.replace(/\\/g, '/')}`;
+
+                    // Add to imageMap
+                    imageMap.set(event.timestamp, {
+                        filename,
+                        url: fileUrl,
+                        path: result.path
+                    });
+
+                    showToast(`Saved screenshot ${index + 1}`);
+                }
+
+                // Process next screenshot, regardless of success
+                setTimeout(() => processNextScreenshot(index + 1), 200);
+            });
+
+            // Send the save request
+            ipcRenderer.send('save-screenshot-base64', {
+                folderPath,
+                filename,
+                base64Data
+            });
+        };
+
+        // Start processing with the first screenshot
+        processNextScreenshot(0);
     });
 
     ipcRenderer.on('folder-selection-canceled', () => {
@@ -6413,21 +6612,4 @@ ${errorData.stack}`.trim();
         return rgbToHsl(hexToRgb(hex));
     }
 
-});
-// Add this where appropriate in your code
-const emergencySaveBtn = document.createElement('button');
-emergencySaveBtn.textContent = 'Emergency Screenshot Save';
-emergencySaveBtn.className = 'p-2 bg-red-600 text-white rounded';
-emergencySaveBtn.addEventListener('click', () => {
-    window.electron.ipcRenderer.send('emergency-save-debug');
-});
-document.querySelector('#log-sidebar').appendChild(emergencySaveBtn);
-
-// Listen for results
-ipcRenderer.on('emergency-save-result', (_, result) => {
-    if (result.success) {
-        showToast(`Emergency save successful: ${result.path}`);
-    } else {
-        showToast(`Emergency save failed: ${result.error}`);
-    }
 });

@@ -672,6 +672,28 @@
       </div>
     </div>
 
+    <!-- Username Modal: hidden by default -->
+    <div id="sharepoint-username-modal"
+      class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-50 z-50">
+      <div class="bg-white rounded w-96 p-4 relative">
+        <h2 class="text-lg font-semibold mb-3">Enter SharePoint Username</h2>
+        <label for="sp-username-input" class="block text-sm mb-2">Username (without "_shelterinsurance_com")</label>
+        <input id="sp-username-input" type="text" class="border border-gray-300 rounded px-2 py-1 w-full"
+          placeholder="e.g. willcunningham" />
+    
+        <!-- Buttons -->
+        <div class="mt-4 flex justify-end gap-2">
+          <button id="sp-username-cancel" class="px-3 py-1.5 bg-gray-200 rounded text-sm hover:bg-gray-300">
+            Cancel
+          </button>
+          <button id="sp-username-confirm" class="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+
+
     <!-- Keyboard Shortcuts Modal -->
     <div id="keyboard-shortcuts-modal" class="hidden bg-white rounded-lg shadow-lg p-8 max-w-4xl w-full mx-4">
       <!-- Close X button -->
@@ -721,6 +743,8 @@
               </div>
             </div>
           </div>
+
+          
     
           <!-- Comments Section -->
           <div>

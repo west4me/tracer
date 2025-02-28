@@ -189,14 +189,38 @@ ipcMain.on('save-screenshot-file', (event, payload) => {
         fs.writeFileSync(fullPath, buffer);
 
         // Verify file was created and has content
+        // In main.js, update the reply part of the save-screenshot-base64 handler:
+
+        // After successful file save
         if (fs.existsSync(fullPath)) {
             const stats = fs.statSync(fullPath);
-            console.log(`File saved successfully. Size: ${stats.size} bytes`);
-            // Send success message back to renderer
-            event.sender.send('screenshot-save-result', { success: true, path: fullPath });
+            console.log(`File saved at: ${fullPath} (${stats.size} bytes)`);
+
+            try {
+                // Make sure the sender is still valid
+                if (event && event.sender && !event.sender.isDestroyed()) {
+                    event.sender.send('screenshot-save-result', {
+                        success: true,
+                        path: fullPath
+                    });
+                    console.log('Sent screenshot-save-result success response');
+                } else {
+                    console.error('Cannot send response: event.sender is not available');
+                }
+            } catch (replyErr) {
+                console.error('Error sending reply:', replyErr);
+            }
         } else {
-            console.error('File was not created');
-            event.sender.send('screenshot-save-result', { success: false, error: 'File not created' });
+            console.error('File was not created after write');
+            try {
+                event.reply('screenshot-save-result', {
+                    success: false,
+                    error: 'File was not created after writeFileSync'
+                });
+                console.log('Sent screenshot-save-result failure response');
+            } catch (replyErr) {
+                console.error('Error sending reply:', replyErr);
+            }
         }
     } catch (err) {
         console.error('Error saving screenshot file:', err);
@@ -207,62 +231,44 @@ ipcMain.on('save-screenshot-file', (event, payload) => {
 ipcMain.on('save-screenshot-base64', (event, payload) => {
     const { folderPath, filename, base64Data } = payload;
 
-    // Store these for debugging
-    lastFolderPath = folderPath;
-    lastScreenshotBase64 = base64Data;
-
     try {
         console.log(`Main process received base64 save request for ${filename}`);
         console.log(`Base64 data length: ${base64Data.length}`);
 
-        // Try a very direct approach - create dummy file first to test permissions
-        const testPath = path.join(folderPath, 'test.txt');
-        fs.writeFileSync(testPath, 'Test write');
-        console.log(`Test file created at: ${testPath}`);
+        // Check if the folderPath exists, if not create it
+        if (!fs.existsSync(folderPath)) {
+            fs.mkdirSync(folderPath, { recursive: true });
+            console.log(`Created folder path: ${folderPath}`);
+        }
 
-        // Now try to save a super simple PNG file
         const fullPath = path.join(folderPath, filename);
 
+        // Remove data URL prefix if present
+        let imageData = base64Data;
+        if (base64Data.includes('base64,')) {
+            imageData = base64Data.split('base64,')[1];
+        }
+
         // Create buffer and save
-        const buffer = Buffer.from(base64Data, 'base64');
+        const buffer = Buffer.from(imageData, 'base64');
         fs.writeFileSync(fullPath, buffer);
 
-        console.log(`Screenshot should be saved at: ${fullPath}`);
+        console.log(`Screenshot saved at: ${fullPath}`);
         console.log(`File exists check: ${fs.existsSync(fullPath)}`);
 
-        // Also save to app's temp directory as fallback
-        const tempPath = path.join(app.getPath('temp'), filename);
-        fs.writeFileSync(tempPath, buffer);
-        console.log(`Backup saved to temp: ${tempPath}`);
-
+        // Send back the reply to the renderer
         event.reply('screenshot-save-result', {
             success: true,
-            path: fullPath,
-            tempPath: tempPath
+            path: fullPath
         });
     } catch (err) {
         console.error('Error saving screenshot:', err);
 
-        // Try saving to desktop as last resort
-        try {
-            const desktopPath = path.join(app.getPath('desktop'), filename);
-            const buffer = Buffer.from(base64Data, 'base64');
-            fs.writeFileSync(desktopPath, buffer);
-            console.log(`Emergency save to desktop: ${desktopPath}`);
-
-            event.reply('screenshot-save-result', {
-                success: true,
-                path: desktopPath,
-                wasEmergencySave: true
-            });
-        } catch (desktopErr) {
-            console.error('Even desktop save failed:', desktopErr);
-            event.reply('screenshot-save-result', {
-                success: false,
-                error: err.message,
-                desktopError: desktopErr.message
-            });
-        }
+        // Send error back to renderer
+        event.reply('screenshot-save-result', {
+            success: false,
+            error: err.message
+        });
     }
 });
 
@@ -426,30 +432,15 @@ ipcMain.on('test-write-file', (event, data) => {
     try {
         fs.writeFileSync(data.path, data.content);
         console.log('Test file written successfully:', data.path);
+        event.reply('test-write-file-result', {
+            success: true,
+            path: data.path
+        });
     } catch (err) {
         console.error('Test file write failed:', err);
-    }
-});
-
-ipcMain.on('emergency-save-debug', (event) => {
-    if (!lastScreenshotBase64 || !lastFolderPath) {
-        console.log('No screenshot data available for emergency save');
-        return;
-    }
-
-    try {
-        // Try saving to desktop
-        const desktopPath = app.getPath('desktop');
-        const filename = `emergency_screenshot_${Date.now()}.png`;
-        const fullPath = path.join(desktopPath, filename);
-
-        const buffer = Buffer.from(lastScreenshotBase64, 'base64');
-        fs.writeFileSync(fullPath, buffer);
-
-        console.log(`Emergency screenshot saved to: ${fullPath}`);
-        event.reply('emergency-save-result', { success: true, path: fullPath });
-    } catch (err) {
-        console.error('Emergency save failed:', err);
-        event.reply('emergency-save-result', { success: false, error: err.message });
+        event.reply('test-write-file-result', {
+            success: false,
+            error: err.message
+        });
     }
 });
