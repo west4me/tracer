@@ -70,23 +70,19 @@ function showEmptyState() {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'flex flex-col items-center justify-center h-full text-center p-8';
     messageDiv.innerHTML = `
-  <svg id="tracking-eye" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="w-16 h-16">
-      <circle cx="8" cy="8" r="7" fill="#FF8A65" stroke="#1a1a1a" stroke-width="1.2"/>
-      <circle id="eye-pupil" cx="8" cy="8" r="3" fill="#1a1a1a"/>
-      <circle id="eye-highlight" cx="9" cy="7" r="1" fill="white"/>
-  </svg>
-  <h3 class="text-xl font-semibold text-gray-700 mb-2">Ready to start tracing?</h3>
-  <p class="text-gray-500 mb-6">Click the button below to begin tracings</p>
-  <button id="start-logging-btn" class="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors">
-      <svg data-lucide="play" class="w-5 h-5"></svg>
-      Start tracing
-  </button>`;
+        <svg id="tracking-eye" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="w-16 h-16">
+            <circle cx="8" cy="8" r="7" fill="#FF8A65" stroke="#1a1a1a" stroke-width="1.2"/>
+            <circle id="eye-pupil" cx="8" cy="8" r="3" fill="#1a1a1a"/>
+            <circle id="eye-highlight" cx="9" cy="7" r="1" fill="white"/>
+        </svg>
+        <h3 class="text-xl font-semibold text-gray-700 mb-2">Ready to start tracing?</h3>
+        <p class="text-gray-500 mb-6">Click the button below to begin tracings</p>
+        <button id="start-logging-btn" class="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors">
+            <svg data-lucide="play" class="w-5 h-5"></svg>
+            Start tracing
+        </button>`;
 
     logArea.appendChild(messageDiv);
-
-
-
-
 
     // Initialize Lucide icons
     lucide.createIcons(messageDiv);
@@ -481,9 +477,9 @@ function toggleLogging() {
     // Re-render Lucide icons
     lucide.createIcons();
 }
-document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.code === 'Space') {
-        e.preventDefault();
+document.addEventListener('keydown', (event) => {
+    if (event.ctrlKey && (event.code === 'Space' || event.key === ' ')) {
+        event.preventDefault();
         toggleLogging();
     }
 });
@@ -1081,12 +1077,6 @@ ipcRenderer.on('reset-listeners', () => {
 ipcRenderer.on('show-shortcuts-modal', () => {
     showModal('keyboard-shortcuts-modal');
 });
-document.addEventListener('keydown', (event) => {
-    if (event.ctrlKey && event.code === 'Space') {
-        event.preventDefault();
-        toggleLogging();
-    }
-});
 linkStyle.textContent = `
     .comment-editor a {
         color: #2563eb;
@@ -1334,6 +1324,93 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    
+    function createTracerFindBar() {
+        if (document.getElementById('tracer-find-bar')) return;
+
+        const browserPanel = document.getElementById('browser-panel');
+
+        // Container positioned at the top-right inside the browser panel
+        const findBar = document.createElement('div');
+        findBar.id = 'tracer-find-bar';
+        findBar.className = 'absolute top-2 right-2 bg-white border border-gray-300 shadow rounded-md px-3 py-2 flex items-center gap-2 z-50';
+
+        // Input field for search
+        const findInput = document.createElement('input');
+        findInput.type = 'text';
+        findInput.placeholder = 'Find on page...';
+        findInput.className = 'w-48 h-8 rounded border border-gray-300 px-2 text-sm focus:ring-1 focus:ring-gray-500';
+
+        // Close button
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = `<svg data-lucide="x" width="20" height="20"></svg>`;
+        closeBtn.className = 'p-1 hover:bg-gray-200 rounded';
+
+        // Attach elements
+        findBar.appendChild(findInput);
+        findBar.appendChild(closeBtn);
+
+        // Ensure parent (browserPanel) is positioned relatively
+        browserPanel.style.position = 'relative';
+        browserPanel.appendChild(findBar);
+        lucide.createIcons();
+
+        findInput.focus();
+
+        let currentRequestId = null;
+        let debounceTimeout = null;
+
+        // Highlight matches in real-time
+        findInput.addEventListener('input', () => {
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+                const text = findInput.value.trim();
+                if (currentRequestId !== null) {
+                    webview.stopFindInPage('clearSelection');
+                }
+                if (text) {
+                    currentRequestId = webview.findInPage(text);
+                }
+            }, 150);
+        });
+
+        // Close actions
+        function closeFindBar() {
+            webview.stopFindInPage('clearSelection');
+            findBar.remove();
+        }
+
+        closeBtn.onclick = closeFindBar;
+
+        findInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeFindBar();
+            }
+        });
+
+        // Clicking outside closes find bar
+        document.addEventListener('click', (event) => {
+            if (!findBar.contains(event.target)) {
+                closeFindBar();
+            }
+        }, { once: true });
+
+        // Indicate no matches with border highlight
+        webview.addEventListener('found-in-page', (event) => {
+            if (event.result.requestId === currentRequestId) {
+                findInput.style.borderColor = event.result.matches > 0 ? '#d1d5db' : '#f87171';
+            }
+        });
+    }
+
+    // Trigger find bar from webview ipc
+    webview.addEventListener('ipc-message', (event) => {
+        if (event.channel === 'trigger-find') {
+            createTracerFindBar();
+        }
+    });
+
+
     webview.addEventListener('did-start-loading', () => {
         // Clear errors on page refresh
         window.errorLog = [];
@@ -1388,8 +1465,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     webview.addEventListener('did-navigate', (event) => {
-        const newUrl = event.url;
-        const url = urlInput.value.trim();
+        const newUrl = webview.getURL();
+        let previousUrl = '';
         const toggleButton = document.getElementById('toggle-error-drawer');
         const errorCount = document.getElementById('error-count');
         const excludedPages = ['home.html', 'about:blank', 'elements.html', 'docs.html'];
@@ -1542,21 +1619,17 @@ document.addEventListener('DOMContentLoaded', () => {
     webview.addEventListener('console-message', (e) => {
         console.log('Guest page logged a message:', e.message, 'level:', e.level);
 
-        if (e.level === 2) {
-            const errorData = {
-                type: 'Console Error',
+        // Explicitly exclude CSP and "[Report Only]" errors
+        if (e.level === 3 && !e.message.includes('Content Security Policy') && !e.message.includes('[Report Only]')) {
+            addErrorToLog({
                 timestamp: new Date().toISOString(),
                 message: e.message,
-                source: 'webview',
-                lineno: e.line || 0,
-                colno: 0,
-                stack: 'From webview console'
-            };
-            
-            window.electron.ipcRenderer.send('webview-error', errorData);
-            addErrorToLog(errorData);
+                source: 'Webview Error',
+                type: 'error'
+            });
         }
     });
+
 
     // THIS IS WHAT ADDS THE ACTUAL ERROR TO THE ERROR DRAWER
     function addErrorToLog(errorData) {
@@ -1564,28 +1637,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const toggleButton = document.getElementById('toggle-error-drawer');
         const errorCount = document.getElementById("error-count");
         const errorEntry = document.createElement('div');
-        const copyButton = errorEntry.querySelector('.copy-error-btn');
-        const filterPatterns = [
-            'cdn.tailwindcss.com should not be used in production',
-            'Security Warning',
-            'Content-Security-Policy',
-            'font-weight: bold',
-            'unsafe-eval',
-            'warning will not show up',
-            'unnecessary security risks'
-        ];
+        
 
         if (!errorContainer || !toggleButton) {
             console.error('[renderer.js] Required elements not found.');
             return;
         }
 
-        if (!errorData.message.toLowerCase().includes('error') && !errorData.type.toLowerCase().includes('error')) {
-            return;
-        }
-
-        if (filterPatterns.some(pattern => errorData.message.includes(pattern))) {
-            console.log('Filtered out false error message:', errorData.message);
+        if (!errorData.type.toLowerCase().includes('error')) {
             return;
         }
         
@@ -1614,7 +1673,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             </div>
         `;
-        
+        const copyButton = errorEntry.querySelector('.copy-error-btn');
         copyButton.addEventListener('click', () => {
             const toast = document.createElement('div');
             const originalTitle = copyButton.title;
@@ -2006,12 +2065,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     ipcRenderer.on('update-error', (_, errorData) => {
-        ipcRenderer.on('update-error', (_, errorData) => {
+  
             console.log('🔥 [DEBUG] Error received in renderer:', errorData);
             console.log('[🔥DEBUG] Message:', errorData.message);
             console.log('[🔥DEBUG] Source:', errorData.source);
             console.log('[🔥DEBUG] Stack:', errorData.stack);
-        });
+
 
 
         const ignoredPatterns = [
@@ -2400,34 +2459,37 @@ document.addEventListener('DOMContentLoaded', () => {
             // If it's an <img>, show alt text, dimensions, caption, etc.
             if ((details.tagName || '').toUpperCase() === 'IMG') {
                 html += `
-                <span class="font-medium">Alt Text:</span>
-                <span class="break-words text-left">${details.alt || '[No Alt]'} </span>
-                <span class="font-medium">Dimensions:</span>
-                 text-left${details.width}×${details.height}px</span>`;
-                if (details.caption) {
-                    html += `
-            <span class="font-medium">Caption:</span>
-            <span class="break-words text-left">${details.caption}</span>`;
-                }
-                if (details.src) {
-                    html += `
-            <span class="font-medium">Image Source:</span>
-            <div class="flex items-center gap-2">
-                <a href="${details.src}" 
-                   class="text-blue-600 hover:text-blue-800 underline break-all"
-                   target="_blank"
-                   title="${details.src}">
-                    ${details.src}
-                </a>
-                <button
-                    class="copy-url-btn p-1 hover:bg-gray-100 rounded"
-                    title="Copy image URL"
-                    data-url="${details.src}">
-                    <svg data-lucide="clipboard" width="14" height="14"></svg>
-                </button>
-            </div>`;
+                    <span class="font-medium">Alt Text:</span>
+                    <span class="break-words text-left">${details.alt || '[No Alt]'}</span>
+                    <span class="font-medium">Dimensions:</span>
+                    <span class="break-words text-left">${details.width}×${details.height}px</span>`;
+
+                                if (details.caption) {
+                                    html += `
+                        <span class="font-medium">Caption:</span>
+                        <span class="break-words text-left">${details.caption}</span>`;
+                                }
+
+                                if (details.src) {
+                                    const truncatedSrc = details.src.length > 25 ? details.src.substring(0, 25) + '...' : details.src;
+                                    html += `
+                        <span class="font-medium">Image Source:</span>
+                        <div class="flex items-center gap-2 break-words">
+                            <a href="${details.src}" 
+                            class="text-blue-600 hover:text-blue-800 underline"
+                            target="_blank"
+                            title="${details.src}">
+                                ${truncatedSrc}
+                            </a>
+                            <button class="copy-url-btn ml-auto p-1 hover:bg-gray-100 rounded" title="Copy URL to clipboard" data-url="${details.src}">
+                                <svg data-lucide="clipboard" width="14" height="14"></svg>
+                            </button>
+                        </div>
+                    `;
                 }
             }
+
+
 
             // If it's an <svg>, show its title, desc, dimensions, etc.
             else if ((details.tagName || '').toUpperCase() === 'SVG') {
@@ -2564,7 +2626,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 html += `
         <div class="col-span-2 mt-2">
             <div class="bg-gray-50 rounded p-2 border break-words whitespace-normal overflow-x-hidden">
-                <div class="text-sm font-semibold mb-1">Parent Container</div>
+                <div class="text-sm font-semibold mb-1">Parent container</div>
                 <div class="text-sm break-words whitespace-normal overflow-x-hidden">
                 ${escapedDesc}
                 </div>
@@ -3447,7 +3509,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             Cancel
                         </button>
                         <button type="button" class="delete-comment text-red-600 hover:text-red-700 px-2 py-1 text-xs">
-                            Delete Comment
+                            Delete comment
                         </button>
                     </div>
                 </div>
@@ -3876,7 +3938,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (pc.className) parentDesc += ` class="${pc.className}"`;
                     parentDesc += '>'; // Open tag
                     parentDesc += `</${pc.tagName.toLowerCase()}>`; // Correctly close the tag dynamically
-                    content += `<div class="label">Parent Container:</div><div>${parentDesc}</div>`;
+                    content += `<div class="label">Parent container:</div><div>${parentDesc}</div>`;
                 }
                 if (d.tagName.toUpperCase() === 'IMG') {
                     content += `<div class="label">Alt Text:</div><div>${d.alt}</div>`;
@@ -4399,17 +4461,17 @@ document.addEventListener('DOMContentLoaded', () => {
             confirmDialog.className = 'bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4';
             confirmDialog.innerHTML = `
             <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                Save Screenshots for JIRA
+                Save screenshots for JIRA
             </h3>
             <p class="text-gray-600 mb-4">
                 Your log contains ${screenshotEvents.length} screenshot${screenshotEvents.length > 1 ? 's' : ''}. To include them in JIRA, they need to be saved to a SharePoint/OneDrive folder.
             </p>            
             <div class="flex justify-end space-x-3">
                 <button id="skip-screenshots" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-                    Skip Screenshots
+                    Skip screenshots
                 </button>
                 <button id="choose-folder" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                    Choose Folder
+                    Choose folder
                 </button>
             </div>
         `;
@@ -6055,5 +6117,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function hexToHsl(hex) {
         return rgbToHsl(hexToRgb(hex));
     }
+
+    document.addEventListener('keydown', (event) => {
+        const isCtrlF = event.ctrlKey && event.key.toLowerCase() === 'f';
+
+        if (isCtrlF) {
+            event.preventDefault();
+            createTracerFindBar();
+        }
+    });
 
 });

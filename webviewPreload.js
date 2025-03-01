@@ -97,10 +97,21 @@ function getInputLabel(element) {
 
 ipcRenderer.send('force-window-focus');
 
+
 console.error = (function (original) {
     return function (...args) {
-        const errorMessage = args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : arg)).join(' ');
+        const errorMessage = args
+            .map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg))
+            .join(' ');
 
+        // Add this check:
+        if (errorMessage.toLowerCase().includes('warning')) {
+            // If the text has the word "warning" anywhere, skip it
+            console.log('Filtered out a console.error "warning":', errorMessage);
+            return;
+        }
+
+        // existing ignoredPatterns array (keep what you have)
         const ignoredPatterns = [
             'GUEST_VIEW_MANAGER_CALL',
             'ERR_ABORTED (-3)',
@@ -108,21 +119,12 @@ console.error = (function (original) {
             'console.warn',
             'console.info'
         ];
-
-        // First check for ignored patterns
         if (ignoredPatterns.some(pattern => errorMessage.includes(pattern))) {
             console.log('Filtered out console error in webview:', errorMessage);
             return;
         }
 
-        // Then ensure it's actually an error message (contains "error" in text)
-        if (!errorMessage.toLowerCase().includes('error')) {
-            console.log('Non-error message filtered from error drawer:', errorMessage);
-            return original.apply(console, args);
-        }
-
-        console.log('[webviewPreload.js] Sending error to main process:', errorMessage);
-
+        // Everything else is truly an error => send it
         ipcRenderer.send('webview-error', {
             type: 'Console Error',
             timestamp: new Date().toISOString(),
@@ -139,6 +141,7 @@ console.error = (function (original) {
 
 
 
+
 // Expose electron functionality to the window
 contextBridge.exposeInMainWorld('electron', {
     ipcRenderer: {
@@ -148,6 +151,7 @@ contextBridge.exposeInMainWorld('electron', {
         sendShortcut: (shortcut) => ipcRenderer.send("shortcut-triggered", shortcut),
         sendToHost: (...args) => ipcRenderer.sendToHost(...args),
         removeListener: (...args) => ipcRenderer.removeListener(...args),
+        findInPage: (text = '') => ipcRenderer.sendToHost('trigger-find-in-page', text),
         removeUrl: (url) => ipcRenderer.sendToHost('remove-url', url) 
     },
     dialog: {
@@ -594,6 +598,10 @@ document.addEventListener('keydown', (event) => {
 });
 
 document.addEventListener("keydown", (event) => {
+    if (event.ctrlKey && event.key.toLowerCase() === 'f') {
+        event.preventDefault(); // Required to explicitly handle it
+        ipcRenderer.sendToHost('trigger-find');
+    }
     if (event.ctrlKey && event.key.toLowerCase() === "t") {
         event.preventDefault(); // Prevent default behavior
         ipcRenderer.send("shortcut-triggered", "toggle-sidebar");

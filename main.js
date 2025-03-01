@@ -21,7 +21,7 @@ app.on('web-contents-created', (event, wc) => {
 function createWindow() {
     const mainWindowState = windowStateKeeper({
         defaultWidth: 1200,
-        defaultHeight: 800,
+        defaultHeight: 1000,
         file: 'window-state.json'
     });
 
@@ -442,5 +442,12 @@ ipcMain.on('test-write-file', (event, data) => {
             success: false,
             error: err.message
         });
+    }
+});
+
+ipcMain.on('trigger-find-in-page', (event, text) => {
+    const senderWebContents = event.sender;
+    if (senderWebContents) {
+        senderWebContents.findInPage(text || '');
     }
 });
