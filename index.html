@@ -316,6 +316,47 @@
       word-break: break-word;
       overflow-wrap: anywhere;
     }
+
+#emoji-picker-container {
+    position: absolute;
+    bottom: 60px;      /* Adjust so it sits above your bottom toolbar */
+    left: 20px;        /* Or wherever you want horizontally */
+    z-index: 9999;     /* Ensure it's higher than the canvas or other elements */
+    background: #fff;
+    border: 1px solid #ddd;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+}
+
+
+#emoji-picker-container.hidden {
+    display: none;
+}
+
+#emoji-picker {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+    padding: 5px;
+    max-height: 150px;
+}
+
+.emoji-option {
+    font-size: 1.5rem;
+    cursor: pointer;
+    border-radius: 5px;
+    padding: 5px;
+    text-align: center;
+    transition: background 0.2s;
+}
+
+.emoji-option:hover {
+    background: #f0f0f0;
+}
+
   </style>
 </head>
 
@@ -486,6 +527,12 @@
       <button class="annotation-tool p-2 hover:bg-gray-200 rounded" data-tool="circle" title="Draw Circle (C)">
         <svg data-lucide="circle" width="20" height="20"></svg>
       </button>
+      <button id="emoji-picker-btn">
+        😊
+      </button>
+      <div id="emoji-picker-container" class="hidden">        
+        <div id="emoji-picker"></div>
+      </div>
 
       <!-- Stamp with popout -->
       <div class="relative">

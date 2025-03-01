@@ -5862,7 +5862,12 @@ ${errorData.stack}`.trim();
         const colorPicker = document.getElementById('annotation-color');
         const undoButton = document.getElementById('annotation-undo');
         const redoButton = document.getElementById('annotation-redo');
-
+        const emojiButton = document.getElementById('emoji-picker-btn');
+        const emojiPickerContainer = document.getElementById('emoji-picker-container');
+        const emojiPicker = document.getElementById('emoji-picker');
+        const stampSelector = document.getElementById('stamp-selector');
+        const stampButton = toolbar.querySelector('[data-tool="stamp"]');
+        let currentEmoji = null;
         // Initialize canvas context
         annotationCanvas = canvas;
         annotationCtx = canvas.getContext('2d');
@@ -5883,26 +5888,27 @@ ${errorData.stack}`.trim();
                 });
 
                 if (toolType === 'stamp') {
-                    // Toggle the tool's active state
-                    const wasActive = e.currentTarget.classList.contains('active');
-                    if (wasActive) {
-                        e.currentTarget.classList.remove('active');
-                        document.getElementById('stamp-selector').classList.add('hidden');
-                        currentTool = null;
-                        annotationCanvas.style.pointerEvents = 'none';
-                    } else {
-                        e.currentTarget.classList.add('active');
-                        const selector = document.getElementById('stamp-selector');
-                        selector.classList.remove('hidden');
-                        currentTool = toolType;
-                        // If no stamp is selected, default to 'pass'
-                        if (!currentStamp) {
-                            currentStamp = 'pass';
-                            document.querySelector('[data-stamp="pass"]').classList.add('bg-gray-100');
-                        }
+                    // Stop this click from bubbling to the outside document click listener
+                    e.stopPropagation();
+                    emojiPickerContainer.classList.add('hidden');
+
+                    // If we are not already in 'stamp' mode, switch to it
+                    if (currentTool !== 'stamp') {
+                        // Remove active from other tools
+                        tools.forEach(t => t.classList.remove('active'));
+                        stampButton.classList.add('active');
+                        currentTool = 'stamp';
                         annotationCanvas.style.pointerEvents = 'auto';
                     }
+
+                    // Toggle the stamp popup: if hidden, show; if shown, hide
+                    if (stampSelector.classList.contains('hidden')) {
+                        stampSelector.classList.remove('hidden');
+                    } else {
+                        stampSelector.classList.add('hidden');
+                    }
                 } else {
+                    emojiPickerContainer.classList.add('hidden');
                     // For non-stamp tools
                     if (currentTool === toolType) {
                         e.currentTarget.classList.remove('active');
@@ -5919,6 +5925,66 @@ ${errorData.stack}`.trim();
             });
         });
 
+        // Populate emoji picker with some sample emojis
+        const emojis = ['😀', '😂', '😍', '😎', '👍', '🔥', '🚀', '🎯', '💡', '📌'];
+        emojis.forEach(emoji => {
+            const emojiOption = document.createElement('div');
+            emojiOption.classList.add('emoji-option');
+            emojiOption.textContent = emoji;
+            emojiOption.addEventListener('click', () => {
+                currentEmoji = emoji;
+                emojiPickerContainer.classList.add('hidden');
+            });
+            emojiPicker.appendChild(emojiOption);
+        });
+
+        // Toggle emoji picker on button click
+        emojiButton.addEventListener('click', (e) => {
+            // Prevent the outside "document.addEventListener('click', ...)" from auto-hiding the container
+            e.stopPropagation();
+
+            // If we are NOT already in emoji mode, switch to it now
+            if (currentTool !== 'emoji') {
+                // Remove active from other tools
+                tools.forEach(t => t.classList.remove('active'));
+                document.getElementById('stamp-selector').classList.add('hidden');
+
+                // Make the emoji button “active” and enable canvas pointer
+                emojiButton.classList.add('active');
+                currentTool = 'emoji';
+                annotationCanvas.style.pointerEvents = 'auto';
+            }
+
+            // Toggle the picker container: if hidden, show it; if shown, hide it
+            if (emojiPickerContainer.classList.contains('hidden')) {
+                emojiPickerContainer.classList.remove('hidden');
+            } else {
+                emojiPickerContainer.classList.add('hidden');
+            }
+        });
+
+
+        // Hide picker if clicking outside
+        document.addEventListener('click', (e) => {
+            if (!emojiPickerContainer.contains(e.target) && e.target !== emojiButton) {
+                emojiPickerContainer.classList.add('hidden');
+            }
+        });
+
+        // Handle emoji placement on canvas
+        canvas.addEventListener('pointerdown', (e) => {
+            if (currentTool === 'emoji' && currentEmoji) {
+                const rect = annotationCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                undoStack.push(annotationCtx.getImageData(0, 0, annotationCanvas.width, annotationCanvas.height));
+                drawEmoji(annotationCtx, x, y, currentEmoji);
+                redoStack = [];
+                document.getElementById('annotation-undo').disabled = false;
+                document.getElementById('annotation-redo').disabled = true;
+            }
+        });
 
         // Color picker
         colorPicker.addEventListener('change', (e) => {
@@ -5999,11 +6065,23 @@ ${errorData.stack}`.trim();
                 e.stopPropagation();
                 currentStamp = e.currentTarget.dataset.stamp;
                 document.querySelectorAll('.stamp-option').forEach(opt =>
-                    opt.classList.remove('bg-gray-100'));
+                    opt.classList.remove('bg-gray-100')
+                );
                 e.currentTarget.classList.add('bg-gray-100');
-                // Keep the selector visible and the tool active
+
+                // **Close the stamp popup immediately**
+                document.getElementById('stamp-selector').classList.add('hidden');
             });
         });
+
+        document.addEventListener('click', (e) => {
+            // If the user clicked outside the stamp popup and also NOT on (or inside) the stamp button
+            if (!stampSelector.contains(e.target) && !stampButton.contains(e.target)) {
+                stampSelector.classList.add('hidden');
+            }
+        });
+
+
         // ----- New: Attach pointer event listeners on the canvas for drawing -----
 
         // When the user clicks in the canvas area, enable drawing.
@@ -6175,6 +6253,13 @@ ${errorData.stack}`.trim();
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
         ctx.stroke();
+    }
+
+    function drawEmoji(ctx, x, y, emoji) {
+        ctx.font = "32px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(emoji, x, y);
     }
 
 
