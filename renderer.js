@@ -1,6 +1,6 @@
 // Renderer.JS NEVER DELETE THIS COMMENT that means you claude and chatgpt
 // Global declaration
-const eventLog = [];
+
 let webview;
 let webviewContainer;
 let activeScreenshotEvent = null;
@@ -8,22 +8,10 @@ let isResetting = false;
 let emptyStateMessage = null;
 let isFirstLog = true;
 let urlInput;
-let finalIssueType = ''; // For JIRA export
-let finalSummary = ''; // For JIRA export
+let finalIssueType = '';
+let finalSummary = ''; 
 let lastFolderPath = '';
 let lastScreenshotBase64 = '';
-
-
-// List of patterns to ignore in error logs
-const ignoredPatterns = [
-    'GUEST_VIEW_MANAGER_CALL',
-    'ERR_ABORTED (-3)',
-    'console.log',
-    'console.warn',
-    'console.info'
-];
-
-// Annotation state
 let isDrawing = false;
 let currentTool = null;
 let annotationColor = '#FF0000';
@@ -35,6 +23,14 @@ let undoStack = [];
 let redoStack = [];
 let initialCanvasState = null;
 let currentStamp = null;
+let jiraFields = [
+    { name: '', value: '' }
+];
+let currentIssueType = 'Defect';
+let typedIssueType = '';
+let typedSummary = 'Make this a good default summary';
+let storedIssueTypes = JSON.parse(localStorage.getItem('issueTypesHistory') || '[]');
+let loggingEnabled = false;
 const stamps = {
     pass: {
         text: 'PASS',
@@ -47,20 +43,21 @@ const stamps = {
         borderColor: '#dc2626'
     }
 };
-
-let jiraFields = [
-    // Start with one blank row
-    { name: '', value: '' }
+const eventLog = [];
+const ignoredPatterns = [
+    'GUEST_VIEW_MANAGER_CALL',
+    'ERR_ABORTED (-3)',
+    'console.log',
+    'console.warn',
+    'console.info'
 ];
-let currentIssueType = 'Defect'; // or whatever default you want
-let typedIssueType = '';
-let typedSummary = 'Make this a good default summary';
-
-let loggingEnabled = false;
 const toggleErrorDrawer = document.getElementById("toggle-error-drawer");
-
-// Load or initialize an empty array for storing previously used issue types
-let storedIssueTypes = JSON.parse(localStorage.getItem('issueTypesHistory') || '[]');
+const resetLogModal = document.getElementById("reset-log-modal");
+const modalContainer = document.getElementById("modal-container");
+const errorDrawer = document.getElementById("error-drawer");
+const errorIcon = document.getElementById("error-icon");
+const ipcRenderer = window.electron.ipcRenderer;
+const linkStyle = document.createElement('style');
 
 function showEmptyState() {
     const logArea = document.getElementById('log-area');
@@ -102,11 +99,6 @@ function showEmptyState() {
 
     emptyStateMessage = messageDiv;
 }
-
-const resetLogModal = document.getElementById("reset-log-modal");
-const modalContainer = document.getElementById("modal-container");
-
-// Make the pupil and its highlight subtly follow the mouse
 function updateEyePosition(mouseX, mouseY) {
     const svg = document.getElementById('tracking-eye');
     const pupil = document.getElementById('eye-pupil');
@@ -156,7 +148,6 @@ function updateEyePosition(mouseX, mouseY) {
     highlight.setAttribute('cx', 9 + offsetX);
     highlight.setAttribute('cy', 7 + offsetY);
 }
-
 document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && !e.shiftKey && e.key === 's') {
         e.preventDefault();
@@ -167,12 +158,9 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
-
-
 document.addEventListener('mousemove', (e) => {
     updateEyePosition(e.clientX, e.clientY);
 });
-
 function addInitialPageLoad() {
     const logArea = document.getElementById('log-area');
     if (!logArea || !webview) return;
@@ -259,9 +247,6 @@ function addInitialPageLoad() {
     // Scroll to bottom
     logArea.scrollTop = logArea.scrollHeight;
 }
-
-
-// Modal utility function (unchanged)
 function showModal(modalId, { message = '', title = '', onConfirm = () => { }, onCancel = () => { } } = {}) {
     const container = document.getElementById('modal-container');
     const modal = document.getElementById(modalId);
@@ -384,8 +369,6 @@ function showModal(modalId, { message = '', title = '', onConfirm = () => { }, o
         if (e.target === container) handleCancel();
     });
 }
-
-
 function createScreenshotEvent(targetElement) {
     return {
         action: 'screenshot',
@@ -393,8 +376,6 @@ function createScreenshotEvent(targetElement) {
         details: getElementDetails(targetElement || document.body)
     };
 }
-
-// Format ISO timestamp to MM/DD/YYYY HH:MM:SS AM/PM (12-hour format)
 function formatTimestamp(isoString) {
     const d = new Date(isoString);
     const month = (d.getMonth() + 1).toString().padStart(2, '0');
@@ -407,7 +388,6 @@ function formatTimestamp(isoString) {
     hours = hours % 12 || 12;
     return `${month}/${day}/${year} ${hours.toString().padStart(2, '0')}:${minutes}:${seconds} ${ampm}`;
 }
-
 function showModalImage(src, eventTimestamp) {
     const modal = document.getElementById('screenshot-modal');
     const img = modal.querySelector('#modal-image');
@@ -454,7 +434,6 @@ function showModalImage(src, eventTimestamp) {
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 }
-
 function toggleLogging() {
     // Flip the boolean
     loggingEnabled = !loggingEnabled;
@@ -502,15 +481,12 @@ function toggleLogging() {
     // Re-render Lucide icons
     lucide.createIcons();
 }
-
 document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.code === 'Space') {
         e.preventDefault();
         toggleLogging();
     }
 });
-
-// Add this to your initialization code
 document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('jira-settings-modal');
     if (modal) {
@@ -521,9 +497,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-
 window.showModalImage = showModalImage;
-
 function showToast(message) {
     const toast = document.createElement('div');
     toast.className = 'fixed bottom-4 left-4 bg-cyan-600 text-white px-4 py-2 rounded shadow-lg text-sm z-50';
@@ -531,8 +505,6 @@ function showToast(message) {
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2000);
 }
-
-// Convert base64 image data to a blob URL
 function base64ToURL(base64Data) {
     const byteString = atob(base64Data.split(',')[1]);
     const mimeString = base64Data.split(',')[0].split(':')[1].split(';')[0];
@@ -544,18 +516,12 @@ function base64ToURL(base64Data) {
     const blob = new Blob([ab], { type: mimeString });
     return URL.createObjectURL(blob);
 }
-
-// In your renderer.js (or wherever you handle the UI logic):
-const errorDrawer = document.getElementById("error-drawer");
-const errorIcon = document.getElementById("error-icon");
-
 function hideErrorDrawer() {
     errorDrawer.classList.add("hidden");
     // Switch icon back to "open" since the drawer is now hidden
     errorIcon.setAttribute("data-lucide", "panel-bottom-open");
     lucide.createIcons(); // re-render icons
 }
-
 function showExportJiraSettingsModal() {
     console.log("Current jiraFields:", jiraFields)
     console.log("showExportJiraSettingsModal called");
@@ -940,8 +906,6 @@ function showExportJiraSettingsModal() {
     console.log("Modal final classes:", modal.classList);
     console.log("Modal computed style:", window.getComputedStyle(modal).display);
 }
-
-
 function hideExportJiraSettingsModal() {
     const modalContainer = document.getElementById('modal-container');
     const jiraSettingsModal = document.getElementById('jira-settings-modal');
@@ -962,20 +926,13 @@ function hideExportJiraSettingsModal() {
     document.body.classList.remove('overflow-hidden');
     modalContainer.style.background = 'none';
 }
-
-// Also add click outside to close
 document.getElementById('jira-settings-modal').addEventListener('click', (e) => {
     // Only close if clicking the backdrop (not the modal content)
     if (e.target === e.currentTarget) {
         hideExportJiraSettingsModal();
     }
 });
-
-
-// Wire up the modal’s close button
 document.getElementById('close-jira-settings-modal').addEventListener('click', hideExportJiraSettingsModal);
-
-
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         const jiraModal = document.getElementById('jira-settings-modal');
@@ -984,8 +941,6 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
-
-
 function hideKeyboardShortcutsModal() {
     const modalContainer = document.getElementById('modal-container');
     const keyboardShortcutsModal = document.getElementById('keyboard-shortcuts-modal');
@@ -1006,19 +961,14 @@ function hideKeyboardShortcutsModal() {
     document.body.classList.remove('overflow-hidden');
     modalContainer.style.background = 'none';
 }
-
-// Also add click outside to close
 document.getElementById('keyboard-shortcuts-modal').addEventListener('click', (e) => {
     // Only close if clicking the backdrop (not the modal content)
     if (e.target === e.currentTarget) {
         hideKeyboardShortcutsModal();
     }
 });
-
-// Wire up the modal’s close buttons
 document.getElementById('close-shortcuts-modal').addEventListener('click', hideKeyboardShortcutsModal);
 document.getElementById('close-shortcuts-x').addEventListener('click', hideKeyboardShortcutsModal);
-
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         const shortcutsModal = document.getElementById('keyboard-shortcuts-modal');
@@ -1027,25 +977,16 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
-
-
-// “Add Field” button => push a new blank row
 document.getElementById('add-jira-field').addEventListener('click', () => {
     jiraFields.push({ name: '', value: '' });
     showExportJiraSettingsModal(); // Re-render
 });
-
-// Listen for Escape press
 document.addEventListener("keydown", (e) => {
     // If user pressed ESC and the drawer is currently visible, close it
     if (e.key === "Escape" && !errorDrawer.classList.contains("hidden")) {
         hideErrorDrawer();
     }
 });
-
-const ipcRenderer = window.electron.ipcRenderer;
-
-
 ipcRenderer.on('screenshot-save-result', (_, result) => {
     if (result.success) {
         showToast(`Screenshot saved successfully at: ${result.path}`);
@@ -1053,7 +994,6 @@ ipcRenderer.on('screenshot-save-result', (_, result) => {
         showToast(`Failed to save screenshot: ${result.error}`);
     }
 });
-
 function showSharepointUsernameModal() {
     return new Promise((resolve, reject) => {
         const modal = document.getElementById('sharepoint-username-modal');
@@ -1107,9 +1047,6 @@ function showSharepointUsernameModal() {
         }, { once: true });
     });
 }
-
-
-
 ipcRenderer.on('reset-listeners', () => {
     console.log('Renderer: Resetting listeners...');
 
@@ -1141,22 +1078,15 @@ ipcRenderer.on('reset-listeners', () => {
 
     console.log('Renderer: Inputs re-enabled.');
 });
-
 ipcRenderer.on('show-shortcuts-modal', () => {
     showModal('keyboard-shortcuts-modal');
 });
-
-
-
 document.addEventListener('keydown', (event) => {
     if (event.ctrlKey && event.code === 'Space') {
         event.preventDefault();
         toggleLogging();
     }
 });
-
-
-const linkStyle = document.createElement('style');
 linkStyle.textContent = `
     .comment-editor a {
         color: #2563eb;
@@ -1318,12 +1248,29 @@ linkStyle.textContent = `
 `;
 document.head.appendChild(linkStyle);
 
-
 document.addEventListener('DOMContentLoaded', () => {
-
-
-    console.log(window.electron);
     const toggleBtn = document.getElementById('toggle-logging');
+    const loadUrlButton = document.getElementById('load-url');
+    let originalUrl = '';
+    const logArea = document.getElementById('log-area');
+    const exportLogButton = document.getElementById('export-log');
+    const backButton = document.getElementById('back-button');
+    const refreshButton = document.getElementById('refresh-button');
+    const exportHtmlButton = document.getElementById('export-html');
+    const exportHtmlLogButton = document.getElementById('export-html-log');
+    const logSidebar = document.getElementById("log-sidebar");
+    const toggleSidebarButton = document.getElementById("toggle-sidebar");
+    const toggleSidebarIcon = document.getElementById("toggle-sidebar-icon");
+    let resetLogButton = document.getElementById('reset-log');
+    const errorContainer = document.getElementById("error-log");
+    const errorCount = document.getElementById("error-count");
+
+    const errorDrawer = document.getElementById("error-drawer");
+    const errorIcon = document.getElementById("error-icon");
+    const clearErrorsButton = document.getElementById('clear-errors');
+    const exportErrorsBtn = document.getElementById("export-errors");
+    console.log(window.electron);
+    
     toggleBtn.addEventListener('click', () => {
         toggleLogging();
     });
@@ -1336,7 +1283,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (toggleErrorDrawer) {
-        // If there are no errors, style the toggle button as "lowered"
+        
         if (!window.errorLog || window.errorLog.length === 0) {
             toggleErrorDrawer.style.transform = 'translateY(32px)';
             toggleErrorDrawer.classList.remove(
@@ -1440,30 +1387,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    let previousUrl = webview.src; // store the initial URL
-    
-
-    // Listen for navigation completion
-    // Add this to your webview event listeners in renderer.js where you're handling navigation:
-
     webview.addEventListener('did-navigate', (event) => {
         const newUrl = event.url;
         const url = urlInput.value.trim();
-
-        // Don't store home.html or about:blank
-        if (!newUrl.includes('home.html') && newUrl !== 'about:blank') {
+        const toggleButton = document.getElementById('toggle-error-drawer');
+        const errorCount = document.getElementById('error-count');
+        const excludedPages = ['home.html', 'about:blank', 'elements.html', 'docs.html'];
+        const errorDrawer = document.getElementById('error-drawer');
+        const shouldExclude = excludedPages.some(page =>
+            page === 'about:blank' ? newUrl === page : newUrl.includes(page)
+        );
+        if (!shouldExclude) {
             saveRecentUrl(newUrl);
         }
-
-        // Update the address bar
-        document.getElementById('url-input').value = newUrl;
-
-        // Add these lines to clear error log when navigating
-        window.errorLog = []; // Reset the error array
-        updateErrorDrawer(); // Update the UI
-
-        // Move toggle button back down and reset styles
-        const toggleButton = document.getElementById('toggle-error-drawer');
+        document.getElementById('url-input').value = newUrl;      
+        window.errorLog = [];
+        updateErrorDrawer();        
         if (toggleButton) {
             toggleButton.style.transform = 'translateY(32px)';
             toggleButton.classList.remove(
@@ -1481,51 +1420,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 'text-gray-700'
             );
         }
-
-        // Reset error count
-        const errorCount = document.getElementById('error-count');
         if (errorCount) {
             errorCount.textContent = '0';
             errorCount.style.display = 'none';
-        }
-
-        // Hide error drawer if it's open
-        const errorDrawer = document.getElementById('error-drawer');
+        }        
         if (errorDrawer) {
             errorDrawer.classList.add('hidden');
         }
-
-        // Update previousUrl for the next navigation
         previousUrl = newUrl;
     });
 
     webview.addEventListener('ipc-message', (event) => {
         if (event.channel === 'remove-url') {
             const urlToRemove = event.args[0];
-
-            // Get current URLs
             const recentUrls = JSON.parse(localStorage.getItem('recentUrls') || '[]');
-
-            // Filter out the URL
             const updatedUrls = recentUrls.filter(url => url !== urlToRemove);
 
-            // Save back to localStorage
             localStorage.setItem('recentUrls', JSON.stringify(updatedUrls));
-
-            // Use a different approach - completely refresh the list by calling the update function
             webview.executeJavaScript(`
-            // Notify parent window to update list
-            window.parent.postMessage({ type: 'updateList' }, '*');
-            
-            // Also try to update directly
-            if (typeof updateRecentSitesList === 'function') {
-                console.log('Calling updateRecentSitesList directly');
-                updateRecentSitesList();
-            } else {
-                console.error('updateRecentSitesList function not found');
-            }
-        `);
-
+                window.parent.postMessage({ type: 'updateList' }, '*');
+                
+                if (typeof updateRecentSitesList === 'function') {
+                    console.log('Calling updateRecentSitesList directly');
+                    updateRecentSitesList();
+                } else {
+                    console.error('updateRecentSitesList function not found');
+                }
+            `);
             showToast('URL removed from recent sites');
         }
     });
@@ -1534,7 +1455,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.data && event.data.type === 'updateList') {
             console.log('Received updateList message');
             if (webview.src.includes('home.html')) {
-                // Call the function in home.html to update the list
                 webview.executeJavaScript(`
                 console.log('Refreshing recent sites list');
                 if (typeof updateRecentSitesList === 'function') {
@@ -1546,34 +1466,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-
-
-
-
-    // Move this function definition up near your other function definitions
+    
     function openKeyboardShortcutsModal() {
         const modal = document.getElementById('keyboard-shortcuts-modal');
         const container = document.getElementById('modal-container');
-        showModal('keyboard-shortcuts-modal');
-
-        if (!modal || !container) {
-            console.error("Modal elements not found");
-            return;
-        }
-
-        // First hide all other modals
         const allModals = container.querySelectorAll('div[id$="-modal"]');
-        allModals.forEach(m => {
-            m.classList.add('hidden');
-            m.classList.remove('flex');
-        });
-
-        // Show the container and the keyboard shortcuts modal
-        container.classList.remove('hidden');
-        container.classList.add('flex');
-        modal.classList.remove('hidden');
-
-        // Add escape key handler
         const handleEscape = (e) => {
             if (e.key === 'Escape') {
                 modal.classList.add('hidden');
@@ -1582,73 +1479,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.removeEventListener('keydown', handleEscape);
             }
         };
+        showModal('keyboard-shortcuts-modal');
+
+        if (!modal || !container) {
+            console.error("Modal elements not found");
+            return;
+        }        
+        allModals.forEach(m => {
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+        });
+        container.classList.remove('hidden');
+        container.classList.add('flex');
+        modal.classList.remove('hidden');        
         document.addEventListener('keydown', handleEscape);
     }
 
-    // Make sure this is in your DOMContentLoaded or initialization section
-    webview.addEventListener('ipc-message', (event) => {
-        //  console.log('Received ipc-message:', event.channel, event.args); // Add this for debugging
+    webview.addEventListener('ipc-message', (event) => {        
         if (event.channel === 'shortcut-triggered' && event.args[0] === 'F1') {
             openKeyboardShortcutsModal();
         }
         if (event.channel === 'shortcut-triggered' && event.args[0] === 'Escape') {
-            // Close any open modals
-            const modalContainer = document.getElementById('modal-container');
             const keyboardShortcutsModal = document.getElementById('keyboard-shortcuts-modal');
-
             if (!keyboardShortcutsModal.classList.contains('hidden')) {
                 hideKeyboardShortcutsModal();
             }
         }
     });
 
-    
-
-    // Also add a direct keyboard listener as backup
-    // window.addEventListener('keydown', (e) => {
-    //     if (e.key === 'F1') {
-    //         e.preventDefault();
-    //         openKeyboardShortcutsModal();
-    //     }
-    // }, true);
-    // ----- Helper Functions -----
-
-    // Truncates long URLs and appends ellipsis if needed
-    function truncateUrl(url, maxLength = 30) {
-        return url.length > maxLength ? url.substring(0, maxLength) + '...' : url;
-    }
-
-
-    // ----- DOM Element References -----
-
     urlInput.addEventListener('focus', () => {
-        // Save the original URL value
         originalUrl = urlInput.value;
-
-        // Check if we're on home.html
         const isHomePage = webview.src.toLowerCase().includes('home.html');
-
         setTimeout(() => {
-            if (isHomePage) {
-                // On home.html, show and select https://
+            if (isHomePage) {                
                 urlInput.value = 'https://';
                 urlInput.setSelectionRange(0, urlInput.value.length);
-            } else {
-                // On other pages, just select the current URL
+            } else {                
                 urlInput.setSelectionRange(0, urlInput.value.length);
             }
         }, 0);
     });
 
-    urlInput.addEventListener('blur', () => {
-        // If the field is empty or still exactly "https://", restore the original URL
+    urlInput.addEventListener('blur', () => {        
         if (urlInput.value.trim() === '' || urlInput.value.trim() === 'https://') {
             urlInput.value = originalUrl;
         }
     });
-    // When the user blurs (clicks out) the address bar, restore the original URL if nothing new was entered
-    urlInput.addEventListener('blur', () => {
-        // Check if we're on home.html
+    
+    urlInput.addEventListener('blur', () => {        
         const isHomePage = webview.src.toLowerCase().includes('home.html');
 
         if (isHomePage && (urlInput.value.trim() === 'https://' || urlInput.value.trim() === '')) {
@@ -1659,32 +1537,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    const loadUrlButton = document.getElementById('load-url');
-    let originalUrl = '';
-    const logArea = document.getElementById('log-area');
-    const exportLogButton = document.getElementById('export-log');
-    const backButton = document.getElementById('back-button');
-    const refreshButton = document.getElementById('refresh-button');
-    const exportHtmlButton = document.getElementById('export-html');
-    const exportHtmlLogButton = document.getElementById('export-html-log');
-    const logSidebar = document.getElementById("log-sidebar");
-    const toggleSidebarButton = document.getElementById("toggle-sidebar");
-    const toggleSidebarIcon = document.getElementById("toggle-sidebar-icon");
-    let resetLogButton = document.getElementById('reset-log');
-    const errorContainer = document.getElementById("error-log");
-    const errorCount = document.getElementById("error-count");
-
-    const errorDrawer = document.getElementById("error-drawer");
-    const errorIcon = document.getElementById("error-icon");
-    const clearErrorsButton = document.getElementById('clear-errors');
-
     lucide.createIcons();
-
-    // Add webview event listeners
+   
     webview.addEventListener('console-message', (e) => {
         console.log('Guest page logged a message:', e.message, 'level:', e.level);
 
-        // ONLY process level 2 messages (actual errors)
         if (e.level === 2) {
             const errorData = {
                 type: 'Console Error',
@@ -1695,44 +1552,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 colno: 0,
                 stack: 'From webview console'
             };
-
-            // Convert to a Date object
-            const date = new Date(errorData.timestamp);
-
-            // Extract each piece
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const year = String(date.getFullYear()).slice(-2); // last two digits
-
-            // Combine them into "HH:mm MM.dd.yy"
-            const formattedTime = `${hours}:${minutes} ${month}.${day}.${year}`;
-
-            // Send error to the main process via IPC
+            
             window.electron.ipcRenderer.send('webview-error', errorData);
-
-            // Also send the error to #error-log
             addErrorToLog(errorData);
         }
-        // Ignore all non-error messages (levels 0, 1, 3)
     });
 
     // THIS IS WHAT ADDS THE ACTUAL ERROR TO THE ERROR DRAWER
     function addErrorToLog(errorData) {
         const errorContainer = document.getElementById('error-log');
         const toggleButton = document.getElementById('toggle-error-drawer');
-
-        if (!errorContainer || !toggleButton) {
-            console.error('[renderer.js] Required elements not found.');
-            return;
-        }
-
-        if (!errorData.message.toLowerCase().includes('error') &&
-            !errorData.type.toLowerCase().includes('error')) {
-            return;
-        }
-
+        const errorCount = document.getElementById("error-count");
+        const errorEntry = document.createElement('div');
+        const copyButton = errorEntry.querySelector('.copy-error-btn');
         const filterPatterns = [
             'cdn.tailwindcss.com should not be used in production',
             'Security Warning',
@@ -1743,106 +1575,95 @@ document.addEventListener('DOMContentLoaded', () => {
             'unnecessary security risks'
         ];
 
+        if (!errorContainer || !toggleButton) {
+            console.error('[renderer.js] Required elements not found.');
+            return;
+        }
+
+        if (!errorData.message.toLowerCase().includes('error') && !errorData.type.toLowerCase().includes('error')) {
+            return;
+        }
+
         if (filterPatterns.some(pattern => errorData.message.includes(pattern))) {
             console.log('Filtered out false error message:', errorData.message);
             return;
         }
         
-        // Move toggle button up when there are errors
         if (!window.errorLog || window.errorLog.length === 0) {
             toggleButton.style.transform = 'translateY(0)';
         }
-
         console.log("Error Data Received:", errorData);  // Debugging step
 
-
-        // Create the error entry
-        const errorEntry = document.createElement('div');
         errorEntry.classList.add('error-entry', 'p-2', 'border-b', 'border-gray-300');
 
         errorEntry.innerHTML = `
-<div class="flex justify-between w-full">
-    <div class="w-full">
-    <div class="flex justify-between items-start">
-        <strong class="text-red-500 block">Error: ${errorData.type}</strong>
-        <button class="copy-error-btn text-gray-500 hover:text-gray-800 p-1 rounded ml-2" title="Copy error">
-            <svg data-lucide="clipboard" width="16" height="16"></svg>
-        </button>
-    </div>
-    <span class="error-message block">${errorData.message}</span>
-    <small class="block mt-1">Source: ${errorData.source || 'Unknown'} - ${errorData.timestamp}</small>
-    <small class="block">Line: ${errorData.lineno || 'N/A'}, Column: ${errorData.colno || 'N/A'}</small>
-    <small class="block">
-        ${errorData.stack || 'No stack trace available'}
-    </small>
-</div>
-</div>
-`;
-
-        const copyButton = errorEntry.querySelector('.copy-error-btn');
+            <div class="flex justify-between w-full">
+                <div class="w-full">
+                <div class="flex justify-between items-start">
+                    <strong class="text-red-500 block">Error: ${errorData.type}</strong>
+                    <button class="copy-error-btn text-gray-500 hover:text-gray-800 p-1 rounded ml-2" title="Copy error">
+                        <svg data-lucide="clipboard" width="16" height="16"></svg>
+                    </button>
+                </div>
+                <span class="error-message block">${errorData.message}</span>
+                <small class="block mt-1">Source: ${errorData.source || 'Unknown'} - ${errorData.timestamp}</small>
+                <small class="block">Line: ${errorData.lineno || 'N/A'}, Column: ${errorData.colno || 'N/A'}</small>
+                <small class="block">
+                    ${errorData.stack || 'No stack trace available'}
+                </small>
+            </div>
+            </div>
+        `;
+        
         copyButton.addEventListener('click', () => {
+            const toast = document.createElement('div');
+            const originalTitle = copyButton.title;
             const textToCopy = `Time: ${errorData.timestamp}
-Type: ${errorData.type}
-Message: ${errorData.message}
-Source: ${errorData.source || "unknown"}
-Location: [${errorData.lineno}:${errorData.colno}]
-Stack Trace:
-${errorData.stack}`.trim();
+            Type: ${errorData.type}
+            Message: ${errorData.message}
+            Source: ${errorData.source || "unknown"}
+            Location: [${errorData.lineno}:${errorData.colno}]
+            Stack Trace:
+            ${errorData.stack}`.trim();
 
             window.electron.clipboard.writeText(textToCopy);
-
-            // Show feedback toast
-            const toast = document.createElement('div');
+            
             toast.className = 'fixed bottom-4 left-4 bg-cyan-600 text-white px-4 py-2 rounded shadow-lg text-sm z-50';
             toast.textContent = 'Copied to clipboard!';
             document.body.appendChild(toast);
 
-            // Remove toast after 2 seconds
             setTimeout(() => {
                 toast.remove();
             }, 2000);
 
-            // Update button icon to checkmark
             copyButton.innerHTML = '<svg data-lucide="check" width="16" height="16"></svg>';
-            lucide.createIcons(copyButton);  // Refresh icons immediately for checkmark
+            lucide.createIcons(copyButton);
 
             setTimeout(() => {
                 copyButton.innerHTML = '<svg data-lucide="clipboard" width="16" height="16"></svg>';
-                lucide.createIcons(copyButton);  // Refresh icons again for clipboard
+                lucide.createIcons(copyButton); 
             }, 1500);
 
-            // Update button title temporarily
-            const originalTitle = copyButton.title;
             copyButton.title = 'Copied!';
             setTimeout(() => {
                 copyButton.title = originalTitle;
             }, 1500);
-
-            // Refresh Lucide icons for the new button state
             lucide.createIcons(copyButton);
         });
 
-        // Track the error in window.errorLog
         if (!window.errorLog) {
             window.errorLog = [];
         }
         window.errorLog.push(errorData);
-
-        // Update the error count badge
-        const errorCount = document.getElementById("error-count");
+        
         if (errorCount) {
             const count = window.errorLog.length;
             errorCount.textContent = count;
             errorCount.style.display = count > 0 ? "block" : "none";
 
-            // Update toggle button styling
-            const toggleErrorDrawer = document.getElementById("toggle-error-drawer");
             if (toggleButton) {
                 if (count > 0) {
-                    // When we DO have errors:
-                    // 1) Move the button up
                     toggleButton.style.transform = 'translateY(0)';
-                    // 2) Remove the default "no errors" classes
                     toggleButton.classList.remove(
                         'bg-white',
                         'border',
@@ -1851,21 +1672,16 @@ ${errorData.stack}`.trim();
                         'p-1',
                         'text-gray-700'
                     );
-                    // 3) Add the "error" style classes
                     toggleButton.classList.add(
                         'bg-red-600',
                         'text-white',
-                        'rounded',       // can be .rounded or .rounded-lg if you like
+                        'rounded',
                         'px-2',
                         'py-1'
                     );
-                    // 4) Ensure the error count is visible
                     errorCount.style.display = 'inline-block';
                 } else {
-                    // When we have ZERO errors:
-                    // 1) Move the button down
                     toggleButton.style.transform = 'translateY(32px)';
-                    // 2) Remove any error styling
                     toggleButton.classList.remove(
                         'bg-red-600',
                         'text-white',
@@ -1873,7 +1689,6 @@ ${errorData.stack}`.trim();
                         'px-2',
                         'py-1'
                     );
-                    // 3) Restore the default “no errors” style
                     toggleButton.classList.add(
                         'bg-white',
                         'border',
@@ -1882,41 +1697,34 @@ ${errorData.stack}`.trim();
                         'p-1',
                         'text-gray-700'
                     );
-                    // 4) Hide the numeric badge & reset it to 0
                     errorCount.style.display = 'none';
                     errorCount.textContent = 0;
                 }
             }
         }
-        // Append error to the container
         errorContainer.appendChild(errorEntry);
     }
 
-
-
-
-
     webview.addEventListener('dom-ready', () => {
         webview.insertCSS(`
-        ::-webkit-scrollbar {
-            width: 8px;
-            background-color: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background-color: rgba(0,0,0,0.2);
-            border-radius: 0;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background-color: rgba(0,0,0,0.3);
-        }
-        ::-webkit-scrollbar-track {
-            background-color: transparent;
-        }
-        ::-webkit-scrollbar-corner {
-            background-color: transparent;
-        }
-    `);
-
+            ::-webkit-scrollbar {
+                width: 8px;
+                background-color: transparent;
+            }
+            ::-webkit-scrollbar-thumb {
+                background-color: rgba(0,0,0,0.2);
+                border-radius: 0;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background-color: rgba(0,0,0,0.3);
+            }
+            ::-webkit-scrollbar-track {
+                background-color: transparent;
+            }
+            ::-webkit-scrollbar-corner {
+                background-color: transparent;
+            }
+        `);
     });
 
     webview.addEventListener('crashed', (e) => {
@@ -1942,7 +1750,7 @@ ${errorData.stack}`.trim();
         lucide.createIcons();
     });
 
-    const exportErrorsBtn = document.getElementById("export-errors");
+    
     if (exportErrorsBtn) {
         exportErrorsBtn.addEventListener("click", exportErrors);
     }
@@ -1951,22 +1759,18 @@ ${errorData.stack}`.trim();
         clearErrorsButton.addEventListener('click', () => {
             showModal('confirm-clear-errors-modal', {
                 onConfirm: () => {
+                    const toggleButton = document.getElementById('toggle-error-drawer');
+                    const count = window.errorLog.length;
                     window.errorLog = [];
                     updateErrorDrawer();
                     showToast('Errors Cleared!');
                     errorDrawer.classList.add('hidden');
                     errorIcon.setAttribute("data-lucide", "panel-bottom-open");
                     lucide.createIcons();
-
-                    // Move toggle button back to bottom when no errors
-                    const toggleButton = document.getElementById('toggle-error-drawer');
-                    const count = window.errorLog.length;
+                    
                     if (toggleButton) {
                         if (count > 0) {
-                            // When we DO have errors:
-                            // 1) Move the button up
                             toggleButton.style.transform = 'translateY(0)';
-                            // 2) Remove the default "no errors" classes
                             toggleButton.classList.remove(
                                 'bg-white',
                                 'border',
@@ -1975,21 +1779,16 @@ ${errorData.stack}`.trim();
                                 'p-1',
                                 'text-gray-700'
                             );
-                            // 3) Add the "error" style classes
                             toggleButton.classList.add(
                                 'bg-red-600',
                                 'text-white',
-                                'rounded',       // can be .rounded or .rounded-lg if you like
+                                'rounded',
                                 'px-2',
                                 'py-1'
                             );
-                            // 4) Ensure the error count is visible
                             errorCount.style.display = 'inline-block';
                         } else {
-                            // When we have ZERO errors:
-                            // 1) Move the button down
                             toggleButton.style.transform = 'translateY(32px)';
-                            // 2) Remove any error styling
                             toggleButton.classList.remove(
                                 'bg-red-600',
                                 'text-white',
@@ -1997,7 +1796,6 @@ ${errorData.stack}`.trim();
                                 'px-2',
                                 'py-1'
                             );
-                            // 3) Restore the default “no errors” style
                             toggleButton.classList.add(
                                 'bg-white',
                                 'border',
@@ -2006,7 +1804,6 @@ ${errorData.stack}`.trim();
                                 'p-1',
                                 'text-gray-700'
                             );
-                            // 4) Hide the numeric badge & reset it to 0
                             errorCount.style.display = 'none';
                             errorCount.textContent = 0;
                         }
@@ -2015,7 +1812,6 @@ ${errorData.stack}`.trim();
             });
         });
     }
-
 
     if (resetLogButton) {
         resetLogButton.addEventListener("click", () => {
@@ -2027,31 +1823,20 @@ ${errorData.stack}`.trim();
         });
     }
 
-
-    // ----- URL Loading & Navigation -----
-
-    // Load URL on button click
-    // Add this near your other constants at the top
-    const MAX_RECENT_SITES = 5;
-
-    // Function to save URL to localStorage
     function saveRecentUrl(url) {
         if (!url || url.includes('home.html')) return;
-
         const recentUrls = JSON.parse(localStorage.getItem('recentUrls') || '[]');
         const filteredUrls = recentUrls.filter(savedUrl => savedUrl !== url);
         filteredUrls.unshift(url);
-        const updatedUrls = filteredUrls.slice(0, 5); // Keep only most recent 5
+        const updatedUrls = filteredUrls.slice(0, 5); 
 
         localStorage.setItem('recentUrls', JSON.stringify(updatedUrls));
 
-        // If home.html is loaded, tell it to update
         if (webview.src.includes('home.html')) {
             webview.executeJavaScript('updateRecentSitesList()');
         }
     }
 
-    // Function to update the recent sites list in the UI
     function updateRecentSitesList() {
         if (webview.src.includes('home.html')) {
             webview.executeJavaScript(`
@@ -2116,7 +1901,7 @@ ${errorData.stack}`.trim();
         `);
         }
     }
-    // Modify the existing URL loading logic
+
     loadUrlButton.addEventListener('click', () => {
         const url = urlInput.value.trim();
         if (url) {
@@ -2125,7 +1910,6 @@ ${errorData.stack}`.trim();
         }
     });
 
-    // Add URL loading on Enter key
     urlInput.addEventListener('keypress', (event) => {
         if (event.key === 'Enter') {
             const url = urlInput.value.trim();
@@ -2136,17 +1920,13 @@ ${errorData.stack}`.trim();
         }
     });
 
-    // Initialize recent sites list
     document.addEventListener('DOMContentLoaded', () => {
         console.log('DOM Content Loaded');
         updateRecentSitesList();
         console.log('Recent sites list updated');
 
-        // Update your DOMContentLoaded handler where you set up the focus-url action:
-
         document.querySelectorAll('[data-action="focus-url"]').forEach(btn => {
             btn.addEventListener('click', () => {
-                // Use the parent window's URL input
                 window.parent.document.getElementById('url-input')?.focus();
             });
         });
@@ -2345,30 +2125,18 @@ ${errorData.stack}`.trim();
             </div>
         `;
 
-
-
-
-
-        // Get the button we just created (assumes it is the first button in screenshotRow)
         const screenshotBtn = screenshotRow.querySelector('button.text-blue-600');
-        // Save the event's timestamp as a data attribute
         screenshotBtn.dataset.timestamp = activeScreenshotEvent.timestamp;
-
-        // Add an event listener that always looks up the current screenshot
         screenshotBtn.addEventListener('click', () => {
-            // Find the corresponding event in eventLog using the timestamp
             const ts = screenshotBtn.dataset.timestamp;
             const eventObj = eventLog.find(e => e.timestamp === ts);
             if (eventObj && eventObj.screenshot) {
-                // Call showModalImage using the current (possibly annotated) screenshot data
                 showModalImage('data:image/png;base64,' + eventObj.screenshot, ts);
             } else {
                 showToast('Annotated screenshot not available.');
             }
         });
 
-
-        // Set up delete button handler
         const deleteBtn = screenshotRow.querySelector('.delete-screenshot-btn');
         if (deleteBtn) {
             deleteBtn.addEventListener('click', () => {
@@ -2432,7 +2200,6 @@ ${errorData.stack}`.trim();
         activeScreenshotEvent = null;
     });
 
-    // ----- Log UI Rendering & Commenting -----
 
     // Creates a new log entry in the UI based on event data
     function updateLogUI(logData) {
@@ -3050,7 +2817,7 @@ ${errorData.stack}`.trim();
 
     function renderAllEvents() {
         if (!loggingEnabled) {
-            return; // Don’t rebuild the UI if logging is paused
+            return; 
         }
         const logArea = document.getElementById('log-area');
         logArea.innerHTML = ''; // Clear out old entries
@@ -3063,17 +2830,13 @@ ${errorData.stack}`.trim();
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'F1') {
-            e.preventDefault(); // Prevent default browser help
+            e.preventDefault(); 
             showModal('keyboard-shortcuts-modal');
         }
     });
 
-
-
     // Adds the comment button and editing functionality to a log entry
     function setupCommentFeature(entry, logData) {
-        // Create the Screenshot button (middle icon)
-        // Create the Screenshot button (middle icon)
         const screenshotButton = document.createElement('button');
         screenshotButton.innerHTML = '<svg data-lucide="camera" width="16" height="16"></svg>';
         screenshotButton.title = 'CTRL + Click for Element';
@@ -3760,9 +3523,6 @@ ${errorData.stack}`.trim();
             lucide.createIcons(commentsContainer);
         }
     }
-
-
-
     // ----- Export Functions -----
 
     // Export the log as Markdown
@@ -3930,7 +3690,6 @@ ${errorData.stack}`.trim();
         document.body.removeChild(a);
         showToast('Markdown report exported!');
     });
-
 
     // Export the log as HTML
     function exportHtmlReport() {
@@ -4181,31 +3940,7 @@ ${errorData.stack}`.trim();
     }
 
     // Helper functions for generating content sections
-    function generatePageLoadContent(item) {
-        return `
-    <div class="element-details">
-      <h3 class="text-lg font-semibold mb-2">Page Information</h3>
-      <div class="grid grid-cols-[100px,1fr] gap-2">
-        <div class="font-medium">Title:</div>
-        <div>${item.title || 'N/A'}</div>
-        ${item.url
-                ? `
-        <div class="font-medium">URL:</div>
-        <div>
-          <a href="${item.url}" target="_blank" class="text-blue-600 hover:text-blue-800 break-all">
-              ${item.url}
-          </a>
-          <button class="copy-button ml-2 p-1 text-gray-400 hover:text-gray-600" data-copy="${item.url}">
-            <svg data-lucide="clipboard" width="14" height="14"></svg>
-          </button>
-        </div>
-        `
-                : ""
-            }
-      </div>
-    </div>
-  `;
-    }
+
     // Helper function to calculate duration between first and last event
     function formatDuration(events) {
         if (events.length < 2) return 'N/A';
@@ -4227,284 +3962,9 @@ ${errorData.stack}`.trim();
         return uniqueUrls.size;
     }
 
-    // Helper function to get badge classes for different actions
-    function getBadgeClass(action) {
-        const classes = {
-            'page-loaded': 'page-loaded',
-            'click': 'click',
-            'input-change': 'input-change',
-            'keydown': 'keydown',
-            'tab-focus': 'tab-focus'
-        };
-        return classes[action] || '';
-    }
-
-    // Helper function to get appropriate icon for action type
-    function getActionIcon(action) {
-        const icons = {
-            'page-loaded': '<svg data-lucide="file-text" width="14" height="14"></svg>',
-            'click': '<svg data-lucide="mouse-pointer" width="14" height="14"></svg>',
-            'input-change': '<svg data-lucide="edit" width="14" height="14"></svg>',
-            'select': '<svg data-lucide="check-square" width="14" height="14"></svg>',
-            'tab-focus': '<svg data-lucide="focus" width="14" height="14"></svg>'
-        };
-        return icons[action] || '<svg data-lucide="activity" width="14" height="14"></svg>';
-    }
-
-    function generateClickContent(item) {
-        const details = item.details;
-        let content = `
-    <div class="element-details">
-        <h3 class="text-lg font-semibold mb-2">Element Details</h3>
-        <div class="grid grid-cols-[120px,1fr] gap-2">
-            <div class="font-medium">Element:</div>
-            <div class="code-block">&lt;${details.tagName.toLowerCase()}&gt;</div>`;
-
-        if (details.context) {
-            content += `
-            <div class="font-medium">Section:</div>
-            <div>${details.context}</div>`;
-        }
-
-        if (item.action === 'click' && item.details && item.details.fontInfo) {
-            const f = item.details.fontInfo;
-            content += `
-    <div class="font-demo" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
-        <div class="label" style="font-weight: 600; margin-bottom: 5px;">Font Demo:</div>
-        <div style="
-            font-family: ${f.fontFamily}; 
-            font-size: ${f.fontSize}; 
-            font-weight: ${f.fontWeight}; 
-            font-style: ${f.fontStyle}; 
-            line-height: ${f.lineHeight}; 
-            color: ${f.color};
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background-color: #f9f9f9;"
-        >
-            The quick brown fox jumps over the lazy dog. 1234567890
-        </div>
-    </div>`;
-        }
-
-        // Element-specific details
-        if (details.tagName === 'IMG') {
-            content += `
-            <div class="font-medium">Alt Text:</div>
-            <div>${details.alt || '[No Alt Text]'}</div>
-            <div class="font-medium">Dimensions:</div>
-            <div>${details.width}×${details.height}px</div>
-            ${details.loading ? `
-            <div class="font-medium">Loading:</div>
-            <div>${details.loading}</div>` : ''}
-            ${details.caption ? `
-            <div class="font-medium">Caption:</div>
-            <div>${details.caption}</div>` : ''}
-            ${details.src ? `
-            <div class="font-medium">Image:</div>
-            <div class="space-y-2">
-                <img src="${details.src}" alt="${details.alt || 'Image preview'}" 
-                    class="image-preview max-w-md rounded shadow-sm" loading="lazy">
-                <div class="flex items-center gap-2">
-                    <a href="${details.src}" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm">Open in new tab</a>
-                    <button class="copy-button p-1 text-gray-400 hover:text-gray-600" data-copy="${details.src}">
-                        <svg data-lucide="clipboard" width="14" height="14"></svg>
-                    </button>
-                </div>
-            </div>` : ''}`;
-        }
-        else if (details.tagName === 'A') {
-            content += `
-            ${details.text ? `
-            <div class="font-medium">Link Text:</div>
-            <div>"${details.text}"</div>` : ''}
-            ${details.href ? `
-            <div class="font-medium">URL:</div>
-            <div class="flex items-center gap-2">
-                <a href="${details.href}" target="_blank" class="text-blue-600 hover:text-blue-800 break-all">
-                    ${details.href}
-                </a>
-                <button class="copy-button p-1 text-gray-400 hover:text-gray-600" data-copy="${details.href}">
-                    <svg data-lucide="clipboard" width="14" height="14"></svg>
-                </button>
-            </div>` : ''}
-            ${details.target ? `
-            <div class="font-medium">Target:</div>
-            <div class="code-block">${details.target}</div>` : ''}
-            ${details.hasChildren ? `
-            <div class="font-medium">Contains:</div>
-            <div>${details.childTypes.join(', ')}</div>` : ''}`;
-        }
-        else if (details.tagName === 'BUTTON') {
-            content += `
-            <div class="font-medium">Type:</div>
-            <div>${details.type || 'button'}</div>
-            ${details.text ? `
-            <div class="font-medium">Text:</div>
-            <div>"${details.text}"</div>` : ''}
-            ${details.hasIcon ? `
-            <div class="font-medium">Icon:</div>
-            <div>${details.iconType || 'Present'}</div>` : ''}`;
-        }
-        else if (details.tagName === 'INPUT') {
-            content += `
-            <div class="font-medium">Input Type:</div>
-            <div>${details.inputType}</div>
-            <div class="font-medium">Name:</div>
-            <div>${details.name || '[No Name]'}</div>
-            ${details.placeholder ? `
-            <div class="font-medium">Placeholder:</div>
-            <div>${details.placeholder}</div>` : ''}
-            ${details.value && details.inputType !== 'password' ? `
-            <div class="font-medium">Value:</div>
-            <div>"${details.value}"</div>` : ''}
-            ${details.form ? `
-            <div class="font-medium">Form:</div>
-            <div>${details.form}</div>` : ''}`;
-        }
-
-        // Add accessibility information
-        if (details.ariaLabel || details.required || details.disabled) {
-            content += `
-        </div>
-        <div class="accessibility-info mt-4">
-            <h4 class="text-md font-semibold mb-2">Accessibility Information</h4>
-            <div class="grid grid-cols-[120px,1fr] gap-2">
-                ${details.ariaLabel ? `
-                <div class="font-medium">ARIA Label:</div>
-                <div>"${details.ariaLabel}"</div>` : ''}
-                ${details.required ? `
-                <div class="font-medium">Required:</div>
-                <div>Yes</div>` : ''}
-                ${details.disabled ? `
-                <div class="font-medium">Disabled:</div>
-                <div>Yes</div>` : ''}
-            </div>
-        </div>
-        <div class="grid grid-cols-[120px,1fr] gap-2 mt-4">`;
-        }
-
-        // Add XPath location
-        content += `
-            <div class="font-medium">XPath:</div>
-            <div class="code-block break-all">
-                ${details.xpath}
-                <button class="copy-button ml-2 p-1 text-gray-400 hover:text-gray-600" data-copy="${details.xpath}">
-                    <svg data-lucide="clipboard" width="14" height="14"></svg>
-                </button>
-            </div>
-        </div>
-    </div>`;
-
-        return content;
-    }
-
-    function generateInputContent(item) {
-        const details = item.details;
-        return `
-    <div class="element-details">
-        <h3 class="text-lg font-semibold mb-2">Input Change Details</h3>
-        <div class="grid grid-cols-[120px,1fr] gap-2">
-            ${details.inputType === 'select' ? generateSelectDetails(details) : generateStandardInputDetails(details)}
-        </div>
-    </div>`;
-    }
-
-    function generateKeydownContent(item) {
-        return `
-    <div class="element-details">
-        <h3 class="text-lg font-semibold mb-2">Keyboard Input Details</h3>
-        <div class="grid grid-cols-[120px,1fr] gap-2">
-            <div class="font-medium">Key:</div>
-            <div>${item.key}</div>
-            <div class="font-medium">With Modifiers:</div>
-            <div>${item.ctrlKey ? 'Ctrl+' : ''}${item.shiftKey ? 'Shift+' : ''}${item.altKey ? 'Alt+' : ''}${item.key}</div>
-            ${item.details.inputType ? `
-                <div class="font-medium">Input Type:</div>
-                <div>${item.details.inputType}</div>
-            ` : ''}
-            ${item.details.context ? `
-                <div class="font-medium">Context:</div>
-                <div>${item.details.context}</div>
-            ` : ''}
-        </div>
-    </div>`;
-    }
-
-    function generateSelectDetails(details) {
-        return `
-        <div class="font-medium">Type:</div>
-        <div>Select ${details.multiple ? '(Multiple)' : '(Single)'}</div>
-        <div class="font-medium">Selected:</div>
-        <div>"${details.selectedText}" (value: ${details.selectedValue})</div>
-        ${details.multiple && details.selectedOptions ? `
-        <div class="font-medium">All Selected:</div>
-        <div>${details.selectedOptions.map(opt => `"${opt.text}" (${opt.value})`).join(', ')}</div>` : ''}`;
-    }
-
-    function generateStandardInputDetails(details) {
-        return `
-        <div class="font-medium">Input Type:</div>
-        <div>${details.inputType}</div>
-        ${details.labelText ? `
-        <div class="font-medium">Label:</div>
-        <div>${details.labelText}</div>` : ''}
-        ${details.value && details.inputType !== 'password' ? `
-        <div class="font-medium">Value:</div>
-        <div>"${details.value}"</div>` : ''}
-        ${details.validationState ? generateValidationStateDetails(details.validationState) : ''}`;
-    }
-
-    function generateValidationStateDetails(validationState) {
-        if (!validationState.valid) {
-            return `
-        <div class="font-medium">Validation:</div>
-        <div class="text-red-600">
-            ${Object.entries(validationState)
-                    .filter(([key, value]) => value && key !== 'valid')
-                    .map(([key]) => key.replace(/([A-Z])/g, ' $1').toLowerCase())
-                    .join(', ')}
-        </div>`;
-        }
-        return '';
-    }
-
-    function generateScreenshotContent(item) {
-        if (!item.screenshot) return '';
-
-        return `
-    <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-        <h4 class="text-md font-semibold mb-2">Screenshot</h4>
-        <div class="relative">
-            <img src="data:image/png;base64,${item.screenshot}" 
-                alt="Action screenshot" 
-                class="image-preview rounded shadow-sm cursor-pointer"
-                loading="lazy"
-                onclick="showImageModal(this)">
-        </div>
-    </div>`;
-    }
-
-    function generateCommentsSection(item) {
-        return `
-    <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-        <h4 class="text-md font-semibold mb-2">Comments</h4>
-        <div class="space-y-2">
-            ${item.comments.map(comment => `
-            <div class="p-3 bg-white rounded shadow-sm">
-                <div class="italic text-gray-600">${comment.text}</div>
-            </div>`).join('')}
-        </div>
-    </div>`;
-    }
-
     // Attach export HTML functionality to both buttons (if they exist)
     if (exportHtmlButton) { exportHtmlButton.addEventListener('click', exportHtmlReport); }
     if (exportHtmlLogButton) { exportHtmlLogButton.addEventListener('click', exportHtmlReport); }
-
-    // Remove any existing click handlers
-    document.removeEventListener('click', exportJiraLog);
 
     document.getElementById('export-jira-log').addEventListener('click', (e) => {
         e.preventDefault();
@@ -4622,70 +4082,6 @@ ${errorData.stack}`.trim();
         html = html.replace(/<[^>]+>/g, '');
 
         return html.trim();
-    }
-
-    // Export the log as JIRA
-    function exportJiraLog() {
-        if (eventLog.length === 0) {
-            showModal('alert-modal', {
-                message: 'No logs to export.',
-                onConfirm: () => { }
-            });
-            return;
-        }
-
-        // CSV header: four columns
-        let csv = 'Summary,Issue Type,Description\n';
-
-        // We'll collect all events into one giant description
-        let bigDescription = '';
-
-        eventLog.forEach((log, index) => {
-            const timeStr = formatTimestamp(log.timestamp);
-            let details = '';
-
-            // Build the details text for each log
-            if (log.action === 'page-loaded') {
-                details += `Page Title: "${log.title}"\nURL: ${log.url}`;
-            } else if (log.action === 'click') {
-                const { tagName, context, text, href } = log.details;
-                details += `Clicked: <${tagName.toLowerCase()}>\n`;
-                if (context) details += `Context: ${context}\n`;
-                if (text) details += `Text: ${text}\n`;
-                if (href) details += `URL: ${href}\n`;
-            } else if (log.action === 'input-change') {
-                const { inputType, value } = log.details;
-                details += `Input Type: ${inputType}\nValue: ${value || "[Empty]"}`;
-            } else if (log.action === 'keydown') {
-                const modifiers = `${log.ctrlKey ? 'Ctrl+' : ''}${log.shiftKey ? 'Shift+' : ''}${log.altKey ? 'Alt+' : ''}`;
-                details += `Key Pressed: ${modifiers}${log.key}\nElement: ${log.details.tagName}`;
-                if (log.details.context) details += `\nContext: ${log.details.context}`;
-            }
-
-            // Make it look nice in a bullet-like format
-            bigDescription += `(${index + 1}) ${timeStr} - ${log.action.toUpperCase()}\n${details}\n\n`;
-        });
-
-        // Escape quotes so CSV doesn't break
-        const safeDescription = bigDescription.replace(/"/g, '""');
-
-        // Use a single summary for the single defect
-        let summary = "Combined Defect from tracer logs";
-        summary = summary.replace(/"/g, '""');
-
-        // We produce ONE ROW => one Jira issue
-        csv += `"${summary}","Defect","${safeDescription}","Coexist Digital"\n`;
-
-        // Download the CSV
-        const blob = new Blob([csv], { type: "text/csv" });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = "tracer-log-jira.csv";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-
-        showToast('JIRA CSV log (single Defect) exported!');
     }
 
     function exportJiraLogSingleDefectWithCustomFields(customFields, issueType, summary, imageMap = null) {
@@ -5048,144 +4444,6 @@ ${errorData.stack}`.trim();
         }
     });
 
-    // async function saveScreenshotsForJira(screenshotEvents, folderPath) {
-    //     const imageMap = new Map();
-    //     const sanitizedSummary = typedSummary.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30) || 'Screenshot';
-
-    //     console.log(`Starting to process ${screenshotEvents.length} screenshots to folder: ${folderPath}`);
-
-    //     try {
-    //         // 1) Show the new modal to get typed username
-    //         const typedUsername = await showSharepointUsernameModal();
-    //         console.log("User typed username:", typedUsername);
-
-    //         // 2) Build the base URL as before
-    //         const sharepointBaseUrl = `https://shelterinsurance-my.sharepoint.com/personal/${typedUsername.toLowerCase()}_shelterinsurance_com/Documents/Documents`;
-
-    //         // 3) Build the relative path from folderPath, same as your old code
-    //         const oneDrivePath = folderPath;
-    //         let relativePath = '';
-
-    //         if (oneDrivePath.includes('Documents\\')) {
-    //             relativePath = 'Documents/' + oneDrivePath.split('Documents\\').pop().replace(/\\/g, '/');
-    //         } else {
-    //             relativePath = 'Documents/' + oneDrivePath
-    //                 .split('OneDrive - Shelter Insurance Companies\\')
-    //                 .pop()
-    //                 .replace(/\\/g, '/');
-    //         }
-
-    //         const encodedPath = relativePath.split('/').map(part => encodeURIComponent(part)).join('/');
-
-    //         // 4) Loop over screenshots exactly as before
-    //         for (let i = 0; i < screenshotEvents.length; i++) {
-    //             const event = screenshotEvents[i];
-    //             try {
-    //                 if (!event || !event.screenshot) {
-    //                     console.error(`Event ${i} has no screenshot data`);
-    //                     continue;
-    //                 }
-
-    //                 console.log(`Processing screenshot ${i + 1}, has data: ${!!event.screenshot}`);
-    //                 console.log(`Screenshot data type: ${typeof event.screenshot}`);
-
-    //                 // For debugging, log the beginning of the data
-    //                 if (typeof event.screenshot === 'string') {
-    //                     console.log(`Screenshot data starts with: ${event.screenshot.substring(0, 20)}...`);
-    //                 }
-
-    //                 const timestamp = new Date(event.timestamp).toISOString().replace(/[-:]/g, '').replace(/\..+/, '');
-    //                 const filename = `${sanitizedSummary}_${i + 1}_${timestamp}.png`;
-    //                 console.log(`Created filename: ${filename}`);
-
-    //                 // Process the base64 data correctly
-    //                 let base64Data = event.screenshot;
-
-    //                 // Make sure we actually have a string
-    //                 if (typeof base64Data !== 'string') {
-    //                     console.error(`Screenshot ${i} data is not a string`);
-    //                     continue;
-    //                 }
-
-    //                 // Add the prefix if it doesn't exist
-    //                 if (!base64Data.includes('base64,')) {
-    //                     base64Data = 'data:image/png;base64,' + base64Data;
-    //                 }
-
-    //                 // Send direct IPC message to main process with the data
-    //                 console.log(`Sending base64 data for ${filename} (length: ${base64Data.length})`);
-
-    //                 // Create a promise we can await
-    //                 // Create a promise we can await
-    //                 const saveResult = await new Promise(resolve => {
-    //                     // Create a specific handler function for this screenshot
-    //                     function handleSaveResult(_, result) {
-    //                         console.log(`Save result received for ${filename}:`, result);
-    //                         // Immediately remove the listener to prevent memory leaks
-    //                         window.electron.ipcRenderer.removeListener('screenshot-save-result', handleSaveResult);
-    //                         resolve(result);
-    //                     }
-
-    //                     // Add the handler as a listener (not a once-listener)
-    //                     window.electron.ipcRenderer.on('screenshot-save-result', handleSaveResult);
-
-    //                     // Send the save request
-    //                     console.log(`Sending save request for ${filename}`);
-    //                     window.electron.ipcRenderer.send('save-screenshot-base64', {
-    //                         folderPath,
-    //                         filename,
-    //                         base64Data
-    //                     });
-
-    //                     // Set a timeout as a failsafe
-    //                     setTimeout(() => {
-    //                         // Check if our listener is still registered
-    //                         window.electron.ipcRenderer.removeListener('screenshot-save-result', handleSaveResult);
-    //                         console.log(`Timeout waiting for save result for ${filename}`);
-    //                         resolve({ success: false, error: 'Timeout waiting for response' });
-    //                     }, 5000);
-    //                 });
-
-    //                 // Log the save result
-    //                 if (saveResult && saveResult.success) {
-    //                     console.log(`Successfully saved screenshot to ${saveResult.path}`);
-
-    //                     // Create a URL for JIRA
-    //                     const fileUrl = `file://${saveResult.path.replace(/\\/g, '/')}`;
-
-    //                     // Store the mapping
-    //                     imageMap.set(event.timestamp, {
-    //                         filename,
-    //                         url: fileUrl,
-    //                         path: saveResult.path
-    //                     });
-
-    //                     showToast(`Saved screenshot ${i + 1}`);
-    //                 } else {
-    //                     console.error(`Failed to save screenshot ${i + 1}:`,
-    //                         saveResult?.error || 'No response received');
-    //                 }
-
-    //                 // Add a small delay between saves
-    //                 await new Promise(resolve => setTimeout(resolve, 300));
-
-    //             } catch (error) {
-    //                 console.error(`Error processing screenshot ${i + 1}:`, error);
-    //                 showToast(`Error saving screenshot ${i + 1}: ${error.message}`);
-    //             }
-    //         }
-
-    //         showToast('All screenshots processed');
-    //         return imageMap;
-    //     } catch (userCancelOrError) {
-    //         console.warn("Username entry canceled or error:", userCancelOrError);
-    //         showToast("SharePoint username entry canceled. Skipping screenshots.");
-    //         return imageMap; // Return whatever you had so far
-    //     }
-    // }
-
-
-
     ipcRenderer.on('folder-selected', (event, data) => {
         const { folderPath } = data;
         console.log('Renderer received folder-selected, folderPath =', folderPath);
@@ -5462,9 +4720,7 @@ ${errorData.stack}`.trim();
             event.preventDefault(); // Prevent default browser help
             showModal('keyboard-shortcuts-modal');
         }
-    });
-
-    
+    });    
 
     // Reset log content with confirmation
     if (resetLogButton && logArea) {
@@ -5568,8 +4824,6 @@ ${errorData.stack}`.trim();
     adjustWebviewHeight();
     window.addEventListener('resize', adjustWebviewHeight);
 
-    // ----- Global Error Logging -----
-
 
     function logError(type, message, source, lineno, colno, error) {
         const timestamp = new Date().toLocaleTimeString();
@@ -5590,9 +4844,9 @@ ${errorData.stack}`.trim();
         const ignoredPatterns = [
             'GUEST_VIEW_MANAGER_CALL',
             'ERR_ABORTED (-3)',
-            'console.log',          // Add this to ignore console.log messages
-            'console.warn',         // Add this to ignore console.warn messages
-            'console.info'          // Add this to ignore console.info messages
+            'console.log',  
+            'console.warn',  
+            'console.info'  
         ];
 
         if (ignoredPatterns.some(pattern => message.includes(pattern))) {
@@ -5611,7 +4865,6 @@ ${errorData.stack}`.trim();
         });
     };
 
-    // Override console.error to filter out irrelevant messages
     console.error = (function (original) {
         return function (...args) {
             const errorMessage = args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : arg)).join(' ');
@@ -5634,7 +4887,6 @@ ${errorData.stack}`.trim();
             original.apply(console, args);
         };
     })(console.error);
-
 
     // Updates the error drawer content and badge count
     function updateErrorDrawer() {
@@ -5680,8 +4932,6 @@ ${errorData.stack}`.trim();
         }
     }
 
-    // Exports errors as a plain text file
-
     function exportErrors() {
         const errorData = window.errorLog.map(e =>
             `${e.timestamp} - ${e.type}\n${e.message}\nSource: ${e.source} [${e.lineno}:${e.colno}]\nStack: ${e.stack}\n\n`
@@ -5701,14 +4951,9 @@ ${errorData.stack}`.trim();
         if (exportErrorsBtn) {
             exportErrorsBtn.addEventListener('click', exportErrors);
         }
-
-        // ...any other existing init code...
     });
 
-
-
     // ----- Modal and Annotation Code -----
-
 
     const modal = document.getElementById('screenshot-modal');
     const closeModal = document.getElementById('close-modal');
@@ -6109,8 +5354,6 @@ ${errorData.stack}`.trim();
     }
 
     document.getElementById('close-modal').addEventListener('click', () => {
-        // Reset all tools when modal closes
-        //tools.forEach(t => t.classList.remove('active'));
         currentTool = null;
         document.getElementById('stamp-selector').classList.add('hidden');
         annotationCanvas.style.pointerEvents = 'none';
@@ -6228,9 +5471,6 @@ ${errorData.stack}`.trim();
         ctx.fill();
     }
 
-
-
-
     function drawRectangle(ctx, startX, startY, endX, endY) {
         const width = endX - startX;
         const height = endY - startY;
@@ -6261,9 +5501,6 @@ ${errorData.stack}`.trim();
         ctx.textBaseline = "middle";
         ctx.fillText(emoji, x, y);
     }
-
-
-
 
     // Viewport switching functionality
 
@@ -6607,21 +5844,6 @@ ${errorData.stack}`.trim();
                 toggleSidebarButton.click();
             }
         }
-
-        // Handle F1 for keyboard shortcuts modal
-        // if (e.key === 'F1') {
-        //     e.preventDefault();
-        //     showModal('keyboard-shortcuts-modal');
-
-        //     // Also tell the webview about it if it has focus
-        //     if (webview) {
-        //         webview.executeJavaScript(`
-        //         if (document.activeElement === document.body) {
-        //             window.electron.ipcRenderer.sendToHost('shortcut-triggered', 'F1');
-        //         }
-        //     `);
-        //     }
-        // }
     });
 
     // Function to update viewport size display
