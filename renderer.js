@@ -28,7 +28,7 @@ let jiraFields = [
 ];
 let currentIssueType = 'Defect';
 let typedIssueType = '';
-let typedSummary = 'Make this a good default summary';
+let typedSummary = '';
 let storedIssueTypes = JSON.parse(localStorage.getItem('issueTypesHistory') || '[]');
 let loggingEnabled = false;
 const stamps = {
@@ -195,7 +195,7 @@ function addInitialPageLoad() {
                             <a href="${logData.url}" class="text-blue-600 hover:text-blue-800 underline break-words text-left" title="${logData.url}">
                                 ${logData.url.length > 25 ? logData.url.substring(0, 25) + "..." : logData.url}
                             </a>
-                            <button class="copy-url-btn ml-auto p-1 hover:bg-gray-100 rounded" title="Copy URL to clipboard" data-url="${logData.url}">
+                            <button class="copy-url-btn ml-auto pr-[2.5px] hover:bg-gray-100 rounded" title="Copy URL to clipboard" data-url="${logData.url}">
                                 <svg data-lucide="clipboard" width="14" height="14"></svg>
                             </button>
                         </div>
@@ -687,9 +687,16 @@ function showExportJiraSettingsModal() {
     const summaryInput = document.createElement('input');
     summaryInput.type = 'text';
     summaryInput.id = 'jira-summary-input';
-    summaryInput.placeholder = 'e.g. "My Custom Defect"';
+    summaryInput.placeholder = 'Enter a descriptive summary for this issue';
+    summaryInput.required = true;
     summaryInput.className = 'w-full border border-gray-300 rounded px-2 py-1';
     summaryContainer.appendChild(summaryInput);
+
+    // Add a required indicator
+    const requiredIndicator = document.createElement('div');
+    requiredIndicator.className = 'text-red-500 text-xs mt-1';
+    requiredIndicator.textContent = '* Required field';
+    summaryContainer.appendChild(requiredIndicator);
 
     // Insert summaryContainer after the issueTypeContainer
     mainContent.insertBefore(summaryContainer, issueTypeContainer.nextSibling);
@@ -922,6 +929,368 @@ function hideExportJiraSettingsModal() {
     document.body.classList.remove('overflow-hidden');
     modalContainer.style.background = 'none';
 }
+// Function to show JIRA comment export modal
+function showJiraCommentExport() {
+    // Check if we have event logs
+    if (eventLog.length === 0) {
+        showModal('alert-modal', {
+            message: 'No logs to export.',
+            onConfirm: () => { }
+        });
+        return;
+    }
+
+    // Create formatted text for JIRA comment
+    const jiraText = generateJiraCommentText();
+
+    // Create the modal
+    const modal = document.createElement('div');
+    modal.id = 'jira-comment-export-modal';
+    modal.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50';
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg shadow-lg w-3/4 max-w-4xl max-h-[80vh] flex flex-col">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h2 class="text-xl font-semibold">JIRA Comment Export</h2>
+                <button id="close-jira-comment-modal" class="text-gray-500 hover:text-gray-700">
+                    <svg data-lucide="x" width="20" height="20"></svg>
+                </button>
+            </div>
+            <div class="p-4 flex-grow overflow-auto">
+                <p class="mb-4">Copy the text below and paste it into a JIRA comment (using Text mode):</p>
+                <div class="relative">
+                    <pre id="jira-comment-text" class="bg-gray-100 p-4 rounded text-sm font-mono overflow-auto max-h-[50vh] whitespace-pre-wrap">${jiraText}</pre>
+                    <button id="copy-jira-text" class="absolute top-2 right-2 bg-gray-800 text-white p-2 rounded hover:bg-gray-900 flex items-center gap-1">
+                        <svg data-lucide="clipboard" width="16" height="16"></svg>
+                        Copy
+                    </button>
+                </div>
+            </div>
+            <div class="p-4 border-t border-gray-200 flex justify-end">
+                <button id="close-comment-modal" class="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-900">Close</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    lucide.createIcons(modal);
+
+    // Set up event listeners
+    document.getElementById('close-jira-comment-modal').addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+
+    document.getElementById('close-comment-modal').addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+
+    document.getElementById('copy-jira-text').addEventListener('click', () => {
+        const textArea = document.getElementById('jira-comment-text');
+        window.electron.clipboard.writeText(textArea.textContent);
+
+        // Update button text temporarily to indicate success
+        const copyButton = document.getElementById('copy-jira-text');
+        const originalContent = copyButton.innerHTML;
+        copyButton.innerHTML = '<svg data-lucide="check" width="16" height="16"></svg> Copied!';
+        lucide.createIcons(copyButton);
+
+        setTimeout(() => {
+            copyButton.innerHTML = originalContent;
+            lucide.createIcons(copyButton);
+        }, 2000);
+
+        showToast('Text copied to clipboard!');
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', function escKeyHandler(e) {
+        if (e.key === 'Escape') {
+            document.body.removeChild(modal);
+            document.removeEventListener('keydown', escKeyHandler);
+        }
+    });
+
+    // Close on click outside
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            document.body.removeChild(modal);
+        }
+    });
+}
+
+function generateJiraCommentText() {
+    // Proper HTML escaping that preserves JIRA markup
+    function escapeHtml(text) {
+        if (!text) return '';
+        // Escape HTML but preserve JIRA markup
+        return text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    // Helper for JIRA panels
+    function createPanel(title, content) {
+        return `{panel:title=${title}}\n${content}{panel}\n`;
+    }
+
+    // Special function to handle code/monospace formatting with HTML-like content
+    function formatMonospace(content) {
+        // First escape HTML special characters to prevent rendering
+        const escaped = content
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        // Then wrap in JIRA monospace formatting
+        return `{{${escaped}}}`;
+    }
+
+    if (eventLog.length === 0) return "No events to export.";
+
+    // Format events for JIRA comment
+    let text = "h2. tracer Session Report\n\n";
+    text += `* Start Time: ${formatTimestamp(eventLog[0].timestamp)}\n`;
+    text += `* End Time: ${formatTimestamp(eventLog[eventLog.length - 1].timestamp)}\n`;
+    text += `* Total Actions: ${eventLog.length}\n\n`;
+
+    // Interactive elements whitelist
+    const interactiveTags = new Set(["A", "BUTTON", "INPUT", "SELECT", "TEXTAREA"]);
+
+    // Process each event
+    eventLog.forEach((log, index) => {
+        const timeStr = formatTimestamp(log.timestamp);
+        text += `h3. (${index + 1}) ${timeStr} - ${log.action.toUpperCase()}\n`;
+
+        switch (log.action) {
+            case 'page-loaded':
+                if (log.title) {
+                    text += `*Page Title:* "${escapeHtml(log.title)}"\n`;
+                }
+                if (log.url) {
+                    text += `*URL:* [${log.url}|${log.url}]\n`;
+                }
+                break;
+
+            case 'click': {
+                const d = log.details || {};
+
+                // Handle element tag properly with correct escaping
+                if (d.tagName && d.tagName.trim()) {
+                    const elementTag = d.tagName.trim().toLowerCase();
+                    text += `*Element:* ${formatMonospace(`<${elementTag}>`)}\n`;
+                } else {
+                    text += `*Element:* [Unknown Element]\n`;
+                }
+
+                if (d.context) {
+                    text += `*Context:* ${escapeHtml(d.context)}\n`;
+                }
+
+                if (d.text) {
+                    text += `*Text:* "${escapeHtml(d.text)}"\n`;
+                }
+
+                // Font information
+                if (d.fontInfo) {
+                    let fontContent = '';
+                    fontContent += `* Font Family: ${d.fontInfo.fontFamily}\n`;
+                    fontContent += `* Font Size: ${d.fontInfo.fontSize}\n`;
+                    fontContent += `* Font Weight: ${d.fontInfo.fontWeight}\n`;
+                    fontContent += `* Font Style: ${d.fontInfo.fontStyle}\n`;
+                    fontContent += `* Line Height: ${d.fontInfo.lineHeight}\n`;
+                    fontContent += `* Color: ${d.fontInfo.color}\n`;
+                    text += createPanel('Font Information', fontContent);
+                }
+
+                // Handle parent container with proper escaping
+                if (d.parentContainer) {
+                    let containerDesc = '[No container details]';
+
+                    if (d.parentContainer.snippet && d.parentContainer.snippet.trim()) {
+                        containerDesc = escapeHtml(d.parentContainer.snippet.trim());
+                    } else if (d.parentContainer.tagName && d.parentContainer.tagName.trim()) {
+                        const pcTag = d.parentContainer.tagName.trim().toLowerCase();
+                        containerDesc = `<${pcTag}>`;
+
+                        if (d.parentContainer.id && d.parentContainer.id.trim()) {
+                            containerDesc = `<${pcTag} id="${d.parentContainer.id.trim()}">`;
+                        }
+
+                        // Escape HTML in the container description
+                        containerDesc = escapeHtml(containerDesc);
+                    }
+
+                    text += `*Parent Container:* ${formatMonospace(containerDesc)}\n`;
+                } else {
+                    text += `*Parent Container:* [No container information]\n`;
+                }
+
+                // Element-specific details
+                if (d.tagName === 'IMG') {
+                    let imgContent = `* Alt Text: ${escapeHtml(d.alt || '[No Alt Text]')}\n`;
+                    imgContent += `* Dimensions: ${d.width}x${d.height}px\n`;
+                    if (d.loading) imgContent += `* Loading: ${d.loading}\n`;
+                    if (d.src) imgContent += `* Source: [View Image|${d.src}]\n`;
+                    if (d.caption) imgContent += `* Caption: "${escapeHtml(d.caption)}"\n`;
+                    text += createPanel('Image Details', imgContent);
+                } else if (d.tagName === 'A') {
+                    let linkContent = '';
+                    if (d.href) linkContent += `* URL: [${d.href}|${d.href}]\n`;
+                    if (d.target) linkContent += `* Target: ${d.target}\n`;
+                    if (d.hasChildren && d.childTypes) linkContent += `* Contains: ${d.childTypes.join(', ')}\n`;
+                    text += createPanel('Link Details', linkContent);
+                }
+
+                // Accessibility information
+                if (d.ariaLabel || d.role || d.disabled !== undefined || d.required !== undefined) {
+                    let accContent = '';
+                    if (d.ariaLabel) accContent += `* ARIA Label: "${escapeHtml(d.ariaLabel)}"\n`;
+                    if (d.role) accContent += `* Role: ${d.role}\n`;
+                    if (d.required !== undefined) accContent += `* Required: ${d.required ? 'Yes' : 'No'}\n`;
+                    if (d.disabled !== undefined) accContent += `* Disabled: ${d.disabled ? 'Yes' : 'No'}\n`;
+                    if (accContent) {
+                        text += createPanel('Accessibility Information', accContent);
+                    }
+                }
+
+                if (d.xpath) {
+                    text += `*XPath:* ${d.xpath}\n`;
+                }
+
+                if (d.scrollPosition) {
+                    const pos = d.scrollPosition;
+                    text += "*Scroll Position:*\n";
+                    text += `  * Viewport: (top: ${pos.viewport.top}, left: ${pos.viewport.left})\n`;
+                    text += `  * Page: (top: ${pos.page.top}, left: ${pos.page.left})\n`;
+                }
+
+                if (d.iframeContext && d.iframeContext.src) {
+                    const iframe = d.iframeContext;
+                    text += "*Iframe Context:*\n";
+                    text += `  * Src: ${iframe.src}\n`;
+                    if (iframe.name) text += `  * Name: ${iframe.name}\n`;
+                    if (iframe.id) text += `  * ID: ${iframe.id}\n`;
+                }
+                break;
+            }
+
+            case 'tab-focus': {
+                const from = log.previous?.tagName || '[Start]';
+                const to = log.newElement?.tagName || '[End]';
+                text += `*Tab Navigation:* ${from} → ${to}\n`;
+                if (log.previous?.value) {
+                    text += `*From Value:* "${escapeHtml(log.previous.value)}"\n`;
+                }
+                if (log.newElement?.value) {
+                    text += `*To Value:* "${escapeHtml(log.newElement.value)}"\n`;
+                }
+                break;
+            }
+
+            case 'input-change': {
+                const d = log.details || {};
+                text += `*Input Type:* ${d.inputType || 'text'}\n`;
+
+                if (d.inputType === 'checkbox' || d.inputType === 'radio') {
+                    text += `* Label: ${escapeHtml(d.labelText || '[No Label]')}\n`;
+                    text += `* State: ${d.checked ? 'Checked' : 'Unchecked'}\n`;
+                    if (d.groupOptions) {
+                        text += '*Group Options:*\n';
+                        d.groupOptions.forEach(opt => {
+                            text += `** ${escapeHtml(opt.labelText)} ${opt.checked ? '(Selected)' : ''}\n`;
+                        });
+                    }
+                } else {
+                    if (d.name) text += `* Name: ${escapeHtml(d.name)}\n`;
+                    if (d.placeholder) text += `* Placeholder: ${escapeHtml(d.placeholder)}\n`;
+                    if (d.value && d.inputType !== 'password') {
+                        text += `* Value: "${escapeHtml(d.value)}"\n`;
+                    }
+                }
+
+                // Validation state
+                if (d.validationState) {
+                    let valContent = '';
+                    Object.entries(d.validationState)
+                        .filter(([key, value]) => value !== false)
+                        .forEach(([key, value]) => {
+                            valContent += `* ${key.replace(/([A-Z])/g, ' $1').toLowerCase()}: ${value}\n`;
+                        });
+                    if (valContent) {
+                        text += createPanel('Validation State', valContent);
+                    }
+                }
+                break;
+            }
+
+            case 'keydown': {
+                const pressed = [
+                    log.ctrlKey ? 'Ctrl+' : '',
+                    log.shiftKey ? 'Shift+' : '',
+                    log.altKey ? 'Alt+' : '',
+                    log.key
+                ].join('');
+                text += `*Key Pressed:* ${pressed}\n`;
+                if (log.details && log.details.tagName) {
+                    const tagName = log.details.tagName.toLowerCase();
+                    text += `*Target Element:* ${formatMonospace(`<${tagName}>`)}\n`;
+                    if (log.details.context) {
+                        text += `*Context:* ${escapeHtml(log.details.context)}\n`;
+                    }
+                }
+                break;
+            }
+
+            case 'select': {
+                let selContent = `* Selected Value: ${escapeHtml(log.selectedValue || '[None]')}\n`;
+                selContent += `* Selected Text: "${escapeHtml(log.selectedText || '[None]')}"\n`;
+                if (log.details?.multiple && log.details?.selectedOptions) {
+                    selContent += '*All Selected Options:*\n';
+                    log.details.selectedOptions.forEach(opt => {
+                        selContent += `** "${escapeHtml(opt.text)}" (${opt.value})\n`;
+                    });
+                }
+                text += createPanel('Selection Details', selContent);
+                break;
+            }
+
+            default:
+                if (log.details) {
+                    try {
+                        const detailsStr = JSON.stringify(log.details);
+                        text += `*Details:* ${detailsStr.length > 100 ? detailsStr.substring(0, 100) + '...' : detailsStr}\n`;
+                    } catch (e) {
+                        text += `*Details:* [Could not serialize details: ${e.message}]\n`;
+                    }
+                }
+                break;
+        }
+
+        // Comments section
+        if (log.comments && log.comments.length > 0) {
+            let comContent = '';
+            log.comments.forEach((comment, idx) => {
+                if (idx > 0) {
+                    comContent += '{color:#7E57C2}' + '─'.repeat(30) + '{color}\n\n';
+                }
+                comContent += `{color:#5E35B1}Comment ${idx + 1}:{color}\n`;
+                const wikiComment = window.convertHtmlToWiki ? window.convertHtmlToWiki(comment.text) : comment.text;
+                comContent += `${wikiComment}\n\n`;
+                comContent += `{color:#666666}_Posted: ${new Date(comment.timestamp).toLocaleString()}_\n{color}\n`;
+            });
+            text += createPanel('Comments', comContent);
+        }
+
+        // Add separator between events
+        text += "\n----\n\n";
+    });
+
+    return text;
+}
+
+
 document.getElementById('jira-settings-modal').addEventListener('click', (e) => {
     // Only close if clicking the backdrop (not the modal content)
     if (e.target === e.currentTarget) {
@@ -1457,8 +1826,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     webview.addEventListener('did-stop-loading', () => {
-        const isHomePage = webview.src.toLowerCase().includes('home.html');
-        if (isHomePage) {
+        const internalPages = ['home.html', 'docs.html', 'elements.html'];
+        const isInternalPage = internalPages.some(page => webview.src.toLowerCase().includes(page));
+
+        if (isInternalPage) {
             urlInput.value = '';
             urlInput.placeholder = "Let's get tracing!";
         }
@@ -1819,54 +2190,35 @@ document.addEventListener('DOMContentLoaded', () => {
             showModal('confirm-clear-errors-modal', {
                 onConfirm: () => {
                     const toggleButton = document.getElementById('toggle-error-drawer');
-                    const count = window.errorLog.length;
+                    const errorCount = document.getElementById('error-count');
                     window.errorLog = [];
                     updateErrorDrawer();
                     showToast('Errors Cleared!');
                     errorDrawer.classList.add('hidden');
                     errorIcon.setAttribute("data-lucide", "panel-bottom-open");
                     lucide.createIcons();
-                    
-                    if (toggleButton) {
-                        if (count > 0) {
-                            toggleButton.style.transform = 'translateY(0)';
-                            toggleButton.classList.remove(
-                                'bg-white',
-                                'border',
-                                'border-gray-300',
-                                'rounded-full',
-                                'p-1',
-                                'text-gray-700'
-                            );
-                            toggleButton.classList.add(
-                                'bg-red-600',
-                                'text-white',
-                                'rounded',
-                                'px-2',
-                                'py-1'
-                            );
-                            errorCount.style.display = 'inline-block';
-                        } else {
-                            toggleButton.style.transform = 'translateY(32px)';
-                            toggleButton.classList.remove(
-                                'bg-red-600',
-                                'text-white',
-                                'rounded',
-                                'px-2',
-                                'py-1'
-                            );
-                            toggleButton.classList.add(
-                                'bg-white',
-                                'border',
-                                'border-gray-300',
-                                'rounded-full',
-                                'p-1',
-                                'text-gray-700'
-                            );
-                            errorCount.style.display = 'none';
-                            errorCount.textContent = 0;
-                        }
-                    }
+
+                    // Reset the toggle button appearance and position
+                    toggleButton.style.transform = 'translateY(32px)';
+                    toggleButton.classList.remove(
+                        'bg-red-600',
+                        'text-white',
+                        'rounded',
+                        'px-2',
+                        'py-1'
+                    );
+                    toggleButton.classList.add(
+                        'bg-white',
+                        'border',
+                        'border-gray-300',
+                        'rounded-full',
+                        'p-1',
+                        'text-gray-700'
+                    );
+
+                    // Hide the error count
+                    errorCount.style.display = 'none';
+                    errorCount.textContent = '0';
                 }
             });
         });
@@ -3962,7 +4314,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (item.action === 'input-change' && item.details) {
                 const d = item.details;
-                content += `<div class="label">Element:</div><div>&lt;${d.tagName.toLowerCase()}&gt;</div>`;
+                content += `<div class="label">Element:</div><div>&lt;${d.tagName}&gt;</div>`;
                 content += `<div class="label">Input Type:</div><div>${d.inputType}</div>`;
                 if (d.name) content += `<div class="label">Name:</div><div>${d.name}</div>`;
                 if (d.placeholder) content += `<div class="label">Placeholder:</div><div>${d.placeholder}</div>`;
@@ -4041,6 +4393,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Check if Ctrl key is pressed
+        if (e.ctrlKey) {
+            // Show JIRA comment export modal
+            showJiraCommentExport();
+            return;
+        }
+
         // Initialize jiraFields if empty
         if (jiraFields.length === 0) {
             jiraFields.push({ name: '', value: '' });
@@ -4071,13 +4430,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // -- Utility function to convert simple HTML tags to Atlassian wiki markup
-    function convertHtmlToWiki(html) {
+    window.convertHtmlToWiki = function (html) {
         if (!html) return '';
 
         // First, normalize newlines
         html = html.replace(/\r\n/g, '\n');
 
-        html = html.replace(/(<ul|<ol)/gi, '\n$1');
+        // Handle special cases: replace {{}} with monospace formatting
+        html = html.replace(/{{(.*?)}}/g, '{{$1}}');
+
+        // Clean up common patterns in the logs
+        html = html.replace(/<(context|element|parent container|accessibility information):?>(.*?)</gi, '*$1:* $2<');
+
+        // Handle troublesome "asterisk" items by converting them to explicit text
+        html = html.replace(/\*([^*]+)\*/g, '_$1_');
 
         // Headers
         html = html.replace(/<h1>(.*?)<\/h1>/gi, 'h1. $1\n');
@@ -4087,7 +4453,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Preserve formatting on their own lines
         html = html.replace(/(<(strong|b|em|i|u)>.*?<\/\2>)/gi, '\n$1\n');
 
-        // Basic formatting - modified to handle inline and block-level
+        // Basic formatting - do these after the specific patterns
         html = html.replace(/<(strong|b)>(.*?)<\/\1>/gi, '*$2*');
         html = html.replace(/<em>|<i>(.*?)<\/em>|<\/i>/gi, '_$1_');
         html = html.replace(/<u>(.*?)<\/u>/gi, '+$1+');
@@ -4110,11 +4476,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // Basic formatting - do these after lists to avoid conflicts
-        html = html.replace(/<(strong|b)>(.*?)<\/\1>/gi, '*$2*');
-        html = html.replace(/<u>(.*?)<\/u>/gi, '+$1+');
-        html = html.replace(/<a\s+href="([^"]+)"[^>]*>(.*?)<\/a>/gi, '[$2|$1]');
-
         // Links
         html = html.replace(/<a\s+href="([^"]+)"[^>]*>(.*?)<\/a>/gi, '[$2|$1]');
 
@@ -4133,6 +4494,9 @@ document.addEventListener('DOMContentLoaded', () => {
         html = html.replace(/<p>(.*?)<\/p>/gi, '$1\n\n');
         html = html.replace(/<br\s*\/?>/gi, '\n');
 
+        // Remove any remaining HTML tags that we haven't handled specifically
+        html = html.replace(/<[^>]+>/g, '');
+
         // Clean up line breaks and spacing
         html = html.replace(/\n{3,}/g, '\n\n')
             .replace(/^\s+|\s+$/gm, '')
@@ -4140,11 +4504,16 @@ document.addEventListener('DOMContentLoaded', () => {
             .map(line => line.trim())
             .join('\n');
 
-        // Remove any remaining HTML tags
-        html = html.replace(/<[^>]+>/g, '');
+        // Restore asterisks for bullet points that might have been impacted
+        html = html.replace(/\n_([^_]+)_/g, function (match, p1) {
+            if (p1.includes(':')) {
+                return '\n*' + p1 + '*';
+            }
+            return match;
+        });
 
         return html.trim();
-    }
+    };
 
     function exportJiraLogSingleDefectWithCustomFields(customFields, issueType, summary, imageMap = null) {
         if (eventLog.length === 0) {
@@ -4394,7 +4763,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // "Save & Export" => hide modal, then run our CSV export
     document.getElementById('save-jira-fields').addEventListener('click', () => {
-        // For each non-blank custom field, update the persistent history in localStorage.
+        const summaryInput = document.getElementById('jira-summary-input');
+        if (!summaryInput || !summaryInput.value.trim()) {
+            // Show error indication
+            summaryInput.classList.add('border-red-500');
+            const errorMsg = document.querySelector('#jira-summary-container .text-red-500');
+            if (errorMsg) {
+                errorMsg.textContent = '* This field is required';
+            }
+            // Focus on the summary input
+            summaryInput.focus();
+            return; // Stop execution
+        }
         jiraFields.forEach(field => {
             if (field.name.trim() && field.value.trim()) {
                 let history = JSON.parse(localStorage.getItem('jiraFieldsHistory') || '[]');
@@ -5635,7 +6015,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <button id="open-devtools" class="p-2 hover:bg-gray-100 rounded-lg" title="Open DevTools">
                 <svg data-lucide="code" width="20" height="20"></svg>
             </button>
-            <a id="help-icon" href="#" class="p-2 hover:bg-gray-100 rounded-lg text-gray-600 hover:text-[#FF8A65] transition-colors" title="Documentation">
+            <a id="help-icon" href="#" class="p-2 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-800 transition-colors" title="Documentation">
                 <svg data-lucide="help-circle" width="20" height="20"></svg>
             </a>
 
@@ -6119,12 +6499,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.addEventListener('keydown', (event) => {
-        const isCtrlF = event.ctrlKey && event.key.toLowerCase() === 'f';
+  const isCtrlF = event.ctrlKey && event.key.toLowerCase() === 'f';
 
-        if (isCtrlF) {
-            event.preventDefault();
-            createTracerFindBar();
-        }
-    });
+  if (isCtrlF) {
+    event.preventDefault();
+    createTracerFindBar();
+  }
+});
 
 });
