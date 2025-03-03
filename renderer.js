@@ -2741,14 +2741,12 @@ document.addEventListener('DOMContentLoaded', () => {
         errorData.type = errorData.type || "Console Error";
 
         logError(
-            "Webview Error",
-            errorData.timestamp,
-            errorData.type,
-            errorData.message,
-            errorData.source,
-            errorData.lineno,
-            errorData.colno,
-            { stack: errorData.stack }
+            "Webview Error",           // type
+            errorData.message,         // message
+            errorData.source,          // source
+            errorData.lineno,          // lineno
+            errorData.colno,           // colno
+            { stack: errorData.stack } // error object
         );
 
         updateErrorDrawer(); // Ensures the UI updates instantly
@@ -3018,7 +3016,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (details.fontInfo) {
                 html += `
             <span class="font-medium">Font Family:</span>
-            <span class="break-words text-left">${details.fontInfo.fontFamily}</span>
+            <span class="break-words whitespace-normal overflow-x-hidden text-left">${details.fontInfo.fontFamily}</span>
             <span class="font-medium">Font Size:</span>
             <span class="break-words text-left">${details.fontInfo.fontSize}</span>
             <span class="font-medium">Font Weight:</span>
@@ -3241,7 +3239,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (details.parentLink) {
                 html += `
         <span class="font-medium">Parent Link:</span>
-        <span class="break-words text-left">
+        <span class="break-words whitespace-normal overflow-x-hidden text-left">
             &lt;${details.parentLink.tagName}&gt; href="${details.parentLink.href}"
             ${details.parentLink.ariaLabel ? '(ARIA Label: ' + details.parentLink.ariaLabel + ')' : ''}
         </span>`;
@@ -5755,14 +5753,31 @@ ${escapeHtml(containerDesc)}
                 return;
             }
 
+            const maybeErrorObj = args.find(arg => arg instanceof Error);
+
+            let stackTrace = '';
+            let possibleLine = null;
+            let possibleCol = null;
+
+            if (maybeErrorObj && maybeErrorObj.stack) {
+                stackTrace = maybeErrorObj.stack;
+                // Optionally parse out line/column from that stack if you like
+            } else {
+                // No explicit Error object, so we rely on a new Error() we create:
+                const tempErr = new Error();
+                stackTrace = tempErr.stack;
+                // You can parse tempErr.stack if you want
+            }
+
             ipcRenderer.sendToHost('webview-error', {
                 type: 'Console Error',
                 timestamp: new Date().toISOString(),
                 message: `Console Error: ${errorMessage}`,
                 source: location.href,
-                lineno: 0,
-                colno: 0,
-                stack: new Error().stack || 'No stack trace available'
+                // Instead of 0, set them to possibleLine/possibleCol or just null:
+                lineno: possibleLine || null,
+                colno: possibleCol || null,
+                stack: stackTrace || 'No stack trace available'
             });
 
             original.apply(console, args);

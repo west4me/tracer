@@ -129,9 +129,9 @@ console.error = (function (original) {
             type: 'Console Error',
             timestamp: new Date().toISOString(),
             message: `Console Error: ${errorMessage}`,
-            source: location.href,
-            lineno: 0,
-            colno: 0,
+            source: source || location.href,
+            lineno: lineno || 0,
+            colno: colno || 0,
             stack: new Error().stack || 'No stack trace available'
         });
 
@@ -712,10 +712,6 @@ window.addEventListener('load', () => {
         video.addEventListener('pause', () => {
             recordEvent('video-pause', video, { currentTime: video.currentTime });
         });
-        // Remove or comment out your old volumechange line:
-        // video.addEventListener('volumechange', () => {
-        //     recordEvent('video-volumechange', video, { volume: video.volume });
-        // });
 
         // Now add a throttle for volume changes:
         let lastVideoVolume = null;
@@ -752,10 +748,6 @@ window.addEventListener('load', () => {
         audio.addEventListener('pause', () => {
             recordEvent('audio-pause', audio, { currentTime: audio.currentTime });
         });
-        // Remove or comment out your old volumechange line:
-        // audio.addEventListener('volumechange', () => {
-        //     recordEvent('audio-volumechange', audio, { volume: audio.volume });
-        // });
 
         // Now add a throttle for volume changes:
         let lastAudioVolume = null;

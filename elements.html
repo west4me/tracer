@@ -9,6 +9,7 @@
 
     <base href="/" target="_blank" />
 
+    <!-- Tailwind & Lucide -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,6 +19,20 @@
         rel="stylesheet">
     <link rel="stylesheet" href="./node_modules/keyboard-css/dist/css/main.min.css" />
 
+    <!-- New Tailwind Config to unify the tracer color scheme -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#D35432',         /* Main tracer color (replaces #f57c00) */
+                        'primary-hover': '#B84326', /* Darker hover variant */
+                        'primary-focus': '#D14F36'  /* Slightly different variant for focus states */
+                    }
+                }
+            }
+        };
+    </script>
 
     <title>All HTML Elements - Test Page</title>
 
@@ -35,26 +50,30 @@
     </style>
 </head>
 
-<body class="min-h-screen bg-white text-gray-800" aria-live="polite">
+<body class="min-h-screen bg-[#fafafa] text-gray-800" aria-live="polite">
     <!-- Outer container for centered layout and vertical stacking -->
     <div class="container mx-auto flex flex-col min-h-screen p-4">
 
         <header id="mainHeader" class="mb-4 p-4 border-b border-gray-200" role="banner" aria-label="Main Page Header"
             aria-live="assertive" aria-atomic="true">
-            <h1 id="mainHeading" class="text-2xl font-bold text-[#f57c00]" role="heading" aria-level="1"
+            <h1 id="mainHeading" class="text-2xl font-bold text-primary" role="heading" aria-level="1"
                 aria-describedby="pageDescription">
                 All HTML Elements Test
             </h1>
             <p class="text-sm text-gray-600">
                 This page demonstrates a wide variety of HTML elements for event tracking.
             </p>
+
+            <!-- Changed from bg-[#f57c00] to bg-primary -->
+            <!-- Added hover:bg-primary-hover for a darker hover, preserving the rest of the attributes -->
             <button id="lucideExampleBtn"
-                class="inline-flex items-center px-3 py-1 mt-2 bg-[#f57c00] text-white rounded hover:bg-opacity-90"
+                class="inline-flex items-center px-3 py-1 mt-2 bg-primary text-white rounded hover:bg-primary-hover"
                 type="button" role="button" aria-pressed="false" aria-label="Lucide Icon Button">
                 <i data-lucide="plus-circle" class="mr-1" aria-hidden="true"></i>
                 Add Item
             </button>
-            <!-- Add this right after the existing "Add Item" button -->
+
+            <!-- Retained purple button as-is; only the orange color was changed throughout -->
             <button id="runAutomationBtn"
                 class="inline-flex items-center px-3 py-1 mt-2 ml-4 bg-purple-600 text-white rounded hover:bg-purple-700"
                 type="button" role="button" aria-pressed="false" aria-label="Run Automation Tests">
@@ -68,39 +87,40 @@
             <nav id="mainNav" class="mb-4 w-1/4 border-r border-gray-200 pr-4" role="navigation"
                 aria-label="Main navigation" aria-controls="navList">
                 <ul id="navList" class="flex flex-col list-inside space-y-2">
+                    <!-- Updated text-[#f57c00] to text-primary -->
                     <li>
                         <a href="#section1" target="_self" rel="noopener noreferrer"
-                            class="text-[#f57c00] hover:underline" aria-label="Skip to Section 1">
+                            class="text-primary hover:underline" aria-label="Skip to Section 1">
                             Section 1
                         </a>
                     </li>
                     <li>
                         <a href="#section2" target="_self" rel="noopener noreferrer"
-                            class="text-[#f57c00] hover:underline" aria-label="Skip to Section 2">
+                            class="text-primary hover:underline" aria-label="Skip to Section 2">
                             Section 2
                         </a>
                     </li>
                     <li>
                         <a href="#section3" target="_self" rel="noopener noreferrer"
-                            class="text-[#f57c00] hover:underline" aria-label="Skip to Section 3">
+                            class="text-primary hover:underline" aria-label="Skip to Section 3">
                             Section 3
                         </a>
                     </li>
                     <li>
                         <a href="#formsSection" target="_self" rel="noopener noreferrer"
-                            class="text-[#f57c00] hover:underline" aria-label="Skip to Forms Section">
+                            class="text-primary hover:underline" aria-label="Skip to Forms Section">
                             Forms
                         </a>
                     </li>
                     <li>
                         <a href="#tableSection" target="_self" rel="noopener noreferrer"
-                            class="text-[#f57c00] hover:underline" aria-label="Skip to Table Section">
+                            class="text-primary hover:underline" aria-label="Skip to Table Section">
                             Tables
                         </a>
                     </li>
                     <li>
                         <a href="#mediaSection" target="_self" rel="noopener noreferrer"
-                            class="text-[#f57c00] hover:underline" aria-label="Skip to Media Section">
+                            class="text-primary hover:underline" aria-label="Skip to Media Section">
                             Media
                         </a>
                     </li>
@@ -116,7 +136,8 @@
                 <!-- Section 1 -->
                 <section id="section1" class="mb-8 p-4 border-b border-gray-200" role="region"
                     aria-labelledby="section1Heading">
-                    <h2 id="section1Heading" class="text-xl font-semibold text-[#f57c00] mb-4" role="heading"
+                    <!-- Changed text-[#f57c00] to text-primary -->
+                    <h2 id="section1Heading" class="text-xl font-semibold text-primary mb-4" role="heading"
                         aria-level="2">
                         Section 1: Text Elements & Inline Elements
                     </h2>
@@ -170,7 +191,8 @@
                 <!-- Section 2 -->
                 <section id="section2" class="mb-8 p-4 border-b border-gray-200" role="region"
                     aria-labelledby="section2Heading">
-                    <h2 id="section2Heading" class="text-xl font-semibold text-[#f57c00] mb-4" role="heading"
+                    <!-- Changed text-[#f57c00] to text-primary -->
+                    <h2 id="section2Heading" class="text-xl font-semibold text-primary mb-4" role="heading"
                         aria-level="2">
                         Section 2: Grouping Elements & Semantic Elements
                     </h2>
@@ -199,8 +221,9 @@
                             This is a <strong>figcaption</strong> describing the above image.
                         </figcaption>
                     </figure>
+                    <!-- Changed border-l-4 border-[#f57c00] to border-l-4 border-primary -->
                     <blockquote cite="https://example.com" aria-label="Blockquote example"
-                        class="border-l-4 border-[#f57c00] pl-2 mb-4" role="blockquote">
+                        class="border-l-4 border-primary pl-2 mb-4" role="blockquote">
                         <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
                     </blockquote>
                     <details aria-label="Details example" role="region" class="mb-4 p-2 border border-gray-300">
@@ -214,7 +237,8 @@
                     <dialog id="sampleDialog" aria-label="Dialog example" role="dialog">
                         This is a <strong>dialog</strong> element. It might be hidden by default.
                         <form method="dialog" class="mt-2">
-                            <button class="bg-[#f57c00] text-white py-1 px-2 rounded hover:bg-opacity-90" value="close"
+                            <!-- Changed bg-[#f57c00] to bg-primary -->
+                            <button class="bg-primary text-white py-1 px-2 rounded hover:bg-primary-hover" value="close"
                                 aria-label="Close dialog">
                                 Close
                             </button>
@@ -234,7 +258,8 @@
                 <!-- Section 3 -->
                 <section id="section3" class="mb-8 p-4 border-b border-gray-200" role="region"
                     aria-labelledby="section3Heading">
-                    <h2 id="section3Heading" class="text-xl font-semibold text-[#f57c00] mb-4" role="heading"
+                    <!-- Changed text-[#f57c00] to text-primary -->
+                    <h2 id="section3Heading" class="text-xl font-semibold text-primary mb-4" role="heading"
                         aria-level="2">
                         Section 3: Bidirectional & Ruby Text Elements
                     </h2>
@@ -260,7 +285,8 @@
                 <!-- Forms Section -->
                 <section id="formsSection" class="mb-8 p-4 border-b border-gray-200" role="form"
                     aria-labelledby="formsSectionHeading">
-                    <h2 id="formsSectionHeading" class="text-xl font-semibold text-[#f57c00] mb-4" role="heading"
+                    <!-- Changed text-[#f57c00] to text-primary -->
+                    <h2 id="formsSectionHeading" class="text-xl font-semibold text-primary mb-4" role="heading"
                         aria-level="2">
                         Forms & Interactive Elements
                     </h2>
@@ -404,7 +430,10 @@
                             </output>
                         </div>
 
-                        <button type="submit" class="bg-[#f57c00] text-white py-1 px-2 rounded hover:bg-opacity-90 mr-2"
+                        <!-- Submit & Reset buttons updated: bg-primary instead of bg-[#f57c00] -->
+                        <!-- Also included hover:bg-primary-hover for consistency -->
+                        <button type="submit"
+                            class="bg-primary text-white py-1 px-2 rounded hover:bg-primary-hover mr-2"
                             aria-label="Submit button" role="button" aria-pressed="false">
                             Submit
                         </button>
@@ -418,7 +447,8 @@
                 <!-- Table Section -->
                 <section id="tableSection" class="mb-8 p-4 border-b border-gray-200" role="region"
                     aria-labelledby="tableSectionHeading">
-                    <h2 id="tableSectionHeading" class="text-xl font-semibold text-[#f57c00] mb-4" role="heading"
+                    <!-- Changed text-[#f57c00] to text-primary -->
+                    <h2 id="tableSectionHeading" class="text-xl font-semibold text-primary mb-4" role="heading"
                         aria-level="2">
                         Table Elements
                     </h2>
@@ -463,7 +493,8 @@
                 <!-- Media Section -->
                 <section id="mediaSection" class="mb-8 p-4 border-b border-gray-200" role="region"
                     aria-labelledby="mediaSectionHeading">
-                    <h2 id="mediaSectionHeading" class="text-xl font-semibold text-[#f57c00] mb-4" role="heading"
+                    <!-- Changed text-[#f57c00] to text-primary -->
+                    <h2 id="mediaSectionHeading" class="text-xl font-semibold text-primary mb-4" role="heading"
                         aria-level="2">
                         Media Elements
                     </h2>
@@ -505,7 +536,8 @@
                 <!-- Canvas -->
                 <section id="canvasSection" class="mb-8 p-4 border-b border-gray-200" role="region"
                     aria-labelledby="canvasSectionHeading">
-                    <h2 id="canvasSectionHeading" class="text-xl font-semibold text-[#f57c00] mb-4" role="heading"
+                    <!-- Changed text-[#f57c00] to text-primary -->
+                    <h2 id="canvasSectionHeading" class="text-xl font-semibold text-primary mb-4" role="heading"
                         aria-level="2">
                         Canvas
                     </h2>
@@ -517,7 +549,8 @@
                 <!-- Script & NoScript -->
                 <section id="scriptSection" class="mb-8 p-4 border-b border-gray-200" role="region"
                     aria-labelledby="scriptSectionHeading">
-                    <h2 id="scriptSectionHeading" class="text-xl font-semibold text-[#f57c00] mb-4" role="heading"
+                    <!-- Changed text-[#f57c00] to text-primary -->
+                    <h2 id="scriptSectionHeading" class="text-xl font-semibold text-primary mb-4" role="heading"
                         aria-level="2">
                         Script & NoScript
                     </h2>
