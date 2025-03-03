@@ -597,6 +597,13 @@ document.addEventListener('keydown', (event) => {
     }
 });
 
+document.addEventListener('keydown', (event) => {
+    // We only need to send the key property for Konami code detection
+    ipcRenderer.sendToHost('webview-konami-keydown', {
+        key: event.key
+    });
+});
+
 document.addEventListener("keydown", (event) => {
     if (event.ctrlKey && event.key.toLowerCase() === 'f') {
         event.preventDefault(); // Required to explicitly handle it

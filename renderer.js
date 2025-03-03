@@ -59,6 +59,241 @@ const errorIcon = document.getElementById("error-icon");
 const ipcRenderer = window.electron.ipcRenderer;
 const linkStyle = document.createElement('style');
 
+// Konami Code sequence
+const konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+let konamiIndex = 0;
+
+// Extract Konami code checking into a separate function so we can use it in multiple places
+function checkKonamiCode(key) {
+    // Check if the key matches the expected key in sequence
+    if (key === konamiCode[konamiIndex]) {
+        konamiIndex++;
+        // If we've matched the full sequence
+        if (konamiIndex === konamiCode.length) {
+            releaseBeetle();
+            // Reset the index
+            konamiIndex = 0;
+        }
+    } else {
+        // Reset if wrong key
+        konamiIndex = 0;
+    }
+}
+
+// Keep track of keys pressed in the main window
+document.addEventListener('keydown', function (e) {
+    checkKonamiCode(e.key);
+});
+function releaseBeetle() {
+    // Create the beetle element
+    const beetle = document.createElement('div');
+    beetle.className = 'konami-beetle';
+    beetle.style.position = 'fixed';
+    beetle.style.zIndex = '1000';
+    beetle.style.width = '40px';
+    beetle.style.height = '40px';
+    beetle.style.pointerEvents = 'none'; // So it doesn't interfere with user interaction
+
+    // Random starting position on the edge of the screen
+    const startPositions = [
+        { x: -40, y: Math.random() * window.innerHeight }, // Left edge
+        { x: window.innerWidth, y: Math.random() * window.innerHeight }, // Right edge
+        { x: Math.random() * window.innerWidth, y: -40 }, // Top edge
+        { x: Math.random() * window.innerWidth, y: window.innerHeight } // Bottom edge
+    ];
+
+    const startPos = startPositions[Math.floor(Math.random() * startPositions.length)];
+    beetle.style.left = startPos.x + 'px';
+    beetle.style.top = startPos.y + 'px';
+
+    // Use inline SVG instead of image file
+    beetle.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="100%" height="100%" style="transform: rotate(90deg);">
+      <!-- Main body (thorax) -->
+      <ellipse cx="200" cy="150" rx="50" ry="70" fill="#543800" stroke="#000000" stroke-width="2"/>
+      
+      <!-- Head -->
+      <circle cx="200" cy="70" r="30" fill="#654200" stroke="#000000" stroke-width="2"/>
+      
+      <!-- Eyes -->
+      <ellipse cx="185" cy="60" rx="8" ry="10" fill="#000000"/>
+      <ellipse cx="215" cy="60" rx="8" ry="10" fill="#000000"/>
+      
+      <!-- Antennae -->
+      <path d="M185 45 Q165 20 155 5" fill="none" stroke="#000000" stroke-width="2"/>
+      <path d="M215 45 Q235 20 245 5" fill="none" stroke="#000000" stroke-width="2"/>
+      <circle cx="155" cy="5" r="3" fill="#000000"/>
+      <circle cx="245" cy="5" r="3" fill="#000000"/>
+      
+      <!-- Wing cases (elytra) -->
+      <path d="M160 100 Q150 150 175 220" fill="#76520E" stroke="#000000" stroke-width="2"/>
+      <path d="M240 100 Q250 150 225 220" fill="#76520E" stroke="#000000" stroke-width="2"/>
+      <!-- Wing dividing line -->
+      <path d="M200 100 L200 220" fill="none" stroke="#000000" stroke-width="1.5"/>
+      <!-- Wing patterns -->
+      <path d="M175 120 L185 140 L175 160" fill="none" stroke="#3A2100" stroke-width="1"/>
+      <path d="M225 120 L215 140 L225 160" fill="none" stroke="#3A2100" stroke-width="1"/>
+      
+      <!-- Legs (left side) -->
+      <path class="leg" id="leftFrontLeg" d="M160 110 Q120 100 100 90" fill="none" stroke="#000000" stroke-width="2.5"/>
+      <path class="leg" id="leftMiddleLeg" d="M160 150 Q110 150 80 160" fill="none" stroke="#000000" stroke-width="2.5"/>
+      <path class="leg" id="leftBackLeg" d="M160 190 Q120 200 100 220" fill="none" stroke="#000000" stroke-width="2.5"/>
+      
+      <!-- Legs (right side) -->
+      <path class="leg" id="rightFrontLeg" d="M240 110 Q280 100 300 90" fill="none" stroke="#000000" stroke-width="2.5"/>
+      <path class="leg" id="rightMiddleLeg" d="M240 150 Q290 150 320 160" fill="none" stroke="#000000" stroke-width="2.5"/>
+      <path class="leg" id="rightBackLeg" d="M240 190 Q280 200 300 220" fill="none" stroke="#000000" stroke-width="2.5"/>
+      
+      <!-- Mandibles -->
+      <path d="M190 90 Q180 100 185 110" fill="none" stroke="#000000" stroke-width="1.5"/>
+      <path d="M210 90 Q220 100 215 110" fill="none" stroke="#000000" stroke-width="1.5"/>
+      
+      <!-- Highlights for a bit of shine -->
+      <ellipse cx="190" cy="140" rx="10" ry="20" fill="#8A6800" opacity="0.6"/>
+      <ellipse cx="210" cy="140" rx="10" ry="20" fill="#8A6800" opacity="0.6"/>
+    </svg>`;
+
+    document.body.appendChild(beetle);
+
+    // Get references to all legs
+    const leftFrontLeg = beetle.querySelector('#leftFrontLeg');
+    const leftMiddleLeg = beetle.querySelector('#leftMiddleLeg');
+    const leftBackLeg = beetle.querySelector('#leftBackLeg');
+    const rightFrontLeg = beetle.querySelector('#rightFrontLeg');
+    const rightMiddleLeg = beetle.querySelector('#rightMiddleLeg');
+    const rightBackLeg = beetle.querySelector('#rightBackLeg');
+
+    // Keep track of beetle's position and movement
+    let pos = { x: startPos.x, y: startPos.y };
+    let destination = {
+        x: Math.random() * (window.innerWidth - 100) + 50,
+        y: Math.random() * (window.innerHeight - 100) + 50
+    };
+    let velocity = { x: 0, y: 0 };
+    let isActive = true;
+    let lastTimestamp = 0;
+    let legPhase = 0; // For leg animation
+
+    // Animation function with timestamp for smoother animation
+    function moveBeetle(timestamp) {
+        if (!isActive) return;
+
+        // Calculate delta time for smooth animation regardless of frame rate
+        const deltaTime = lastTimestamp ? (timestamp - lastTimestamp) / 1000 : 0.016; // in seconds
+        lastTimestamp = timestamp;
+
+        // Calculate direction and distance to destination
+        const dx = destination.x - pos.x;
+        const dy = destination.y - pos.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        // If we're close to the destination, pick a new one
+        if (distance < 5) {
+            destination = {
+                x: Math.random() * (window.innerWidth - 100) + 50,
+                y: Math.random() * (window.innerHeight - 100) + 50
+            };
+        }
+
+        // Update velocity with a bit of easing
+        velocity.x = velocity.x * 0.95 + dx * 0.006;
+        velocity.y = velocity.y * 0.95 + dy * 0.006;
+
+        // Apply some max speed
+        const maxSpeed = 2;
+        const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+        if (speed > maxSpeed) {
+            velocity.x = (velocity.x / speed) * maxSpeed;
+            velocity.y = (velocity.y / speed) * maxSpeed;
+        }
+
+        // Update position
+        pos.x += velocity.x;
+        pos.y += velocity.y;
+
+        // Update CSS position
+        beetle.style.left = pos.x + 'px';
+        beetle.style.top = pos.y + 'px';
+
+        // Calculate angle for rotation based on movement direction
+        const angleRadians = Math.atan2(velocity.y, velocity.x);
+        const angleDegrees = angleRadians * (180 / Math.PI);
+
+        // Apply rotation to the beetle SVG container
+        const beetleSvg = beetle.querySelector('svg');
+        if (beetleSvg) {
+            beetleSvg.style.transform = `rotate(${angleDegrees + 90}deg)`;
+        }
+
+        // Animate legs based on speed
+        // Faster movement = faster leg animation
+        legPhase += deltaTime * speed * 5;
+
+        // Calculate leg movements with alternating phases 
+        // This creates a walking motion where legs move in alternating patterns
+        if (leftFrontLeg && leftMiddleLeg && leftBackLeg && rightFrontLeg && rightMiddleLeg && rightBackLeg) {
+            // Left side legs animation
+            const frontLeftPhase = Math.sin(legPhase);
+            const middleLeftPhase = Math.sin(legPhase + Math.PI * 0.66); // 120 degrees out of phase
+            const backLeftPhase = Math.sin(legPhase + Math.PI * 1.33);   // 240 degrees out of phase
+
+            // Right side legs animation (opposite to left side)
+            const frontRightPhase = Math.sin(legPhase + Math.PI);        // 180 degrees out of phase from left front
+            const middleRightPhase = Math.sin(legPhase + Math.PI * 1.66); // 300 degrees out of phase
+            const backRightPhase = Math.sin(legPhase + Math.PI * 0.33);   // 60 degrees out of phase
+
+            // Apply transformations - pivot from where the leg connects to the body
+            const maxRotation = 15; // Maximum rotation in degrees
+
+            // Transform legs with rotation around their connection points
+            leftFrontLeg.setAttribute('transform', `rotate(${frontLeftPhase * maxRotation}, 160, 110)`);
+            leftMiddleLeg.setAttribute('transform', `rotate(${middleLeftPhase * maxRotation}, 160, 150)`);
+            leftBackLeg.setAttribute('transform', `rotate(${backLeftPhase * maxRotation}, 160, 190)`);
+
+            rightFrontLeg.setAttribute('transform', `rotate(${frontRightPhase * maxRotation}, 240, 110)`);
+            rightMiddleLeg.setAttribute('transform', `rotate(${middleRightPhase * maxRotation}, 240, 150)`);
+            rightBackLeg.setAttribute('transform', `rotate(${backRightPhase * maxRotation}, 240, 190)`);
+        }
+
+        // Check if beetle should exit the screen
+        if (pos.x < -50 || pos.x > window.innerWidth + 50 ||
+            pos.y < -50 || pos.y > window.innerHeight + 50) {
+            // 5% chance to exit per frame when near edge
+            if (Math.random() < 0.05) {
+                document.body.removeChild(beetle);
+                isActive = false;
+                return;
+            }
+        }
+
+        // Schedule next animation frame
+        requestAnimationFrame(moveBeetle);
+    }
+
+    // Start the animation
+    requestAnimationFrame(moveBeetle);
+
+    // After 10-20 seconds, make beetle leave the screen
+    setTimeout(() => {
+        // Head toward an exit
+        const exits = [
+            { x: -50, y: Math.random() * window.innerHeight },
+            { x: window.innerWidth + 50, y: Math.random() * window.innerHeight },
+            { x: Math.random() * window.innerWidth, y: -50 },
+            { x: Math.random() * window.innerWidth, y: window.innerHeight + 50 }
+        ];
+
+        destination = exits[Math.floor(Math.random() * exits.length)];
+
+        // Remove after a delay to ensure it moves offscreen
+        setTimeout(() => {
+            if (beetle.parentNode) {
+                document.body.removeChild(beetle);
+            }
+            isActive = false;
+        }, 5000);
+    }, 10000 + Math.random() * 10000);
+}
+
 function showEmptyState() {
     const logArea = document.getElementById('log-area');
     if (!logArea) return;
@@ -1104,28 +1339,84 @@ function generateJiraCommentText() {
                     text += createPanel('Font Information', fontContent);
                 }
 
-                // Handle parent container with proper escaping
+                if ((d.tagName || '').toUpperCase() === 'SVG') {
+                    let svgContent = '';
+                    if (d.svgTitle) svgContent += `* SVG Title: "${d.svgTitle}"\n`;
+                    if (d.svgDesc) svgContent += `* SVG Description: "${d.svgDesc}"\n`;
+                    if (d.svgWidth) svgContent += `* Width: ${d.svgWidth}\n`;
+                    if (d.svgHeight) svgContent += `* Height: ${d.svgHeight}\n`;
+                    if (d.svgViewBox) svgContent += `* ViewBox: ${d.svgViewBox}\n`;
+                    if (svgContent) {
+                        description += createPanel('SVG Details', svgContent);
+                    }
+                }
+
+                if ((d.tagName || '').toUpperCase() === 'VIDEO') {
+                    let mediaContent = '';
+                    if (d.src) mediaContent += `* Source: ${d.src}\n`;
+                    if (d.controls !== undefined) mediaContent += `* Controls: ${d.controls ? 'Yes' : 'No'}\n`;
+                    if (d.currentTime) mediaContent += `* Current Time: ${d.currentTime}s\n`;
+                    if (d.duration) mediaContent += `* Duration: ${d.duration}\n`;
+                    if (d.paused !== undefined) mediaContent += `* Paused: ${d.paused ? 'Yes' : 'No'}\n`;
+                    if (d.volume !== undefined) mediaContent += `* Volume: ${d.volume}\n`;
+                    if (mediaContent) {
+                        description += createPanel('Video Details', mediaContent);
+                    }
+                } else if ((d.tagName || '').toUpperCase() === 'AUDIO') {
+                    let mediaContent = '';
+                    if (d.src) mediaContent += `* Source: ${d.src}\n`;
+                    if (d.controls !== undefined) mediaContent += `* Controls: ${d.controls ? 'Yes' : 'No'}\n`;
+                    if (d.currentTime) mediaContent += `* Current Time: ${d.currentTime}s\n`;
+                    if (d.duration) mediaContent += `* Duration: ${d.duration}\n`;
+                    if (d.paused !== undefined) mediaContent += `* Paused: ${d.paused ? 'Yes' : 'No'}\n`;
+                    if (d.volume !== undefined) mediaContent += `* Volume: ${d.volume}\n`;
+                    if (mediaContent) {
+                        description += createPanel('Audio Details', mediaContent);
+                    }
+                }
+
+                // Parent Container in a JIRA panel
                 if (d.parentContainer) {
                     let containerDesc = '[No container details]';
 
+                    // If there's a snippet, use it
                     if (d.parentContainer.snippet && d.parentContainer.snippet.trim()) {
                         containerDesc = escapeHtml(d.parentContainer.snippet.trim());
-                    } else if (d.parentContainer.tagName && d.parentContainer.tagName.trim()) {
+                    }
+                    // Otherwise construct a minimal <tag> string
+                    else if (d.parentContainer.tagName && d.parentContainer.tagName.trim()) {
                         const pcTag = d.parentContainer.tagName.trim().toLowerCase();
-                        containerDesc = `<${pcTag}>`;
+                        containerDesc = `<${pcTag}`;
 
                         if (d.parentContainer.id && d.parentContainer.id.trim()) {
-                            containerDesc = `<${pcTag} id="${d.parentContainer.id.trim()}">`;
+                            containerDesc += ` id="${d.parentContainer.id.trim()}"`;
+                        }
+                        if (d.parentContainer.className && d.parentContainer.className.trim()) {
+                            containerDesc += ` class="${d.parentContainer.className.trim()}"`;
+                        }
+                        if (d.parentContainer.role && d.parentContainer.role.trim()) {
+                            containerDesc += ` role="${d.parentContainer.role.trim()}"`;
+                        }
+                        if (d.parentContainer.ariaLabel && d.parentContainer.ariaLabel.trim()) {
+                            containerDesc += ` aria-label="${d.parentContainer.ariaLabel.trim()}"`;
                         }
 
-                        // Escape HTML in the container description
+                        containerDesc += `></${pcTag}>`;
+
+                        // Escape any HTML angle brackets to avoid JIRA markup issues
                         containerDesc = escapeHtml(containerDesc);
                     }
 
-                    text += `*Parent Container:* ${formatMonospace(containerDesc)}\n`;
+                    // Wrap final containerDesc in JIRA monospace
+                    const parentPanelContent = formatMonospace(containerDesc);
+
+                    // Put it inside a Parent Container panel
+                    text += createPanel('Parent Container', parentPanelContent);
                 } else {
-                    text += `*Parent Container:* [No container information]\n`;
+                    // If no parent info is available at all
+                    text += createPanel('Parent Container', '[No container information]');
                 }
+
 
                 // Element-specific details
                 if (d.tagName === 'IMG') {
@@ -1188,6 +1479,7 @@ function generateJiraCommentText() {
                 }
                 break;
             }
+            
 
             case 'input-change': {
                 const d = log.details || {};
@@ -1663,6 +1955,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     urlInput = document.getElementById('url-input');
     webview = document.getElementById('my-webview');
+
+    webview.addEventListener('ipc-message', (event) => {
+        if (event.channel === 'webview-konami-keydown') {
+            const key = event.args[0].key;
+            checkKonamiCode(key);
+        }
+    });
 
     window.addEventListener('message', (event) => {
         console.log('Message received in renderer:', event.data);
@@ -2455,8 +2754,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateErrorDrawer(); // Ensures the UI updates instantly
     });
 
-
-
     window.electron.ipcRenderer.on('screenshot-taken', (ipcEvent, base64Data) => {
         if (!activeScreenshotEvent) {
             console.warn("No active event to attach screenshot to!");
@@ -2610,7 +2907,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Clear the active screenshot event
         activeScreenshotEvent = null;
     });
-
 
     // Creates a new log entry in the UI based on event data
     function updateLogUI(logData) {
@@ -4019,6 +4315,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (details.ariaLabel) {
                     section += `- **ARIA Label:** "${details.ariaLabel}"\n`;
                 }
+                // Add Parent Container Information
+                if (details.parentContainer) {
+                    let containerDesc = '[No container details]';
+
+                    if (details.parentContainer.snippet && details.parentContainer.snippet.trim()) {
+                        containerDesc = details.parentContainer.snippet.trim();
+                    } else if (details.parentContainer.tagName && details.parentContainer.tagName.trim()) {
+                        const pcTag = details.parentContainer.tagName.trim().toLowerCase();
+                        containerDesc = `<${pcTag}>`;
+
+                        if (details.parentContainer.id && details.parentContainer.id.trim()) {
+                            containerDesc = `<${pcTag} id="${details.parentContainer.id.trim()}">`;
+                        }
+                    }
+
+                    section += `- **Parent Container:** \`${containerDesc}\`\n`;
+                } else {
+                    section += `- **Parent Container:** [No container information]\n`;
+                }
             } else if (item.action === 'select') {
                 section += `- **Element:** \`<SELECT>\`\n`;
                 section += `- **Selected Value:** ${item.selectedValue || '[None]'}\n`;
@@ -4055,6 +4370,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (details.required) {
                     section += `- **Required:** Yes\n`;
+                }
+                if (details.validationState) {
+                    const validationIssues = Object.entries(details.validationState)
+                        .filter(([key, value]) => value !== false)
+                        .map(([key, value]) => `${key.replace(/([A-Z])/g, ' $1').toLowerCase()}: ${value}`);
+
+                    if (validationIssues.length > 0) {
+                        section += `- **Validation Issues:**\n`;
+                        validationIssues.forEach(issue => {
+                            section += `  - ${issue}\n`;
+                        });
+                    }
                 }
             } else if (item.action === 'keydown') {
                 const modifiers = `${item.ctrlKey ? 'Ctrl+' : ''}${item.shiftKey ? 'Shift+' : ''}${item.altKey ? 'Alt+' : ''}`;
@@ -4112,6 +4439,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         const shouldDisplay = (value) => value !== null && value !== undefined && String(value).trim() !== "";
 
         function isUrl(str) {
@@ -4124,125 +4461,125 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let htmlReport = `
-       <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>tracer Report</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      margin: 20px;
-      background: #ffffff;
-      color: #1a1a1a;
-    }
-    h1 {
-      font-size: 28px;
-      margin-bottom: 5px;
-    }
-    .report-header {
-      border-bottom: 2px solid #1a1a1a;
-      margin-bottom: 20px;
-      padding-bottom: 10px;
-    }
-    .stats {
-      margin-top: 10px;
-      font-size: 14px;
-    }
-    .event {
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      padding: 12px;
-      margin-bottom: 15px;
-      background: #f9f9f9;
-    }
-    .details-grid {
-      display: grid;
-      grid-template-columns: 150px 1fr;
-      row-gap: 6px;
-      column-gap: 10px;
-      font-size: 14px;
-    }
-    .details-grid .label {
-      font-weight: 600;
-    }
-    .section {
-      margin-top: 10px;
-    }
-    /* Thumbnail style: fixed max-width; no hover zoom */
-    .static-img {
-      max-width: 200px;
-      height: auto;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      margin-top: 8px;
-      cursor: pointer;
-    }
-  </style>
-</head>
-<body>
-  <div class="report-header">
-    <h1>tracer Report</h1>
-    <p>Generated: ${new Date().toLocaleString()}</p>
-    <p class="stats">
-      Total Actions: ${eventLog.length} | Duration: ${formatDuration(eventLog)} | Pages Visited: ${countUniquePages(eventLog)} | Visual Captures: ${eventLog.filter(e => e.screenshot || e.elementCapture).length}
-    </p>
-  </div>
-  <div class="events">
-    ${eventLog.map((item, index) => {
-            return `
-        <div class="event">
-          <div class="details-grid">
-            <div class="label">Event #:</div>
-            <div>${index + 1}</div>
-            ${generateDetailedContent(item)}
-          </div>
-          ${item.screenshot ? `
-            <div class="section">
-              <div class="label">Screenshot:</div>
-              <a href="#" onclick="openFullImage('data:image/png;base64,${item.screenshot}'); return false;">
-                <img class="static-img" src="data:image/png;base64,${item.screenshot}" alt="Screenshot">
-              </a>
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>tracer Report</title>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+            <style>
+                body {
+                font-family: 'Inter', sans-serif;
+                margin: 20px;
+                background: #ffffff;
+                color: #1a1a1a;
+                }
+                h1 {
+                font-size: 28px;
+                margin-bottom: 5px;
+                }
+                .report-header {
+                border-bottom: 2px solid #1a1a1a;
+                margin-bottom: 20px;
+                padding-bottom: 10px;
+                }
+                .stats {
+                margin-top: 10px;
+                font-size: 14px;
+                }
+                .event {
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 12px;
+                margin-bottom: 15px;
+                background: #f9f9f9;
+                }
+                .details-grid {
+                display: grid;
+                grid-template-columns: 150px 1fr;
+                row-gap: 6px;
+                column-gap: 10px;
+                font-size: 14px;
+                }
+                .details-grid .label {
+                font-weight: 600;
+                }
+                .section {
+                margin-top: 10px;
+                }
+                /* Thumbnail style: fixed max-width; no hover zoom */
+                .static-img {
+                max-width: 200px;
+                height: auto;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                margin-top: 8px;
+                cursor: pointer;
+                }
+            </style>
+            </head>
+            <body>
+            <div class="report-header">
+                <h1>tracer Report</h1>
+                <p>Generated: ${new Date().toLocaleString()}</p>
+                <p class="stats">
+                Total Actions: ${eventLog.length} | Duration: ${formatDuration(eventLog)} | Pages Visited: ${countUniquePages(eventLog)} | Visual Captures: ${eventLog.filter(e => e.screenshot || e.elementCapture).length}
+                </p>
             </div>
-          ` : ''}
-          ${item.elementCapture ? `
-            <div class="section">
-              <div class="label">Element Capture:</div>
-              <a href="#" onclick="openFullImage('data:image/png;base64,${item.elementCapture}'); return false;">
-                <img class="static-img" src="data:image/png;base64,${item.elementCapture}" alt="Element Capture">
-              </a>
+            <div class="events">
+                ${eventLog.map((item, index) => {
+                        return `
+                    <div class="event">
+                    <div class="details-grid">
+                        <div class="label">Event #:</div>
+                        <div>${index + 1}</div>
+                        ${generateDetailedContent(item)}
+                    </div>
+                    ${item.screenshot ? `
+                        <div class="section">
+                        <div class="label">Screenshot:</div>
+                        <a href="#" onclick="openFullImage('data:image/png;base64,${item.screenshot}'); return false;">
+                            <img class="static-img" src="data:image/png;base64,${item.screenshot}" alt="Screenshot">
+                        </a>
+                        </div>
+                    ` : ''}
+                    ${item.elementCapture ? `
+                        <div class="section">
+                        <div class="label">Element Capture:</div>
+                        <a href="#" onclick="openFullImage('data:image/png;base64,${item.elementCapture}'); return false;">
+                            <img class="static-img" src="data:image/png;base64,${item.elementCapture}" alt="Element Capture">
+                        </a>
+                        </div>
+                    ` : ''}
+                    ${item.comments && item.comments.length > 0 ? `
+                        <div class="section">
+                        <div class="label">Comments:</div>
+                        ${item.comments.map(comment => `
+                            <div>
+                            <p>${comment.text}</p>
+                            <p style="font-size:12px; color:#666;">${new Date(comment.timestamp).toLocaleString()}</p>
+                            </div>
+                        `).join('')}
+                        </div>
+                    ` : ''}
+                    </div>
+                `;
+                    }).join('')}
             </div>
-          ` : ''}
-          ${item.comments && item.comments.length > 0 ? `
-            <div class="section">
-              <div class="label">Comments:</div>
-              ${item.comments.map(comment => `
-                <div>
-                  <p>${comment.text}</p>
-                  <p style="font-size:12px; color:#666;">${new Date(comment.timestamp).toLocaleString()}</p>
-                </div>
-              `).join('')}
-            </div>
-          ` : ''}
-        </div>
-      `;
-        }).join('')}
-  </div>
-  <script>
-    function openFullImage(dataUrl) {
-      var newWin = window.open();
-      if (newWin) {
-        newWin.document.write('<html><head><title>Full Size Image</title></head><body style="margin:0; display:flex; align-items:center; justify-content:center; background:#000;"><img src="' + dataUrl + '" style="max-width:100%; max-height:100%;"/></body></html>');
-      } else {
-        alert('Popup blocked. Please allow popups for this report to view full size images.');
-      }
-    }
-  </script>
-</body>
-</html>
-`;
+            <script>
+                function openFullImage(dataUrl) {
+                var newWin = window.open();
+                if (newWin) {
+                    newWin.document.write('<html><head><title>Full Size Image</title></head><body style="margin:0; display:flex; align-items:center; justify-content:center; background:#000;"><img src="' + dataUrl + '" style="max-width:100%; max-height:100%;"/></body></html>');
+                } else {
+                    alert('Popup blocked. Please allow popups for this report to view full size images.');
+                }
+                }
+            </script>
+            </body>
+            </html>
+        `;
 
         // Updated generateDetailedContent() for the HTML export:
         function generateDetailedContent(item) {
@@ -4265,15 +4602,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const d = item.details;
                 content += `<div class="label">Element:</div><div>&lt;${d.tagName.toLowerCase()}&gt;</div>`;
                 if (d.text) {
-                    content += `<div class="label">Text Content:</div><div style="font-size:${d.fontInfo.fontSize}; font-weight:${d.fontInfo.fontWeight}; font-style:${d.fontInfo.fontStyle}; line-height:${d.fontInfo.lineHeight}; color:${d.fontInfo.color};">${d.text}</div>`;
+                    content += `<div class="label">Text Content:</div><div>${d.text}</div>`;
                 }
                 if (d.fontInfo) {
-                    content += `<div class="label">Font Family:</div><div style="min-width: 500px; font-family:${d.fontInfo.fontFamily};">${d.fontInfo.fontFamily}</div>`;
-                    content += `<div class="label">Font Size:</div><div style="min-width: 500px; font-size:${d.fontInfo.fontSize};">${d.fontInfo.fontSize}</div>`;
-                    content += `<div class="label">Font Weight:</div><div style="min-width: 500px; font-weight:${d.fontInfo.fontWeight};">${d.fontInfo.fontWeight}</div>`;
-                    content += `<div class="label">Font Style:</div><div style="min-width: 500px; font-style:${d.fontInfo.fontStyle};">${d.fontInfo.fontStyle}</div>`;
-                    content += `<div class="label">Line Height:</div><div style="min-width: 500px; line-height:${d.fontInfo.lineHeight};">${d.fontInfo.lineHeight}</div>`;
-                    content += `<div class="label">Color:</div><div style="min-width: 500px; color:${d.fontInfo.color};">${d.fontInfo.color}</div>`;
+                    content += `<div class="label">Font Family:</div><div style="min-width: 500px;">${d.fontInfo.fontFamily}</div>`;
+                    content += `<div class="label">Font Size:</div><div style="min-width: 500px;">${d.fontInfo.fontSize}</div>`;
+                    content += `<div class="label">Font Weight:</div><div style="min-width: 500px;">${d.fontInfo.fontWeight}</div>`;
+                    content += `<div class="label">Font Style:</div><div style="min-width: 500px;">${d.fontInfo.fontStyle}</div>`;
+                    content += `<div class="label">Line Height:</div><div style="min-width: 500px;">${d.fontInfo.lineHeight}</div>`;
+                    content += `<div class="label">Color:</div><div style="min-width: 500px;">${d.fontInfo.color}</div>`;
                 }
                 if (d.role) {
                     content += `<div class="label">Role:</div><div>${d.role}</div>`;
@@ -4283,14 +4620,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (d.parentContainer) {
                     const pc = d.parentContainer;
-                    let parentDesc = `<${pc.tagName.toLowerCase()}`;
-                    if (pc.ariaLabel) parentDesc += ` aria-label="${pc.ariaLabel}"`;
-                    if (pc.role) parentDesc += ` role="${pc.role}"`;
-                    if (pc.id) parentDesc += ` id="${pc.id}"`;
-                    if (pc.className) parentDesc += ` class="${pc.className}"`;
-                    parentDesc += '>'; // Open tag
-                    parentDesc += `</${pc.tagName.toLowerCase()}>`; // Correctly close the tag dynamically
-                    content += `<div class="label">Parent container:</div><div>${parentDesc}</div>`;
+                    let containerDesc = '[No container details]';
+
+                    // If there's a snippet, display that first
+                    if (pc.snippet && pc.snippet.trim()) {
+                        containerDesc = pc.snippet.trim();
+                    }
+                    // Otherwise, build an HTML-like tag description
+                    else if (pc.tagName && pc.tagName.trim()) {
+                        const pcTag = pc.tagName.trim().toLowerCase();
+                        containerDesc = `<${pcTag}`;
+
+                        if (pc.id && pc.id.trim()) {
+                            containerDesc += ` id="${pc.id.trim()}"`;
+                        }
+                        if (pc.className && pc.className.trim()) {
+                            containerDesc += ` class="${pc.className.trim()}"`;
+                        }
+                        if (pc.role && pc.role.trim()) {
+                            containerDesc += ` role="${pc.role.trim()}"`;
+                        }
+                        if (pc.ariaLabel && pc.ariaLabel.trim()) {
+                            containerDesc += ` aria-label="${pc.ariaLabel.trim()}"`;
+                        }
+
+                        containerDesc += `></${pcTag}>`;
+                    }
+
+                    // Escape in case it's HTML, then wrap in <pre>
+                    content += `
+        <div class="label">Parent Container:</div>
+        <div>
+            <pre style="background: #f0f0f0; padding: 8px;">
+${escapeHtml(containerDesc)}
+            </pre>
+        </div>
+    `;
+                } else {
+                    content += `
+        <div class="label">Parent Container:</div>
+        <div>[No container information]</div>
+    `;
                 }
                 if (d.tagName.toUpperCase() === 'IMG') {
                     content += `<div class="label">Alt Text:</div><div>${d.alt}</div>`;
@@ -4436,84 +4806,82 @@ document.addEventListener('DOMContentLoaded', () => {
         // First, normalize newlines
         html = html.replace(/\r\n/g, '\n');
 
-        // Handle special cases: replace {{}} with monospace formatting
+        // Handle special cases: replace {{}} with monospace formatting (unchanged)
         html = html.replace(/{{(.*?)}}/g, '{{$1}}');
 
-        // Clean up common patterns in the logs
+        // Clean up common patterns in the logs (unchanged)
         html = html.replace(/<(context|element|parent container|accessibility information):?>(.*?)</gi, '*$1:* $2<');
 
-        // Handle troublesome "asterisk" items by converting them to explicit text
-        html = html.replace(/\*([^*]+)\*/g, '_$1_');
+        /*
+          IMPORTANT: Remove or modify the line that replaced *...* with _..._.
+          That line was overriding your bold formatting. Let's comment it out:
+        */
+        // html = html.replace(/\*([^*]+)\*/g, '_$1_');
 
         // Headers
         html = html.replace(/<h1>(.*?)<\/h1>/gi, 'h1. $1\n');
         html = html.replace(/<h2>(.*?)<\/h2>/gi, 'h2. $1\n');
         html = html.replace(/<h3>(.*?)<\/h3>/gi, 'h3. $1\n');
 
-        // Preserve formatting on their own lines
+        // Preserve formatting on their own lines (unchanged)
         html = html.replace(/(<(strong|b|em|i|u)>.*?<\/\2>)/gi, '\n$1\n');
 
-        // Basic formatting - do these after the specific patterns
-        html = html.replace(/<(strong|b)>(.*?)<\/\1>/gi, '*$2*');
-        html = html.replace(/<em>|<i>(.*?)<\/em>|<\/i>/gi, '_$1_');
-        html = html.replace(/<u>(.*?)<\/u>/gi, '+$1+');
-        html = html.replace(/<code>(.*?)<\/code>/gi, '{{$1}}');
+        // Basic formatting
+        // 1) Bold: <strong> or <b>
+        html = html.replace(/<(strong|b)>([\s\S]*?)<\/\1>/gi, '*$2*');
+        // 2) Italic: <em> or <i>
+        //    Fix the regex to capture the tag pair properly
+        html = html.replace(/<(em|i)>([\s\S]*?)<\/\1>/gi, '_$2_');
+        // 3) Underline: <u> -> +...+
+        html = html.replace(/<u>([\s\S]*?)<\/u>/gi, '+$1+');
+        // 4) Code: <code> -> {{...}}
+        html = html.replace(/<code>([\s\S]*?)<\/code>/gi, '{{$1}}');
 
-        // Lists - improved handling with proper spacing
+        // Lists (unchanged, but tested)
         html = html.replace(/<ul>([\s\S]*?)<\/ul>/gi, function (match, content) {
             return content.replace(/<li>([\s\S]*?)<\/li>/gi, item => {
-                // Handle multi-line list items
                 const itemContent = item.replace(/<li>([\s\S]*?)<\/li>/gi, '$1').trim();
                 return `* ${itemContent}\n`;
             });
         });
-
         html = html.replace(/<ol>([\s\S]*?)<\/ol>/gi, function (match, content) {
             return content.replace(/<li>([\s\S]*?)<\/li>/gi, item => {
-                // Handle multi-line list items
                 const itemContent = item.replace(/<li>([\s\S]*?)<\/li>/gi, '$1').trim();
                 return `# ${itemContent}\n`;
             });
         });
 
-        // Links
-        html = html.replace(/<a\s+href="([^"]+)"[^>]*>(.*?)<\/a>/gi, '[$2|$1]');
+        // Links: <a href="...">Text</a> -> [Text|URL]
+        html = html.replace(/<a\s+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, '[$2|$1]');
 
-        // Tables
+        // Tables (unchanged)
         html = html.replace(/<table>/gi, '{table}\n');
         html = html.replace(/<\/table>/gi, '{table}\n');
         html = html.replace(/<tr>/gi, '|');
         html = html.replace(/<\/tr>/gi, '|\n');
-        html = html.replace(/<td>|<th>/gi, '|');
-        html = html.replace(/<\/td>|<\/th>/gi, '');
+        html = html.replace(/<t[dh]>/gi, '|');
+        html = html.replace(/<\/t[dh]>/gi, '');
 
-        // Quotes
-        html = html.replace(/<blockquote>(.*?)<\/blockquote>/gi, '{quote}$1{quote}');
+        // Blockquotes
+        html = html.replace(/<blockquote>([\s\S]*?)<\/blockquote>/gi, '{quote}$1{quote}');
 
-        // Handle paragraphs and line breaks
-        html = html.replace(/<p>(.*?)<\/p>/gi, '$1\n\n');
+        // Paragraphs / line breaks
+        html = html.replace(/<p>([\s\S]*?)<\/p>/gi, '$1\n\n');
         html = html.replace(/<br\s*\/?>/gi, '\n');
 
-        // Remove any remaining HTML tags that we haven't handled specifically
+        // Remove any remaining HTML tags that weren't handled
         html = html.replace(/<[^>]+>/g, '');
 
-        // Clean up line breaks and spacing
+        // Clean up extra blank lines
         html = html.replace(/\n{3,}/g, '\n\n')
             .replace(/^\s+|\s+$/gm, '')
             .split('\n')
-            .map(line => line.trim())
+            .map(line => line.trimEnd()) // trim trailing space
             .join('\n');
-
-        // Restore asterisks for bullet points that might have been impacted
-        html = html.replace(/\n_([^_]+)_/g, function (match, p1) {
-            if (p1.includes(':')) {
-                return '\n*' + p1 + '*';
-            }
-            return match;
-        });
 
         return html.trim();
     };
+
 
     function exportJiraLogSingleDefectWithCustomFields(customFields, issueType, summary, imageMap = null) {
         if (eventLog.length === 0) {
@@ -4582,7 +4950,32 @@ document.addEventListener('DOMContentLoaded', () => {
                         fontContent += `* Color: ${d.fontInfo.color}\n`;
                         description += createPanel('Font Information', fontContent);
                     }
+                    if (d.parentContainer) {
+                        const pc = d.parentContainer;
+                        let containerDesc = '[No container details]';
 
+                        // If there's a snippet, use it first
+                        if (pc.snippet && pc.snippet.trim()) {
+                            // Wrap in JIRA monospace to avoid JIRA markup conflicts
+                            containerDesc = `{{${pc.snippet.trim()}}}`;
+                        }
+                        // Otherwise construct an HTML-like tag
+                        else if (pc.tagName && pc.tagName.trim()) {
+                            const pcTag = pc.tagName.trim().toLowerCase();
+                            containerDesc = `<${pcTag}`;
+
+                            if (pc.id && pc.id.trim()) containerDesc += ` id="${pc.id.trim()}"`;
+                            if (pc.className && pc.className.trim()) containerDesc += ` class="${pc.className.trim()}"`;
+                            if (pc.role && pc.role.trim()) containerDesc += ` role="${pc.role.trim()}"`;
+                            if (pc.ariaLabel && pc.ariaLabel.trim()) containerDesc += ` aria-label="${pc.ariaLabel.trim()}"`;
+
+                            containerDesc += `></${pcTag}>`;
+                            // Wrap again in JIRA monospace
+                            containerDesc = `{{${containerDesc}}}`;
+                        }
+
+                        description += createPanel('Parent Container', containerDesc);
+                    }
                     // Enhanced element-specific details
                     if (d.tagName === 'IMG') {
                         let imgContent = `* Alt Text: ${d.alt || '[No Alt Text]'}\n`;
@@ -4633,21 +5026,51 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (d.inputType === 'checkbox' || d.inputType === 'radio') {
                         description += `* Label: ${d.labelText || '[No Label]'}\n`;
                         description += `* State: ${d.checked ? 'Checked' : 'Unchecked'}\n`;
+
+                        // Add this block to include full group information
                         if (d.groupOptions) {
-                            description += '*Group Options:*\n';
+                            let groupContent = '';
                             d.groupOptions.forEach(opt => {
-                                description += `** ${opt.labelText} ${opt.checked ? '(Selected)' : ''}\n`;
+                                groupContent += `* ${opt.labelText} ${opt.checked ? '(Selected)' : ''}\n`;
+                            });
+                            description += createPanel('Group Options', groupContent);
+                        }
+                    } else if (d.tagName === 'SELECT') {
+                        // Add this block to include complete select information
+                        let selectContent = `* Selected Value: ${d.selectedValue || '[None]'}\n`;
+                        selectContent += `* Selected Text: "${d.selectedText || '[None]'}"\n`;
+
+                        if (d.multiple && d.selectedOptions) {
+                            selectContent += '*All Selected Options:*\n';
+                            d.selectedOptions.forEach(opt => {
+                                selectContent += `** "${opt.text}" (${opt.value})\n`;
                             });
                         }
+
+                        // Include full options list if available
+                        if (d.options && d.options.length > 0) {
+                            selectContent += '*Available Options:*\n';
+                            d.options.forEach(opt => {
+                                selectContent += `** "${opt.text}" (${opt.value}) ${opt.selected ? '(Selected)' : ''}\n`;
+                            });
+                        }
+
+                        description += createPanel('Selection Details', selectContent);
                     } else {
+                        // Standard inputs
                         if (d.name) description += `* Name: ${d.name}\n`;
                         if (d.placeholder) description += `* Placeholder: ${d.placeholder}\n`;
                         if (d.value && d.inputType !== 'password') {
                             description += `* Value: "${d.value}"\n`;
                         }
+
+                        // Add form relationship information
+                        if (d.form) {
+                            description += `* Form: ${d.form}\n`;
+                        }
                     }
 
-                    // Validation state panel if present
+                    // Add validation state information
                     if (d.validationState) {
                         let valContent = '';
                         Object.entries(d.validationState)
@@ -4655,8 +5078,20 @@ document.addEventListener('DOMContentLoaded', () => {
                             .forEach(([key, value]) => {
                                 valContent += `* ${key.replace(/([A-Z])/g, ' $1').toLowerCase()}: ${value}\n`;
                             });
-                        description += createPanel('Validation State', valContent);
+                        if (valContent) {
+                            description += createPanel('Validation State', valContent);
+                        }
                     }
+
+                    // Include all ARIA attributes
+                    if (d.ariaAttributes && Object.keys(d.ariaAttributes).length > 0) {
+                        let ariaContent = '';
+                        Object.entries(d.ariaAttributes).forEach(([key, value]) => {
+                            ariaContent += `* ${key}: ${value}\n`;
+                        });
+                        description += createPanel('ARIA Attributes', ariaContent);
+                    }
+
                     break;
                 }
 
@@ -4750,16 +5185,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         csvRow += `,"${safeDescription}"\n`;
 
-        const csvContent = csvHeader + csvRow;
-        const blob = new Blob([csvContent], { type: "text/csv" });
+        // Assemble the CSV text
+        const csvContent = "\uFEFF" + csvHeader + csvRow;
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
+
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
         a.download = "tracer-log-jira-wiki.csv";
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+
         showToast('JIRA CSV log with Atlassian Wiki markup exported!');
     }
+
 
     // "Save & Export" => hide modal, then run our CSV export
     document.getElementById('save-jira-fields').addEventListener('click', () => {
@@ -6184,8 +6623,8 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
       <!-- Modal Footer -->
       <div class="px-4 py-3 border-t border-gray-200 flex justify-end space-x-2">
-        <button id="save-custom" class="button">Save</button>
-        <button id="cancel-custom" class="button-alt border border-neutral-400 text-neutral-800 bg-white hover:bg-gray-100">Cancel</button>
+        <button id="cancel-custom" class="button-alt border border-neutral-400 text-neutral-800 bg-white hover:bg-gray-100">Cancel</button>  
+        <button id="save-custom" class="button">Save</button>        
       </div>
     </div>
   `;

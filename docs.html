@@ -61,10 +61,6 @@
             background-color: white;
         }
 
-        .feature-card:hover {
-            transform: translateY(-2px);
-        }
-
         .skip-link {
             position: absolute;
             left: -9999px;
@@ -80,6 +76,23 @@
             transform: translateX(-50%);
             opacity: 1;
         }
+
+        .section-card {
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+
+        .toc-card {
+            position: sticky;
+            top: 2rem;
+        }
+
+        .toc-card a {
+            transition: color 0.2s ease, transform 0.2s ease;
+            display: block;
+            padding: 0.5rem 0;
+        }
     </style>
 </head>
 
@@ -87,41 +100,117 @@
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
     <div class="content-wrapper">
-        <main id="main-content" class="container mx-auto px-6 py-12 max-w-6xl">
+        <main id="main-content" class="container mx-auto px-6 py-8 max-w-6xl">
             <!-- Header with search on the right -->
-            <div class="flex items-start justify-between mb-12">
-                <div class="text-left">
+            <div class="flex flex-col md:flex-row md:items-start md:justify-between mb-8">
+                <div class="text-left mb-6 md:mb-0">
                     <h1 class="text-4xl font-bold mb-3 text-gray-900">
                         tracer Documentation
                     </h1>
                     <p class="text-xl text-gray-700 max-w-3xl">
-                        A modern testing tool for capturing and documenting user interactions with precision and
-                        clarity.
+                        A powerful testing tool for capturing and documenting user interactions
+                        with precision and clarity.
                     </p>
-                </div>
-                <!-- Search box -->
-                <div class="ml-8">
-                    <input type="text" id="doc-search" placeholder="Search docs..."
-                        class="border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[#FF8A65]" />
                 </div>
             </div>
 
-            <!-- Table of Contents -->
-            <div class="bg-white p-6 rounded-lg shadow-sm mb-8 border border-gray-200">
-                <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                        stroke="#FF8A65" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="21" y1="10" x2="3" y2="10"></line>
-                        <line x1="21" y1="6" x2="3" y2="6"></line>
-                        <line x1="21" y1="14" x2="3" y2="14"></line>
-                        <line x1="21" y1="18" x2="3" y2="18"></line>
-                    </svg>
-                    Contents
-                </h2>
-                <ul class="space-y-2">
-                    <li>
-                        <a href="#overview" class="text-[#FF8A65] hover:text-[#ff7043] flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <!-- Table of Contents (Sidebar) -->
+                <div class="md:col-span-1">
+                    <!-- Search box -->
+                    <div class="bg-white p-4 border border-gray-200 rounded-t-lg mb-4 shadow-sm">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg data-lucide="search" class="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
+                            </div>
+                            <input type="text" id="doc-search" placeholder="Search docs..."
+                                class="block w-full pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-focus focus:border-primary-focus" />
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-lg shadow-sm mb-8 border border-gray-200 toc-card">
+                        <h2 class="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="21" y1="10" x2="3" y2="10"></line>
+                                <line x1="21" y1="6" x2="3" y2="6"></line>
+                                <line x1="21" y1="14" x2="3" y2="14"></line>
+                                <line x1="21" y1="18" x2="3" y2="18"></line>
+                            </svg>
+                            Contents
+                        </h2>
+                        <!-- List items follow here -->
+                        <ul class="space-y-0">
+                            <li>
+                                <a href="#overview" class="text-primary hover:text-primary-hover">
+                                    Overview
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#getting-started" class="text-primary hover:text-primary-hover">
+                                    Getting Started
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#interaction-tracking" class="text-primary hover:text-primary-hover">
+                                    Interaction Tracking
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#keyboard-shortcuts" class="text-primary hover:text-primary-hover">
+                                    Keyboard Shortcuts
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#responsive-testing" class="text-primary hover:text-primary-hover">
+                                    Responsive Testing
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#screenshot-tools" class="text-primary hover:text-primary-hover">
+                                    Screenshot & Annotation
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#export-formats" class="text-primary hover:text-primary-hover">
+                                    Export Formats
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#commenting-system" class="text-primary hover:text-primary-hover">
+                                    Commenting System
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#jira-integration" class="text-primary hover:text-primary-hover">
+                                    JIRA Integration
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#error-logging" class="text-primary hover:text-primary-hover">
+                                    Error Logging
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#finding-text" class="text-primary hover:text-primary-hover">
+                                    Finding Text
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Main Content -->
+                <div class="md:col-span-3 space-y-8">
+                    <!-- Overview Section -->
+                    <section id="overview" class="section-card bg-white p-6 rounded-xl shadow-sm">
+                        <h2
+                            class="text-2xl font-semibold mb-4 pb-2 border-b border-gray-200 text-gray-900 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round">
                                 <circle cx="12" cy="12" r="10"></circle>
@@ -129,23 +218,183 @@
                                 <line x1="12" y1="8" x2="12.01" y2="8"></line>
                             </svg>
                             Overview
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#getting-started" class="text-[#FF8A65] hover:text-[#ff7043] flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                        </h2>
+                        <p class="text-lg text-gray-600 mb-6">
+                            tracer is a specialized QA tool designed to capture, document, and analyze user interactions
+                            within web applications. It provides detailed logging of user actions, accessibility
+                            information, and technical context
+                            in real-time.
+                        </p>
+
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="feature-card p-5">
+                                <div class="flex items-center mb-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary mr-3">
+                                        <path d="M14 4.1L12 6"></path>
+                                        <path d="m5.1 8-2.9-.8"></path>
+                                        <path d="m6 12-1.9 2"></path>
+                                        <path d="M7.2 2.2L8 5.1"></path>
+                                        <path
+                                            d="M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z">
+                                        </path>
+                                    </svg>
+                                    <h3 class="text-xl font-semibold">Precision Tracking</h3>
+                                </div>
+                                <p class="text-gray-600">
+                                    Captures every interaction with exact timestamps, element details, and accessibility
+                                    context.
+                                </p>
+                            </div>
+                            <div class="feature-card p-5">
+                                <div class="flex items-center mb-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary mr-3">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                                    </svg>
+                                    <h3 class="text-xl font-semibold">Smart Documentation</h3>
+                                </div>
+                                <p class="text-gray-600">
+                                    Automatically generates comprehensive logs in multiple formats for easy sharing and
+                                    integration.
+                                </p>
+                            </div>
+                            <div class="feature-card p-5">
+                                <div class="flex items-center mb-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary mr-3">
+                                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                                        <circle cx="12" cy="13" r="4"></circle>
+                                    </svg>
+                                    <h3 class="text-xl font-semibold">Visual Evidence</h3>
+                                </div>
+                                <p class="text-gray-600">
+                                    Capture screenshots with annotation tools to highlight issues and create visual
+                                    documentation.
+                                </p>
+                            </div>
+                            <div class="feature-card p-5">
+                                <div class="flex items-center mb-3">                                   
+                                    <svg fill="currentColor" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="text-primary mr-3">
+                                        <path
+                                            d="M0.086,12L12,23.914L23.914,12L12,0.086L0.086,12z M14.598,18.488c-0.091-1.03-0.507-2.014-1.23-2.941L16.914,12
+                                                                 l-4.207-4.207c-0.894-0.894-1.339-1.826-1.325-2.771c0.012-0.817,0.359-1.531,0.691-2.034L21.086,12L14.598,18.488z M12,9.914
+                                                                 L14.086,12L12,14.086L9.914,12L12,9.914z M9.402,5.512c0.091,1.03,0.507,2.014,1.23,2.941L7.086,12l4.207,4.207
+                                                                 c0.894,0.894,1.339,1.826,1.325,2.771c-0.012,0.817-0.359,1.531-0.691,2.034L2.914,12L9.402,5.512z" />
+                                    </svg>
+                                    <h3 class="text-xl font-semibold">JIRA Integration</h3>
+                                </div>
+                                <p class="text-gray-600">
+                                    Export your test sessions directly to JIRA with customizable fields and Atlassian
+                                    Wiki
+                                    markup.
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Getting Started Section -->
+                    <section id="getting-started" class="section-card bg-white p-6 rounded-xl shadow-sm">
+                        <h2
+                            class="text-2xl font-semibold mb-4 pb-2 border-b border-gray-200 text-gray-900 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round">
                                 <polyline points="1 4 1 10 7 10"></polyline>
                                 <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
                             </svg>
                             Getting Started
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#interaction-tracking"
-                            class="text-[#FF8A65] hover:text-[#ff7043] flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                        </h2>
+
+                        <div class="space-y-6">
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Interface Overview</h3>
+                                <p class="mb-3">The tracer interface consists of three main sections:</p>
+                                <ul class="list-disc ml-6 space-y-2">
+                                    <li>
+                                        <strong>Browser Panel:</strong> The main viewing area where you can load
+                                        websites
+                                        for testing.
+                                    </li>
+                                    <li>
+                                        <strong>Action Log:</strong> The right sidebar that records all user
+                                        interactions.
+                                    </li>
+                                    <li>
+                                        <strong>Error Drawer:</strong> The bottom panel that logs any JavaScript errors
+                                        encountered during testing.
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Loading a Website</h3>
+                                <ol class="list-decimal ml-6 space-y-2">
+                                    <li>Enter a URL in the address bar at the top of the application.</li>
+                                    <li>Click "Load" or press Enter to navigate to the site.</li>
+                                    <li>Use the back and refresh buttons to navigate as you would in a normal browser.
+                                    </li>
+                                </ol>
+                                <div class="flex items-center gap-2 mt-4 bg-blue-50 p-3 rounded">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" class="text-blue-500">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                    </svg>
+                                    <span class="text-blue-700">Tip: Recently visited sites are saved for quick access
+                                        on the home page.</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Start Recording Actions</h3>
+                                <ol class="list-decimal ml-6 space-y-2">
+                                    <li>
+                                        Press <kbd class="kbc-button">Ctrl</kbd> + <kbd class="kbc-button">Space</kbd>
+                                        or
+                                        click the play button <svg data-lucide="play" width="16" height="16"
+                                            class="inline"></svg> in the Action Log panel to start logging.
+                                    </li>
+                                    <li>Interact with the loaded website as you normally would.</li>
+                                    <li>
+                                        Each interaction will be recorded in the Action Log panel with detailed
+                                        information.
+                                    </li>
+                                    <li>
+                                        Press <kbd class="kbc-button">Ctrl</kbd> + <kbd class="kbc-button">Space</kbd>
+                                        again
+                                        to pause logging.
+                                    </li>
+                                </ol>
+                                <div class="flex items-center gap-2 mt-4 bg-amber-50 p-3 rounded">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" class="text-amber-600">
+                                        <path
+                                            d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                                        </path>
+                                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                    </svg>
+                                    <span class="text-amber-700">Note: The toggle button's icon will change from
+                                        <svg data-lucide="play" width="16" height="16" class="inline"></svg> to
+                                        <svg data-lucide="pause" width="16" height="16" class="inline"></svg> when
+                                        logging is active.
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Interaction Tracking Section -->
+                    <section id="interaction-tracking" class="section-card bg-white p-6 rounded-xl shadow-sm">
+                        <h2
+                            class="text-2xl font-semibold mb-4 pb-2 border-b border-gray-200 text-gray-900 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round">
                                 <path d="M14 4.1L12 6"></path>
@@ -157,12 +406,116 @@
                                 </path>
                             </svg>
                             Interaction Tracking
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#keyboard-shortcuts"
-                            class="text-[#FF8A65] hover:text-[#ff7043] flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                        </h2>
+                        <p class="text-lg text-gray-600 mb-6">
+                            tracer captures detailed information about various types of user interactions:
+                        </p>
+
+                        <div class="space-y-6">
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Click Events</h3>
+                                <p class="mb-3">
+                                    When you click on an element, tracer records:
+                                </p>
+                                <ul class="list-disc ml-6 space-y-2">
+                                    <li>Element type and content</li>
+                                    <li>ARIA attributes and accessibility information</li>
+                                    <li>XPath location</li>
+                                    <li>Parent container context</li>
+                                    <li>Element-specific details (e.g., image dimensions, button states)</li>
+                                    <li>Font information (family, size, weight, style, line height, color)</li>
+                                </ul>
+                                <div class="mt-4">
+                                    <div class="code-block">
+                                        {
+                                        "type": "click",
+                                        "element": "button.submit-form",
+                                        "timestamp": "2025-02-11T14:23:42",
+                                        "context": "checkout-form",
+                                        "details": {
+                                        "text": "Submit Order",
+                                        "aria-label": "Complete purchase",
+                                        "disabled": false
+                                        }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Form Interactions</h3>
+                                <p class="mb-3">Form input events capture:</p>
+                                <ul class="list-disc ml-6 space-y-2">
+                                    <li>Input type and value</li>
+                                    <li>Validation states</li>
+                                    <li>Form context</li>
+                                    <li>Associated labels</li>
+                                    <li>Radio button groups and checkbox states</li>
+                                </ul>
+                                <div class="mt-4">
+                                    <div class="code-block">
+                                        {
+                                        "type": "input-change",
+                                        "element": "input[type='email']",
+                                        "timestamp": "2025-02-11T14:23:45",
+                                        "details": {
+                                        "value": "user@example.com",
+                                        "valid": true,
+                                        "required": true
+                                        }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Navigation Events</h3>
+                                <p class="mb-3">Page navigation events track:</p>
+                                <ul class="list-disc ml-6 space-y-2">
+                                    <li>Page title and URL</li>
+                                    <li>Load timestamp</li>
+                                    <li>Previous page information</li>
+                                </ul>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Keyboard Events</h3>
+                                <p class="mb-3">Keyboard interactions record:</p>
+                                <ul class="list-disc ml-6 space-y-2">
+                                    <li>Key pressed and modifiers (Ctrl, Shift, Alt)</li>
+                                    <li>Target element</li>
+                                    <li>Context information</li>
+                                </ul>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Tab Navigation</h3>
+                                <p class="mb-3">Tab navigation events track:</p>
+                                <ul class="list-disc ml-6 space-y-2">
+                                    <li>Element focus changes when using the Tab key</li>
+                                    <li>Previous and current elements in focus</li>
+                                    <li>Details of each element in the tab sequence</li>
+                                </ul>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Media Interactions</h3>
+                                <p class="mb-3">Interactions with media elements (audio, video) capture:</p>
+                                <ul class="list-disc ml-6 space-y-2">
+                                    <li>Play and pause events</li>
+                                    <li>Current time and duration</li>
+                                    <li>Volume changes</li>
+                                    <li>Media source information</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Keyboard Shortcuts Section -->
+                    <section id="keyboard-shortcuts" class="section-card bg-white p-6 rounded-xl shadow-sm">
+                        <h2
+                            class="text-2xl font-semibold mb-4 pb-2 border-b border-gray-200 text-gray-900 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round">
                                 <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
@@ -176,12 +529,155 @@
                                 <path d="M7 16h10"></path>
                             </svg>
                             Keyboard Shortcuts
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#responsive-testing"
-                            class="text-[#FF8A65] hover:text-[#ff7043] flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                        </h2>
+
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-lg font-semibold mb-3">Global Shortcuts</h3>
+                                <div class="space-y-3">
+                                    <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
+                                        <span class="font-medium">Toggle Logging</span>
+                                        <kbd class="kbc-button">Ctrl + Space</kbd>
+                                    </div>
+                                    <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
+                                        <span class="font-medium">Toggle Sidebar</span>
+                                        <kbd class="kbc-button">Ctrl + T</kbd>
+                                    </div>
+                                    <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
+                                        <span class="font-medium">Take Screenshot</span>
+                                        <kbd class="kbc-button">Ctrl + S</kbd>
+                                    </div>
+                                    <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
+                                        <span class="font-medium">Element Screenshot</span>
+                                        <div class="flex items-center gap-1">
+                                            <kbd class="kbc-button">Ctrl</kbd> +
+                                            <svg data-lucide="camera" width="16" height="16"></svg>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
+                                        <span class="font-medium">Full Page Screenshot</span>
+                                        <div class="flex items-center gap-1">
+                                            <kbd class="kbc-button">Ctrl</kbd> +
+                                            <kbd class="kbc-button">Shift</kbd> +
+                                            <svg data-lucide="camera" width="16" height="16"></svg>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
+                                        <span class="font-medium">Find in Page</span>
+                                        <kbd class="kbc-button">Ctrl + F</kbd>
+                                    </div>
+                                    <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
+                                        <span class="font-medium">Show All Shortcuts</span>
+                                        <kbd class="kbc-button">F1</kbd>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-lg font-semibold mb-3">Annotation Shortcuts</h3>
+                                <div class="space-y-3">
+                                    <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
+                                        <span class="font-medium">Arrow Tool</span>
+                                        <kbd class="kbc-button">A</kbd>
+                                    </div>
+                                    <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
+                                        <span class="font-medium">Rectangle Tool</span>
+                                        <kbd class="kbc-button">R</kbd>
+                                    </div>
+                                    <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
+                                        <span class="font-medium">Circle Tool</span>
+                                        <kbd class="kbc-button">C</kbd>
+                                    </div>
+                                    <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
+                                        <span class="font-medium">Stamp Tool</span>
+                                        <kbd class="kbc-button">W</kbd>
+                                    </div>
+                                    <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
+                                        <span class="font-medium">Undo</span>
+                                        <kbd class="kbc-button">Ctrl + Z</kbd>
+                                    </div>
+                                    <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
+                                        <span class="font-medium">Redo</span>
+                                        <kbd class="kbc-button">Ctrl + Shift + Z</kbd>
+                                    </div>
+                                    <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
+                                        <span class="font-medium">Save Annotation</span>
+                                        <kbd class="kbc-button">Ctrl + S</kbd>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3 flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                        class="text-primary">
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                    </svg>
+                                    Comment Editing
+                                </h3>
+                                <div class="space-y-3">
+                                    <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
+                                        <span class="font-medium">Insert/Edit Link</span>
+                                        <kbd class="kbc-button">Ctrl + K</kbd>
+                                    </div>
+                                    <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
+                                        <span class="font-medium">Save Comment</span>
+                                        <kbd class="kbc-button">Ctrl + Enter</kbd>
+                                    </div>
+                                    <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
+                                        <span class="font-medium">Line Break</span>
+                                        <kbd class="kbc-button">Shift + Enter</kbd>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg border-l-4 border-indigo-500">
+                                <h3 class="text-lg font-semibold mb-2 flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                        class="text-primary">
+                                        <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+                                        <path d="M6 8h.001"></path>
+                                        <path d="M10 8h.001"></path>
+                                        <path d="M14 8h.001"></path>
+                                        <path d="M18 8h.001"></path>
+                                        <path d="M8 12h.001"></path>
+                                        <path d="M12 12h.001"></path>
+                                        <path d="M16 12h.001"></path>
+                                        <path d="M7 16h10"></path>
+                                    </svg>
+                                    Keyboard Shortcuts Dialog
+                                </h3>
+                                <p class="text-sm text-gray-600 mb-3">
+                                    Access the complete keyboard shortcuts reference at any time by pressing
+                                    <kbd class="kbc-button">F1</kbd> while using tracer. This opens a comprehensive
+                                    dialog with all available shortcuts.
+                                </p>
+                                <div class="flex justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                        class="text-indigo-500">
+                                        <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+                                        <path d="M6 8h.001"></path>
+                                        <path d="M10 8h.001"></path>
+                                        <path d="M14 8h.001"></path>
+                                        <path d="M18 8h.001"></path>
+                                        <path d="M8 12h.001"></path>
+                                        <path d="M12 12h.001"></path>
+                                        <path d="M16 12h.001"></path>
+                                        <path d="M7 16h10"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Responsive Testing Section -->
+                    <section id="responsive-testing" class="section-card bg-white p-6 rounded-xl shadow-sm">
+                        <h2
+                            class="text-2xl font-semibold mb-4 pb-2 border-b border-gray-200 text-gray-900 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round">
                                 <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
@@ -189,11 +685,132 @@
                                 <line x1="12" y1="17" x2="12" y2="21"></line>
                             </svg>
                             Responsive Testing
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#screenshot-tools" class="text-[#FF8A65] hover:text-[#ff7043] flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                        </h2>
+
+                        <p class="text-lg text-gray-600 mb-6">
+                            tracer includes powerful tools for testing responsive layouts across different device sizes.
+                        </p>
+
+                        <div class="space-y-6">
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Viewport Controls</h3>
+                                <p class="mb-3">The viewport toolbar offers multiple ways to test responsive designs:
+                                </p>
+                                <div class="grid md:grid-cols-2 gap-4 mb-3">
+                                    <div class="border border-gray-200 rounded p-4">
+                                        <div class="flex items-center mb-2">
+                                            <svg data-lucide="monitor" width="20" height="20"
+                                                class="text-primary mr-2"></svg>
+                                            <span class="font-medium">Desktop View</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">Default width: 1280px</p>
+                                    </div>
+                                    <div class="border border-gray-200 rounded p-4">
+                                        <div class="flex items-center mb-2">
+                                            <svg data-lucide="tablet" width="20" height="20"
+                                                class="text-primary mr-2"></svg>
+                                            <span class="font-medium">Tablet View</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">Default width: 768px</p>
+                                    </div>
+                                    <div class="border border-gray-200 rounded p-4">
+                                        <div class="flex items-center mb-2">
+                                            <svg data-lucide="smartphone" width="20" height="20"
+                                                class="text-primary mr-2"></svg>
+                                            <span class="font-medium">Mobile View</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">Default width: 375px</p>
+                                    </div>
+                                    <div class="border border-gray-200 rounded p-4">
+                                        <div class="flex items-center mb-2">
+                                            <svg data-lucide="move-horizontal" width="20" height="20"
+                                                class="text-primary mr-2"></svg>
+                                            <span class="font-medium">Responsive View</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">Freely resizable with drag handles</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 mt-4 bg-amber-50 p-3 rounded">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-600">
+                                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                                        </path>
+                                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                    </svg>
+                                    <span class="text-amber-700">Note: The current viewport dimensions are always displayed in the center of the toolbar.
+                                        </span>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3 flex items-center gap-2">
+                                    <svg data-lucide="settings" width="20" height="20" class="text-primary"></svg>
+                                    Custom Breakpoints
+                                </h3>
+                                <p class="mb-3">You can set custom viewport sizes:</p>
+                                <ol class="list-decimal ml-6 space-y-2">
+                                    <li>Click the settings gear icon <svg data-lucide="settings" width="16" height="16" class="inline"></svg> in the
+                                        viewport toolbar</li>
+                                    <li>Enter custom width values for Desktop, Tablet, and Mobile views</li>
+                                    <li>Click Save to apply your custom breakpoints</li>
+                                </ol>
+                                <div class="flex items-center gap-2 mt-4 bg-blue-50 p-3 rounded">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                    </svg>
+                                    <span class="text-blue-700">Tip: Custom breakpoints are saved between sessions.</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3 flex items-center gap-2">
+                                    <svg data-lucide="move-horizontal" width="20" height="20" class="text-primary"></svg>
+                                    Responsive Mode
+                                </h3>
+                                <p class="mb-3">
+                                    Test fully responsive layouts with interactive resizing:
+                                </p>
+                                <ol class="list-decimal ml-6 space-y-2">
+                                    <li>Click the responsive view button <svg data-lucide="move-horizontal" width="16" height="16"
+                                            class="inline"></svg> in the viewport toolbar</li>
+                                    <li>Drag the handles on either side to resize the viewport</li>
+                                    <li>The current dimensions are displayed in the toolbar</li>
+                                </ol>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3 flex items-center gap-2">
+                                    <svg data-lucide="maximize-2" width="20" height="20" class="text-primary"></svg>
+                                    Resetting the Viewport
+                                </h3>
+                                <p class="mb-3">To return to full-width view, click the reset viewport button <svg data-lucide="maximize-2"
+                                        width="16" height="16" class="inline"></svg> in the toolbar.</p>
+                                <p class="mt-2 text-sm text-gray-600">
+                                    This will restore the viewport to 100% width of the browser panel.
+                                </p>
+                                <div class="flex items-center gap-2 mt-4 bg-blue-50 p-3 rounded">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                    </svg>
+                                    <span class="text-blue-700">Tip: Reset to full width when you want to see the entire page without
+                                        constraints.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Screenshot Tools Section -->
+                    <section id="screenshot-tools" class="section-card bg-white p-6 rounded-xl shadow-sm">
+                        <h2
+                            class="text-2xl font-semibold mb-4 pb-2 border-b border-gray-200 text-gray-900 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round">
                                 <path
@@ -202,11 +819,139 @@
                                 <circle cx="12" cy="13" r="4"></circle>
                             </svg>
                             Screenshot & Annotation
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#export-formats" class="text-[#FF8A65] hover:text-[#ff7043] flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                        </h2>
+
+                        <div class="space-y-6">
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Capturing Screenshots</h3>
+                                <p class="mb-3">
+                                    tracer offers multiple ways to capture visual evidence:
+                                </p>
+                                <ul class="list-disc ml-6 space-y-2">
+                                    <li>
+                                        <strong>Viewport Screenshot:</strong> Press
+                                        <kbd class="kbc-button">Ctrl</kbd>
+                                        +
+                                        <kbd class="kbc-button">S</kbd>
+                                        or click the camera icon <svg data-lucide="camera" width="16" height="16"
+                                            class="inline"></svg> on
+                                        any log entry to capture the current viewport.
+                                    </li>
+                                    <li>
+                                        <strong>Element Screenshot:</strong> Hold
+                                        <kbd class="kbc-button">Ctrl</kbd>
+                                        and click the camera icon <svg data-lucide="camera" width="16" height="16"
+                                            class="inline"></svg> to
+                                        capture just the specific element.
+                                    </li>
+                                    <li>
+                                        <strong>Full Page Screenshot:</strong> Hold
+                                        <kbd class="kbc-button">Ctrl</kbd>
+                                        +
+                                        <kbd class="kbc-button">Shift</kbd>
+                                        and click the camera icon <svg data-lucide="camera" width="16" height="16"
+                                            class="inline"></svg> to
+                                        capture the entire page.
+                                    </li>
+                                </ul>
+                                <div class="flex items-center gap-2 mt-4 bg-blue-50 p-3 rounded">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" class="text-blue-500">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                    </svg>
+                                    <span class="text-blue-700">Tip: You can take screenshots even when logging is
+                                        paused.</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Annotation Tools</h3>
+                                <p class="mb-3">
+                                    After capturing a screenshot, you can annotate it with the following tools:
+                                </p>
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    <div class="border border-gray-200 rounded p-4">
+                                        <div class="flex items-center mb-2">
+                                            <svg data-lucide="arrow-right" width="20" height="20"
+                                                class="text-primary mr-2"></svg>
+                                            <span class="font-medium">Arrow Tool (A)</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">Draw attention arrows on the screenshot.</p>
+                                    </div>
+                                    <div class="border border-gray-200 rounded p-4">
+                                        <div class="flex items-center mb-2">
+                                            <svg data-lucide="square" width="20" height="20"
+                                                class="text-primary mr-2"></svg>
+                                            <span class="font-medium">Rectangle Tool (R)</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">Highlight areas with rectangles.</p>
+                                    </div>
+                                    <div class="border border-gray-200 rounded p-4">
+                                        <div class="flex items-center mb-2">
+                                            <svg data-lucide="circle" width="20" height="20"
+                                                class="text-primary mr-2"></svg>
+                                            <span class="font-medium">Circle Tool (C)</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">Draw circles to emphasize points of interest.
+                                        </p>
+                                    </div>
+                                    <div class="border border-gray-200 rounded p-4">
+                                        <div class="flex items-center mb-2">
+                                            <svg data-lucide="stamp" width="20" height="20"
+                                                class="text-primary mr-2"></svg>
+                                            <span class="font-medium">Stamp Tool (W)</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">Add "PASS" or "FAIL" stamps to the screenshot.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="mt-4">
+                                    <h4 class="font-medium mb-2">Additional Annotation Features:</h4>
+                                    <ul class="list-disc ml-6 space-y-2">
+                                        <li><strong>Emoji Picker:</strong> Insert emoji annotations</li>
+                                        <li><strong>Color Picker:</strong> Select colors for your annotations</li>
+                                        <li><strong>Undo/Redo:</strong> Fix mistakes with undo and redo buttons</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Managing Screenshots</h3>
+                                <p class="mb-3">
+                                    Each screenshot is associated with the log entry where it was captured:
+                                </p>
+                                <ul class="list-disc ml-6 space-y-2">
+                                    <li>Click the screenshot link in a log entry to view and edit the image.</li>
+                                    <li>Use Undo/Redo to refine your annotations.</li>
+                                    <li>Click Save to store the annotated image with the log entry.</li>
+                                    <li>Screenshots are included in exports to provide visual context.</li>
+                                </ul>
+                                <div class="flex items-center gap-2 mt-4 bg-amber-50 p-3 rounded">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" class="text-amber-600">
+                                        <path
+                                            d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                                        </path>
+                                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                    </svg>
+                                    <span class="text-amber-700">Note: Unsaved annotations will be lost when closing the
+                                        screenshot
+                                        view.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Export Formats Section -->
+                    <section id="export-formats" class="section-card bg-white p-6 rounded-xl shadow-sm">
+                        <h2
+                            class="text-2xl font-semibold mb-4 pb-2 border-b border-gray-200 text-gray-900 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -214,690 +959,606 @@
                                 <line x1="12" y1="15" x2="12" y2="3"></line>
                             </svg>
                             Export Formats
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#jira-integration" class="text-[#FF8A65] hover:text-[#ff7043] flex items-center gap-2">
-                            <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg">
+                        </h2>
+
+                        <div class="grid md:grid-cols-3 gap-6">
+                            <div class="feature-card p-5 transition">
+                                <div class="flex items-center mb-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary mr-3">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                                        <line x1="10" y1="9" x2="8" y2="9"></line>
+                                    </svg>
+                                    <h3 class="text-xl font-semibold">Markdown</h3>
+                                </div>
+                                <p class="text-gray-600 mb-3">
+                                    Clean, readable format perfect for documentation and GitHub.
+                                </p>
+                                <ul class="list-disc ml-6 text-sm text-gray-500">
+                                    <li>Structured text with sections</li>
+                                    <li>Code blocks for technical details</li>
+                                    <li>Image references</li>
+                                    <li>Compatible with most documentation tools</li>
+                                </ul>
+                            </div>
+                            <div class="feature-card p-5 transition">
+                                <div class="flex items-center mb-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="file-code"
+                                        class="lucide lucide-file-code text-primary mr-3">
+                                        <path d="M10 12.5 8 15l2 2.5"></path>
+                                        <path d="m14 12.5 2 2.5-2 2.5"></path>
+                                        <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+                                        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"></path>
+                                    </svg>
+                                    <h3 class="text-xl font-semibold">HTML Report</h3>
+                                </div>
+                                <p class="text-gray-600 mb-3">
+                                    Rich, interactive reports with full detail and screenshots.
+                                </p>
+                                <ul class="list-disc ml-6 text-sm text-gray-500">
+                                    <li>Interactive timeline</li>
+                                    <li>Embedded screenshots</li>
+                                    <li>Expandable details</li>
+                                    <li>Styled for readability</li>
+                                </ul>
+                            </div>
+                            <div class="feature-card p-5 transition">
+                                <div class="flex items-center mb-3">
+                                    <svg fill="currentColor" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
+                                        class="text-primary mr-3">
+                                        <path
+                                            d="M0.086,12L12,23.914L23.914,12L12,0.086L0.086,12z M14.598,18.488c-0.091-1.03-0.507-2.014-1.23-2.941L16.914,12
+                                                                                                     l-4.207-4.207c-0.894-0.894-1.339-1.826-1.325-2.771c0.012-0.817,0.359-1.531,0.691-2.034L21.086,12L14.598,18.488z M12,9.914
+                                                                                                     L14.086,12L12,14.086L9.914,12L12,9.914z M9.402,5.512c0.091,1.03,0.507,2.014,1.23,2.941L7.086,12l4.207,4.207
+                                                                                                     c0.894,0.894,1.339,1.826,1.325,2.771c-0.012,0.817-0.359,1.531-0.691,2.034L2.914,12L9.402,5.512z" />
+                                    </svg>
+                                    <h3 class="text-xl font-semibold">JIRA Format</h3>
+                                </div>
+                                <p class="text-gray-600 mb-3">
+                                    Ready-to-paste format for JIRA tickets and comments.
+                                </p>
+                                <ul class="list-disc ml-6 text-sm text-gray-500">
+                                    <li>Atlassian Wiki markup</li>
+                                    <li>Customizable JIRA fields</li>
+                                    <li>CSV Import format</li>
+                                    <li>Organized sections with panels</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 bg-gray-50 p-5 rounded-lg">
+                            <h3 class="text-xl font-semibold mb-3">Using Exports</h3>
+                            <p class="mb-3">To export your action log:</p>
+                            <ol class="list-decimal ml-6 space-y-2">
+                                <li>Click one of the export buttons in the Action Log toolbar:
+                                    <ul class="list-disc ml-6 mt-2">
+                                        <li><svg data-lucide="file-text" width="16" height="16" class="inline"></svg>
+                                            Export as Markdown
+                                        </li>
+                                        <li><svg data-lucide="file-code" width="16" height="16" class="inline"></svg>
+                                            Export as HTML</li>
+                                        <li><svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
+                                            class="inline">
+                                            <path
+                                                d="M0.086,12L12,23.914L23.914,12L12,0.086L0.086,12z M14.598,18.488c-0.091-1.03-0.507-2.014-1.23-2.941L16.914,12
+                                                                                                                                             l-4.207-4.207c-0.894-0.894-1.339-1.826-1.325-2.771c0.012-0.817,0.359-1.531,0.691-2.034L21.086,12L14.598,18.488z M12,9.914
+                                                                                                                                             L14.086,12L12,14.086L9.914,12L12,9.914z M9.402,5.512c0.091,1.03,0.507,2.014,1.23,2.941L7.086,12l4.207,4.207
+                                                                                                                                             c0.894,0.894,1.339,1.826,1.325,2.771c-0.012,0.817-0.359,1.531-0.691,2.034L2.914,12L9.402,5.512z">
+                                            </path>
+                                        </svg>
+                                            Export as JIRA</li>
+                                    </ul>
+                                </li>
+                                <li>For JIRA exports, you can customize fields and issue type (see JIRA Integration
+                                    section)</li>
+                                <li>The exported file will be saved to your downloads folder</li>
+                            </ol>
+                            <div class="flex items-center gap-2 mt-4 bg-blue-50 p-3 rounded">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" class="text-blue-500">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                                <span class="text-blue-700">Tip: You can export just the comments as a JIRA comment by
+                                    holding Ctrl while
+                                    clicking the JIRA export button.</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Commenting System Section -->
+                    <section id="commenting-system" class="section-card bg-white p-6 rounded-xl shadow-sm">
+                        <h2
+                            class="text-2xl font-semibold mb-4 pb-2 border-b border-gray-200 text-gray-900 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            Commenting System
+                        </h2>
+
+                        <p class="text-lg text-gray-600 mb-6">
+                            tracer allows you to add rich-text comments to any recorded event, providing context and
+                            explanations for your
+                            test steps.
+                        </p>
+
+                        <div class="space-y-6">
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Adding Comments</h3>
+                                <p class="mb-3">
+                                    To add a comment to any log entry:
+                                </p>
+                                <ol class="list-decimal ml-6 space-y-2">
+                                    <li>Click the comment icon <svg data-lucide="message-circle" width="16" height="16"
+                                            class="inline"></svg> on the event you want to annotate</li>
+                                    <li>Type your comment in the text editor</li>
+                                    <li>Format your text using the toolbar options</li>
+                                    <li>Click "Save" to attach the comment to the event</li>
+                                </ol>
+                                <div class="mt-4 text-center">
+                                    <figure>
+                                        <img src="assets/comment-editor.png" alt="Comment Editor" class="inline-block rounded-lg shadow" />
+                                        <figcaption class="text-sm text-gray-600 mt-2">Comment editor with formatting toolbar and text area</figcaption>
+                                    </figure>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Text Formatting Options</h3>
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    <div class="border border-gray-200 rounded p-4">
+                                        <div class="flex items-center mb-2">
+                                            <span class="font-bold mr-2">B</span>
+                                            <span class="font-medium">Bold Text</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">Format text as bold for emphasis.</p>
+                                    </div>
+                                    <div class="border border-gray-200 rounded p-4">
+                                        <div class="flex items-center mb-2">
+                                            <span class="underline mr-2">U</span>
+                                            <span class="font-medium">Underline</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">Add underline formatting to text.</p>
+                                    </div>
+                                    <div class="border border-gray-200 rounded p-4">
+                                        <div class="flex items-center mb-2">
+                                            <span class="mr-2">• List</span>
+                                            <span class="font-medium">Bullet List</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">Create bulleted lists for multiple items.</p>
+                                    </div>
+                                    <div class="border border-gray-200 rounded p-4">
+                                        <div class="flex items-center mb-2">
+                                            <span class="text-blue-600 underline mr-2">Link</span>
+                                            <span class="font-medium">Insert Link</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">Add hyperlinks to external resources.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Managing Comments</h3>
+                                <ul class="list-disc ml-6 space-y-2">
+                                    <li>Edit a comment by clicking the comment text and then the edit button</li>
+                                    <li>Delete comments using the delete button on each comment</li>
+                                    <li>All comments are included when exporting to Markdown, HTML, or JIRA formats</li>
+                                </ul>
+                                <div class="flex items-center gap-2 mt-4 bg-blue-50 p-3 rounded">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" class="text-blue-500">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                    </svg>
+                                    <span class="text-blue-700">Tip: Use <kbd class="kbc-button">Ctrl</kbd> + <kbd
+                                            class="kbc-button">Enter</kbd> to save a comment quickly.</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Keyboard Shortcuts for Comments</h3>
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    <div class="flex items-center justify-between p-2 border border-gray-200 rounded">
+                                        <span class="font-medium">Insert/Edit Link</span>
+                                        <kbd class="kbc-button">Ctrl + K</kbd>
+                                    </div>
+                                    <div class="flex items-center justify-between p-2 border border-gray-200 rounded">
+                                        <span class="font-medium">Save Comment</span>
+                                        <kbd class="kbc-button">Ctrl + Enter</kbd>
+                                    </div>
+                                    <div class="flex items-center justify-between p-2 border border-gray-200 rounded">
+                                        <span class="font-medium">Line Break</span>
+                                        <kbd class="kbc-button">Shift + Enter</kbd>
+                                    </div>
+                                    <div class="flex items-center justify-between p-2 border border-gray-200 rounded">
+                                        <span class="font-medium">Auto-create Ordered List</span>
+                                        <span class="text-sm">Type "1." at start of line</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- JIRA Integration Section -->
+                    <section id="jira-integration" class="section-card bg-white p-6 rounded-xl shadow-sm">
+                        <h2 class="text-2xl font-semibold mb-4 pb-2 border-b border-gray-200 text-gray-900 flex items-center gap-2">
+                            <svg fill="currentColor" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
+                                class="text-primary">
                                 <path
-                                    d="M0.086,12L12,23.914L23.914,12L12,0.086L0.086,12z M14.598,18.488c-0.091-1.03-0.507-2.014-1.23-2.941L16.914,12 l-4.207-4.207c-0.894-0.894-1.339-1.826-1.325-2.771c0.012-0.817,0.359-1.531,0.691-2.034L21.086,12L14.598,18.488z M12,9.914 L14.086,12L12,14.086L9.914,12L12,9.914z M9.402,5.512c0.091,1.03,0.507,2.014,1.23,2.941L7.086,12l4.207,4.207 c0.894,0.894,1.339,1.826,1.325,2.771c-0.012,0.817-0.359,1.531-0.691,2.034L2.914,12L9.402,5.512z">
-                                </path>
+                                    d="M0.086,12L12,23.914L23.914,12L12,0.086L0.086,12z M14.598,18.488c-0.091-1.03-0.507-2.014-1.23-2.941L16.914,12
+                                                                                             l-4.207-4.207c-0.894-0.894-1.339-1.826-1.325-2.771c0.012-0.817,0.359-1.531,0.691-2.034L21.086,12L14.598,18.488z M12,9.914
+                                                                                             L14.086,12L12,14.086L9.914,12L12,9.914z M9.402,5.512c0.091,1.03,0.507,2.014,1.23,2.941L7.086,12l4.207,4.207
+                                                                                             c0.894,0.894,1.339,1.826,1.325,2.771c-0.012,0.817-0.359,1.531-0.691,2.034L2.914,12L9.402,5.512z" />
                             </svg>
                             JIRA Integration
-                        </a>
-                    </li>
-                </ul>
-            </div>
+                        </h2>
 
-            <!-- Overview Section -->
-            <section id="overview" class="mb-12">
-                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    <h2 class="text-2xl font-semibold mb-4 text-gray-900 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="#FF8A65" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="16" x2="12" y2="12"></line>
-                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                        </svg>
-                        Overview
-                    </h2>
-                    <p class="text-lg text-gray-600 mb-6">
-                        tracer is a specialized QA tool designed to capture, document, and analyze user interactions
-                        within web applications.
-                        It provides detailed logging of user actions, accessibility information, and technical context
-                        information in real-time.
-                    </p>
+                        <p class="text-lg text-gray-600 mb-6">
+                            tracer provides advanced JIRA integration to streamline your bug reporting workflow.
+                        </p>
 
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div class="feature-card p-5">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"
-                                fill="none" stroke="#FF8A65" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" class="mb-3">
-                                <path d="M14 4.1L12 6"></path>
-                                <path d="m5.1 8-2.9-.8"></path>
-                                <path d="m6 12-1.9 2"></path>
-                                <path d="M7.2 2.2L8 5.1"></path>
-                                <path
-                                    d="M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z">
-                                </path>
-                            </svg>
-                            <h3 class="text-xl font-semibold mb-2">Precision Tracking</h3>
-                            <p class="text-gray-600">
-                                Captures every interaction with exact timestamps, element details, and accessibility
-                                context.
-                            </p>
-                        </div>
-                        <div class="feature-card p-5">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"
-                                fill="none" stroke="#FF8A65" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" class="mb-3">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                            <h3 class="text-xl font-semibold mb-2">Smart Documentation</h3>
-                            <p class="text-gray-600">
-                                Automatically generates comprehensive logs in multiple formats for easy sharing and
-                                integration.
-                            </p>
-                        </div>
-                        <div class="feature-card p-5">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"
-                                fill="none" stroke="#FF8A65" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" class="mb-3">
-                                <path
-                                    d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z">
-                                </path>
-                                <circle cx="12" cy="13" r="4"></circle>
-                            </svg>
-                            <h3 class="text-xl font-semibold mb-2">Visual Evidence</h3>
-                            <p class="text-gray-600">
-                                Capture screenshots with annotation tools to highlight issues and create visual
-                                documentation.
-                            </p>
-                        </div>
-                        <div class="feature-card p-5">
-                            <svg fill="#FF8A65" width="32" height="32" viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg" class="mb-3">
-                                <path
-                                    d="M0.086,12L12,23.914L23.914,12L12,0.086L0.086,12z M14.598,18.488c-0.091-1.03-0.507-2.014-1.23-2.941L16.914,12 l-4.207-4.207c-0.894-0.894-1.339-1.826-1.325-2.771c0.012-0.817,0.359-1.531,0.691-2.034L21.086,12L14.598,18.488z M12,9.914 L14.086,12L12,14.086L9.914,12L12,9.914z M9.402,5.512c0.091,1.03,0.507,2.014,1.23,2.941L7.086,12l4.207,4.207 c0.894,0.894,1.339,1.826,1.325,2.771c-0.012,0.817-0.359,1.531-0.691,2.034L2.914,12L9.402,5.512z">
-                                </path>
-                            </svg>
-                            <h3 class="text-xl font-semibold mb-2">JIRA Integration</h3>
-                            <p class="text-gray-600">
-                                Export your test sessions directly to JIRA with customizable fields and Atlassian Wiki
-                                markup.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </section>
+                        <div class="space-y-6">
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Export to JIRA</h3>
+                                <p class="mb-3">
+                                    Export your test session as a JIRA-ready CSV file:
+                                </p>
+                                <ol class="list-decimal ml-6 space-y-2">
+                                    <li>Click the JIRA export button 
+                                        <svg fill="currentColor" width="16" height="16" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
+                                            class="text-primary mr-1 inline">
+                                            <path
+                                                d="M0.086,12L12,23.914L23.914,12L12,0.086L0.086,12z M14.598,18.488c-0.091-1.03-0.507-2.014-1.23-2.941L16.914,12
+                                                                                                        l-4.207-4.207c-0.894-0.894-1.339-1.826-1.325-2.771c0.012-0.817,0.359-1.531,0.691-2.034L21.086,12L14.598,18.488z M12,9.914
+                                                                                                        L14.086,12L12,14.086L9.914,12L12,9.914z M9.402,5.512c0.091,1.03,0.507,2.014,1.23,2.941L7.086,12l4.207,4.207
+                                                                                                        c0.894,0.894,1.339,1.826,1.325,2.771c-0.012,0.817-0.359,1.531-0.691,2.034L2.914,12L9.402,5.512z" />
+                                        </svg>
+                                        in the Action Log toolbar</li>
+                                    <li>Configure the export settings in the dialog:</li>
+                                    <ul class="list-disc ml-6 mt-2 space-y-1">
+                                        <li>Set the Issue Type (Defect, Story, Task, etc.)</li>
+                                        <li>Enter a Summary for the issue</li>
+                                        <li>Add custom JIRA fields as needed</li>
+                                    </ul>
+                                    <li>Click "Save & Export" to generate the CSV file</li>
+                                    <li>Import the CSV into JIRA using the CSV import feature</li>
+                                </ol>
+                            </div>
 
-            <!-- Getting Started Section -->
-            <section id="getting-started" class="mb-12">
-                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    <h2 class="text-2xl font-semibold mb-4 text-gray-900 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="#FF8A65" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="1 4 1 10 7 10"></polyline>
-                            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
-                        </svg>
-                        Getting Started
-                    </h2>
-
-                    <div class="space-y-6">
-                        <div class="bg-gray-50 p-5 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-3">Basic Navigation</h3>
-                            <p class="mb-3">The tracer interface consists of three main sections:</p>
-                            <ul class="list-disc ml-6 space-y-2">
-                                <li>
-                                    <strong>Browser Panel:</strong> The main viewing area where you can load websites
-                                    for testing.
-                                </li>
-                                <li>
-                                    <strong>Action Log:</strong> The right sidebar that records all user interactions.
-                                </li>
-                                <li>
-                                    <strong>Error Drawer:</strong> The bottom panel that logs any JavaScript errors
-                                    encountered during testing.
-                                </li>
-                            </ul>
-                        </div>
-
-                        <div class="bg-gray-50 p-5 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-3">Loading a Website</h3>
-                            <ol class="list-decimal ml-6 space-y-2">
-                                <li>Enter a URL in the address bar at the top of the application.</li>
-                                <li>Click "Load" or press Enter to navigate to the site.</li>
-                                <li>Use the back and refresh buttons to navigate as you would in a normal browser.</li>
-                            </ol>
-                        </div>
-
-                        <div class="bg-gray-50 p-5 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-3">Start Recording Actions</h3>
-                            <ol class="list-decimal ml-6 space-y-2">
-                                <li>
-                                    Press <kbd class="kbc-button">Ctrl</kbd> + <kbd class="kbc-button">Space</kbd> or
-                                    click the play
-                                    button in the Action Log panel to start logging.
-                                </li>
-                                <li>Interact with the loaded website as you normally would.</li>
-                                <li>
-                                    Each interaction will be recorded in the Action Log panel with detailed
-                                    information.
-                                </li>
-                                <li>
-                                    Press <kbd class="kbc-button">Ctrl</kbd> + <kbd class="kbc-button">Space</kbd> again
-                                    to pause
-                                    logging.
-                                </li>
-                            </ol>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Interaction Tracking Section -->
-            <section id="interaction-tracking" class="mb-12">
-                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    <h2 class="text-2xl font-semibold mb-4 text-gray-900 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="#FF8A65" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M14 4.1L12 6"></path>
-                            <path d="m5.1 8-2.9-.8"></path>
-                            <path d="m6 12-1.9 2"></path>
-                            <path d="M7.2 2.2L8 5.1"></path>
-                            <path
-                                d="M9.037 9.69a.498.498 0 0 1 .653-.653l11 4.5a.5.5 0 0 1-.074.949l-4.349 1.041a1 1 0 0 0-.74.739l-1.04 4.35a.5.5 0 0 1-.95.074z">
-                            </path>
-                        </svg>
-                        Interaction Tracking
-                    </h2>
-                    <p class="text-lg text-gray-600 mb-6">
-                        tracer captures detailed information about various types of user interactions:
-                        <a href="elements.html">Test it out!</a>
-                    </p>
-
-                    <div class="space-y-6">
-                        <div class="bg-gray-50 p-5 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-3">Click Events</h3>
-                            <p class="mb-3">
-                                When you click on an element, tracer records:
-                            </p>
-                            <ul class="list-disc ml-6 space-y-2">
-                                <li>Element type and content</li>
-                                <li>ARIA attributes and accessibility information</li>
-                                <li>XPath location</li>
-                                <li>Parent container context</li>
-                                <li>Element-specific details (e.g., image dimensions, button states)</li>
-                            </ul>
-                            <div class="mt-4">
-                                <div class="code-block">
-                                    {
-                                    "type": "click",
-                                    "element": "button.submit-form",
-                                    "timestamp": "2025-02-11T14:23:42",
-                                    "context": "checkout-form",
-                                    "details": {
-                                    "text": "Submit Order",
-                                    "aria-label": "Complete purchase",
-                                    "disabled": false
-                                    }
-                                    }
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">SharePoint/OneDrive Integration</h3>
+                                <p class="mb-3">
+                                    For screenshots in JIRA exports:
+                                </p>
+                                <ol class="list-decimal ml-6 space-y-2">
+                                    <li>When exporting to JIRA with screenshots, you'll be prompted to save them to a
+                                        folder</li>
+                                    <li>Choose a folder in your SharePoint/OneDrive directory</li>
+                                    <li>Enter your SharePoint username when prompted</li>
+                                    <li>The export will include proper SharePoint links to your screenshots</li>
+                                </ol>
+                                <div class="flex items-center gap-2 mt-4 bg-amber-50 p-3 rounded">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" class="text-amber-600">
+                                        <path
+                                            d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                                        </path>
+                                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                    </svg>
+                                    <span class="text-amber-700">Note: Using SharePoint/OneDrive ensures proper image
+                                        embedding in JIRA
+                                        tickets.</span>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="bg-gray-50 p-5 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-3">Form Interactions</h3>
-                            <p class="mb-3">Form input events capture:</p>
-                            <ul class="list-disc ml-6 space-y-2">
-                                <li>Input type and value</li>
-                                <li>Validation states</li>
-                                <li>Form context</li>
-                                <li>Associated labels</li>
-                            </ul>
-                            <div class="mt-4">
-                                <div class="code-block">
-                                    {
-                                    "type": "input-change",
-                                    "element": "input[type='email']",
-                                    "timestamp": "2025-02-11T14:23:45",
-                                    "details": {
-                                    "value": "user@example.com",
-                                    "valid": true,
-                                    "required": true
-                                    }
-                                    }
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bg-gray-50 p-5 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-3">Navigation Events</h3>
-                            <p class="mb-3">Page navigation events track:</p>
-                            <ul class="list-disc ml-6 space-y-2">
-                                <li>Page title and URL</li>
-                                <li>Load timestamp</li>
-                                <li>Previous page information</li>
-                            </ul>
-                        </div>
-
-                        <div class="bg-gray-50 p-5 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-3">Keyboard Events</h3>
-                            <p class="mb-3">Keyboard interactions record:</p>
-                            <ul class="list-disc ml-6 space-y-2">
-                                <li>Key pressed and modifiers (Ctrl, Shift, Alt)</li>
-                                <li>Target element</li>
-                                <li>Context information</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Keyboard Shortcuts Section -->
-            <section id="keyboard-shortcuts" class="mb-12">
-                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    <h2 class="text-2xl font-semibold mb-4 text-gray-900 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="#FF8A65" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
-                            <path d="M6 8h.001"></path>
-                            <path d="M10 8h.001"></path>
-                            <path d="M14 8h.001"></path>
-                            <path d="M18 8h.001"></path>
-                            <path d="M8 12h.001"></path>
-                            <path d="M12 12h.001"></path>
-                            <path d="M16 12h.001"></path>
-                            <path d="M7 16h10"></path>
-                        </svg>
-                        Keyboard Shortcuts
-                    </h2>
-
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div class="bg-gray-50 p-5 rounded-lg">
-                            <h3 class="text-lg font-semibold mb-3">Global Shortcuts</h3>
-                            <div class="space-y-3">
-                                <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
-                                    <span class="font-medium">Toggle Logging</span>
-                                    <kbd class="kbc-button">Ctrl + Space</kbd>
-                                </div>
-                                <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
-                                    <span class="font-medium">Toggle Sidebar</span>
-                                    <kbd class="kbc-button">Ctrl + T</kbd>
-                                </div>
-                                <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
-                                    <span class="font-medium">Take Screenshot</span>
-                                    <kbd class="kbc-button">Ctrl + S</kbd>
-                                </div>
-                                <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
-                                    <span class="font-medium">Element Screenshot</span>
-                                    <kbd class="kbc-button">Ctrl + Click (on screenshot icon)</kbd>
-                                </div>
-                                <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
-                                    <span class="font-medium">Full Page Screenshot</span>
-                                    <kbd class="kbc-button">Ctrl + Shift + Click (on screenshot icon)</kbd>
-                                </div>
-                                <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
-                                    <span class="font-medium">Show All Shortcuts</span>
-                                    <kbd class="kbc-button">F1</kbd>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bg-gray-50 p-5 rounded-lg">
-                            <h3 class="text-lg font-semibold mb-3">Annotation Shortcuts</h3>
-                            <div class="space-y-3">
-                                <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
-                                    <span class="font-medium">Arrow Tool</span>
-                                    <kbd class="kbc-button">A</kbd>
-                                </div>
-                                <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
-                                    <span class="font-medium">Rectangle Tool</span>
-                                    <kbd class="kbc-button">R</kbd>
-                                </div>
-                                <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
-                                    <span class="font-medium">Circle Tool</span>
-                                    <kbd class="kbc-button">C</kbd>
-                                </div>
-                                <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
-                                    <span class="font-medium">Stamp Tool</span>
-                                    <kbd class="kbc-button">W</kbd>
-                                </div>
-                                <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
-                                    <span class="font-medium">Undo</span>
-                                    <kbd class="kbc-button">Ctrl + Z</kbd>
-                                </div>
-                                <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
-                                    <span class="font-medium">Redo</span>
-                                    <kbd class="kbc-button">Ctrl + Shift + Z</kbd>
-                                </div>
-                                <div class="flex items-center justify-between p-2 hover:bg-gray-100 rounded">
-                                    <span class="font-medium">Save Annotation</span>
-                                    <kbd class="kbc-button">Ctrl + S</kbd>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Responsive Testing Section -->
-            <section id="responsive-testing" class="mb-12">
-                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    <h2 class="text-2xl font-semibold mb-4 text-gray-900 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="#FF8A65" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                            <line x1="8" y1="21" x2="16" y2="21"></line>
-                            <line x1="12" y1="17" x2="12" y2="21"></line>
-                        </svg>
-                        Responsive Testing
-                    </h2>
-
-                    <p class="text-lg text-gray-600 mb-6">
-                        tracer includes powerful tools for testing responsive layouts across different device sizes.
-                    </p>
-
-                    <div class="space-y-6">
-                        <div class="bg-gray-50 p-5 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-3">Viewport Presets</h3>
-                            <p class="mb-3">Quickly switch between common device sizes:</p>
-                            <ul class="list-disc ml-6 space-y-2">
-                                <li><strong>Desktop:</strong> 1280px (default)</li>
-                                <li><strong>Tablet:</strong> 768px</li>
-                                <li><strong>Mobile:</strong> 375px</li>
-                            </ul>
-                        </div>
-
-                        <div class="bg-gray-50 p-5 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-3">Custom Breakpoints</h3>
-                            <p class="mb-3">You can set custom viewport sizes:</p>
-                            <ol class="list-decimal ml-6 space-y-2">
-                                <li>Click the settings gear icon in the viewport toolbar</li>
-                                <li>Enter custom width values for Desktop, Tablet, and Mobile views</li>
-                                <li>Click Save to apply your custom breakpoints</li>
-                            </ol>
-                        </div>
-
-                        <div class="bg-gray-50 p-5 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-3">Responsive Mode</h3>
-                            <p class="mb-3">
-                                Test fully responsive layouts with interactive resizing:
-                            </p>
-                            <ol class="list-decimal ml-6 space-y-2">
-                                <li>Click the responsive view button in the viewport toolbar</li>
-                                <li>Drag the handles on either side to resize the viewport</li>
-                                <li>The current dimensions are displayed in the toolbar</li>
-                            </ol>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Screenshot Tools Section -->
-            <section id="screenshot-tools" class="mb-12">
-                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    <h2 class="text-2xl font-semibold mb-4 text-gray-900 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="#FF8A65" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z">
-                            </path>
-                            <circle cx="12" cy="13" r="4"></circle>
-                        </svg>
-                        Screenshot & Annotation
-                    </h2>
-
-                    <div class="space-y-6">
-                        <div class="bg-gray-50 p-5 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-3">Capturing Screenshots</h3>
-                            <p class="mb-3">
-                                tracer offers multiple ways to capture visual evidence:
-                            </p>
-                            <ul class="list-disc ml-6 space-y-2">
-                                <li>
-                                    <strong>Viewport Screenshot:</strong> Press
-                                    <kbd class="kbc-button">Ctrl</kbd>
-                                    +
-                                    <kbd class="kbc-button">S</kbd>
-                                    or click the camera icon on any log entry to capture the current viewport.
-                                </li>
-                                <li>
-                                    <strong>Element Screenshot:</strong> Hold
-                                    <kbd class="kbc-button">Ctrl</kbd>
-                                    and click the camera icon to capture just the specific element.
-                                </li>
-                                <li>
-                                    <strong>Full Page Screenshot:</strong> Hold
-                                    <kbd class="kbc-button">Ctrl</kbd>
-                                    +
-                                    <kbd class="kbc-button">Shift</kbd>
-                                    and click the camera icon to capture the entire page.
-                                </li>
-                            </ul>
-                        </div>
-
-                        <div class="bg-gray-50 p-5 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-3">Annotation Tools</h3>
-                            <p class="mb-3">
-                                After capturing a screenshot, you can annotate it with the following tools:
-                            </p>
-                            <ul class="list-disc ml-6 space-y-2">
-                                <li>
-                                    <strong>Arrow Tool (A):</strong> Draw attention arrows on the screenshot.
-                                </li>
-                                <li>
-                                    <strong>Rectangle Tool (R):</strong> Highlight areas with rectangles.
-                                </li>
-                                <li>
-                                    <strong>Circle Tool (C):</strong> Draw circles to emphasize points of interest.
-                                </li>
-                                <li>
-                                    <strong>Stamp Tool (W):</strong> Add "PASS" or "FAIL" stamps to the screenshot.
-                                </li>
-                                <li>
-                                    <strong>Color Picker:</strong> Select a color for your annotations.
-                                </li>
-                            </ul>
-                        </div>
-
-                        <div class="bg-gray-50 p-5 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-3">Managing Screenshots</h3>
-                            <p class="mb-3">
-                                Each screenshot is associated with the log entry where it was captured:
-                            </p>
-                            <ul class="list-disc ml-6 space-y-2">
-                                <li>Click the screenshot link in a log entry to view and edit the image.</li>
-                                <li>Use Undo/Redo to refine your annotations.</li>
-                                <li>Click Save to store the annotated image with the log entry.</li>
-                                <li>Screenshots are included in exports to provide visual context.</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Export Formats Section -->
-            <section id="export-formats" class="mb-12">
-                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    <h2 class="text-2xl font-semibold mb-4 text-gray-900 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="#FF8A65" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
-                        Export Formats
-                    </h2>
-
-                    <div class="grid md:grid-cols-3 gap-6">
-                        <div class="feature-card p-5">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                fill="none" stroke="#FF8A65" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" class="mb-3">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <polyline points="14 2 14 8 20 8"></polyline>
-                                <line x1="16" y1="13" x2="8" y2="13"></line>
-                                <line x1="16" y1="17" x2="8" y2="17"></line>
-                                <line x1="10" y1="9" x2="8" y2="9"></line>
-                            </svg>
-                            <h3 class="text-xl font-semibold mb-2">Markdown</h3>
-                            <p class="text-gray-600 mb-3">
-                                Clean, readable format perfect for documentation and GitHub.
-                            </p>
-                            <ul class="list-disc ml-6 text-sm text-gray-500">
-                                <li>Structured text with sections</li>
-                                <li>Code blocks for technical details</li>
-                                <li>Image references</li>
-                                <li>Compatible with most documentation tools</li>
-                            </ul>
-                        </div>
-                        <div class="feature-card p-5">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                fill="none" stroke="#FF8A65" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" class="mb-3">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <polyline points="14 2 14 8 20 8"></polyline>
-                                <line x1="16" y1="13" x2="8" y2="13"></line>
-                                <line x1="16" y1="17" x2="8" y2="17"></line>
-                                <polyline points="10 9 9 9 8 9"></polyline>
-                            </svg>
-                            <h3 class="text-xl font-semibold mb-2">HTML Report</h3>
-                            <p class="text-gray-600 mb-3">
-                                Rich, interactive reports with full detail and screenshots.
-                            </p>
-                            <ul class="list-disc ml-6 text-sm text-gray-500">
-                                <li>Interactive timeline</li>
-                                <li>Embedded screenshots</li>
-                                <li>Expandable details</li>
-                                <li>Styled for readability</li>
-                            </ul>
-                        </div>
-                        <div class="feature-card p-5">
-                            <svg fill="#FF8A65" width="24" height="24" viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg" class="mb-3">
-                                <path
-                                    d="M0.086,12L12,23.914L23.914,12L12,0.086L0.086,12z M14.598,18.488c-0.091-1.03-0.507-2.014-1.23-2.941L16.914,12 l-4.207-4.207c-0.894-0.894-1.339-1.826-1.325-2.771c0.012-0.817,0.359-1.531,0.691-2.034L21.086,12L14.598,18.488z M12,9.914 L14.086,12L12,14.086L9.914,12L12,9.914z M9.402,5.512c0.091,1.03,0.507,2.014,1.23,2.941L7.086,12l4.207,4.207 c0.894,0.894,1.339,1.826,1.325,2.771c-0.012,0.817-0.359,1.531-0.691,2.034L2.914,12L9.402,5.512z">
-                                </path>
-                            </svg>
-                            <h3 class="text-xl font-semibold mb-2">JIRA Format</h3>
-                            <p class="text-gray-600 mb-3">
-                                Ready-to-paste format for JIRA tickets and comments.
-                            </p>
-                            <ul class="list-disc ml-6 text-sm text-gray-500">
-                                <li>Atlassian Wiki markup</li>
-                                <li>Customizable JIRA fields</li>
-                                <li>CSV Import format</li>
-                                <li>Organized sections with panels</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="mt-8 bg-gray-50 p-5 rounded-lg">
-                        <h3 class="text-xl font-semibold mb-3">Using Exports</h3>
-                        <p class="mb-3">To export your action log:</p>
-                        <ol class="list-decimal ml-6 space-y-2">
-                            <li>Click one of the export buttons in the Action Log toolbar</li>
-                            <li>Choose your preferred format (Markdown, HTML, or JIRA)</li>
-                            <li>For JIRA exports, you can customize fields and issue type</li>
-                            <li>The exported file will be saved to your downloads folder</li>
-                        </ol>
-                    </div>
-                </div>
-            </section>
-
-            <!-- JIRA Integration Section -->
-            <section id="jira-integration" class="mb-12">
-                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    <h2 class="text-2xl font-semibold mb-4 text-gray-900 flex items-center gap-2">
-                        <svg fill="#FF8A65" width="24" height="24" viewBox="0 0 24 24"
-                            xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M0.086,12L12,23.914L23.914,12L12,0.086L0.086,12z M14.598,18.488c-0.091-1.03-0.507-2.014-1.23-2.941L16.914,12 l-4.207-4.207c-0.894-0.894-1.339-1.826-1.325-2.771c0.012-0.817,0.359-1.531,0.691-2.034L21.086,12L14.598,18.488z M12,9.914 L14.086,12L12,14.086L9.914,12L12,9.914z M9.402,5.512c0.091,1.03,0.507,2.014,1.23,2.941L7.086,12l4.207,4.207 c0.894,0.894,1.339,1.826,1.325,2.771c-0.012,0.817-0.359,1.531-0.691,2.034L2.914,12L9.402,5.512z">
-                            </path>
-                        </svg>
-                        JIRA Integration
-                    </h2>
-
-                    <p class="text-lg text-gray-600 mb-6">
-                        tracer provides advanced JIRA integration to streamline your bug reporting workflow.
-                    </p>
-
-                    <div class="space-y-6">
-                        <div class="bg-gray-50 p-5 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-3">Export to JIRA</h3>
-                            <p class="mb-3">
-                                Export your test session as a JIRA-ready CSV file:
-                            </p>
-                            <ol class="list-decimal ml-6 space-y-2">
-                                <li>Click the JIRA export button in the Action Log toolbar</li>
-                                <li>Configure the export settings in the dialog:</li>
-                                <ul class="list-disc ml-6 mt-2 space-y-1">
-                                    <li>Set the Issue Type (Defect, Story, Task, etc.)</li>
-                                    <li>Provide a Summary for the issue</li>
-                                    <li>Add custom JIRA fields as needed</li>
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Atlassian Wiki Markup</h3>
+                                <p class="mb-3">
+                                    tracer formats your logs with Atlassian Wiki markup for rich formatting in
+                                    JIRA:
+                                </p>
+                                <ul class="list-disc ml-6 space-y-2">
+                                    <li>Structured headings for each section</li>
+                                    <li>Formatted panels for different types of information</li>
+                                    <li>Code blocks for technical details</li>
+                                    <li>Image references for screenshots</li>
+                                    <li>Bulleted and numbered lists</li>
+                                    <li>Color-coded text for highlighting important information</li>
                                 </ul>
-                                <li>Click "Save & Export" to generate the CSV file</li>
-                                <li>Import the CSV into JIRA using the CSV import feature</li>
-                            </ol>
-                        </div>
+                            </div>
 
-                        <div class="bg-gray-50 p-5 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-3">Atlassian Wiki Markup</h3>
-                            <p class="mb-3">
-                                tracer formats your logs with Atlassian Wiki markup for rich formatting in
-                                JIRA:
-                            </p>
-                            <ul class="list-disc ml-6 space-y-2">
-                                <li>Structured headings for each section</li>
-                                <li>Formatted panels for different types of information</li>
-                                <li>Code blocks for technical details</li>
-                                <li>Image references for screenshots</li>
-                                <li>Bulleted and numbered lists</li>
-                                <li>Color-coded text for highlighting important information</li>
-                            </ul>
-                        </div>
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">JIRA Comment Export</h3>
+                                <p class="mb-3">
+                                    You can also export just the comments section for quick JIRA updates:
+                                </p>
+                                <ol class="list-decimal ml-6 space-y-2">
+                                    <li>Hold <kbd class="kbc-button">Ctrl</kbd> while clicking the JIRA export button
+                                    </li>
+                                    <li>This opens a dialog with just the comments formatted as JIRA Wiki markup</li>
+                                    <li>Copy the text and paste it directly into a JIRA comment</li>
+                                </ol>
+                            </div>
 
-                        <div class="bg-gray-50 p-5 rounded-lg">
-                            <h3 class="text-xl font-semibold mb-3">Custom Fields</h3>
-                            <p class="mb-3">Add custom JIRA fields to your export:</p>
-                            <ul class="list-disc ml-6 space-y-2">
-                                <li>Component, Priority, Labels, Assignee, etc.</li>
-                                <li>Recently used fields are saved for quick access</li>
-                                <li>Fields are validated to ensure proper JIRA import</li>
-                            </ul>
-                            <p class="mt-3 text-sm text-gray-500">
-                                Note: Custom fields must match your JIRA instance configuration. Consult your JIRA
-                                administrator for
-                                available fields.
-                            </p>
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Custom Fields</h3>
+                                <p class="mb-3">Add custom JIRA fields to your export:</p>
+                                <ul class="list-disc ml-6 space-y-2">
+                                    <li>Component, Priority, Labels, Assignee, etc.</li>
+                                    <li>Recently used fields are saved for quick access</li>
+                                    <li>Fields are validated to ensure proper JIRA import</li>
+                                </ul>
+                                <div class="flex items-center gap-2 mt-4 bg-amber-50 p-3 rounded">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-600">
+                                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                                        </path>
+                                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                    </svg>
+                                    <span class="text-amber-700">Note: Custom fields must match your JIRA instance configuration. Consult your JIRA
+                                    administrator for available fields.</span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-            </section>
+                    </section>
 
-            <!-- Footer / Resources Section -->
-            <section class="mb-12">
-                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    <h2 class="text-2xl font-semibold mb-4 text-gray-900 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="#FF8A65" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-                        </svg>
-                        Additional Resources
-                    </h2>
+                    <!-- Error Logging Section -->
+                    <section id="error-logging" class="section-card bg-white p-6 rounded-xl shadow-sm">
+                        <h2
+                            class="text-2xl font-semibold mb-4 pb-2 border-b border-gray-200 text-gray-900 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path
+                                    d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                                </path>
+                                <line x1="12" y1="9" x2="12" y2="13"></line>
+                                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                            </svg>
+                            Error Logging
+                        </h2>
 
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div class="feature-card p-5">
-                            <h3 class="text-xl font-semibold mb-2">Keyboard Shortcuts Reference</h3>
-                            <p class="text-gray-600 mb-2">
-                                Access the complete keyboard shortcuts reference at any time by pressing
-                                <kbd class="keyboard-key">F1</kbd> while using tracer.
-                            </p>
-                        </div>
-                        <div class="feature-card p-5">
-                            <h3 class="text-xl font-semibold mb-2">Error Logging</h3>
-                            <p class="text-gray-600 mb-2">
-                                Use the error drawer at the bottom of the screen to view and export JavaScript errors
-                                encountered
-                                during testing.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="mt-8 text-center">
-                        <p class="text-gray-600">
-                            For additional questions or feedback, please contact your administrator.
+                        <p class="text-lg text-gray-600 mb-6">
+                            tracer automatically captures JavaScript errors that occur during testing, helping you
+                            identify issues in the
+                            application.
                         </p>
-                        <p class="text-sm text-gray-500 mt-4">
-                            &copy; 2025 tracer. All rights reserved.
+
+                        <div class="space-y-6">
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Error Drawer</h3>
+                                <p class="mb-3">
+                                    JavaScript errors are tracked in the Error Drawer at the bottom of the screen:
+                                </p>
+                                <ul class="list-disc ml-6 space-y-2">
+                                    <li>When errors occur, the error count appears on the error drawer button <svg
+                                            data-lucide="panel-bottom-open" width="16" height="16" class="inline"></svg>
+                                    </li>
+                                    <li>The button turns red to indicate errors are present</li>
+                                    <li>Click the button to open the Error Drawer and view detailed error information
+                                    </li>
+                                </ul>
+                                <div class="mt-4 text-center">
+                                    <figure>
+                                        <img src="assets/error-drawer.png" alt="Error Drawer" class="inline-block rounded-lg shadow" />
+                                        <figcaption class="text-sm text-gray-600 mt-2">Error drawer showing JavaScript errors with details</figcaption>
+                                    </figure>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Error Details</h3>
+                                <p class="mb-3">
+                                    Each error entry includes:
+                                </p>
+                                <ul class="list-disc ml-6 space-y-2">
+                                    <li>Error type and message</li>
+                                    <li>Source file and line number</li>
+                                    <li>Stack trace for debugging</li>
+                                    <li>Timestamp of when the error occurred</li>
+                                </ul>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Managing Errors</h3>
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    <div class="border border-gray-200 rounded p-4">
+                                        <div class="flex items-center mb-2">
+                                            <svg data-lucide="clipboard" width="20" height="20"
+                                                class="text-primary mr-2"></svg>
+                                            <span class="font-medium">Copy Error Details</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">Copy error information to clipboard with the
+                                            copy button.</p>
+                                    </div>
+                                    <div class="border border-gray-200 rounded p-4">
+                                        <div class="flex items-center mb-2">
+                                            <svg data-lucide="download" width="20" height="20"
+                                                class="text-primary mr-2"></svg>
+                                            <span class="font-medium">Export Errors</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">Export the entire error log to a text file.</p>
+                                    </div>
+                                    <div class="border border-gray-200 rounded p-4">
+                                        <div class="flex items-center mb-2">
+                                            <svg data-lucide="trash" width="20" height="20"
+                                                class="text-primary mr-2"></svg>
+                                            <span class="font-medium">Clear Errors</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">Clear all errors from the log.</p>
+                                    </div>
+                                    <div class="border border-gray-200 rounded p-4">
+                                        <div class="flex items-center mb-2">
+                                            <svg data-lucide="panel-bottom-close" width="20" height="20"
+                                                class="text-primary mr-2"></svg>
+                                            <span class="font-medium">Toggle Drawer</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">Hide/show the error drawer.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3 flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                        class="text-primary">
+                                        <line x1="4" y1="9" x2="20" y2="9"></line>
+                                        <line x1="4" y1="15" x2="20" y2="15"></line>
+                                        <line x1="10" y1="3" x2="8" y2="21"></line>
+                                        <line x1="16" y1="3" x2="14" y2="21"></line>
+                                    </svg>
+                                    Error Filtering
+                                </h3>
+                                <p class="mb-3">
+                                    tracer automatically filters out common non-critical errors to reduce noise:
+                                </p>
+                                <ul class="list-disc ml-6 space-y-2">
+                                    <li>Console warnings and info messages</li>
+                                    <li>Navigation aborted errors</li>
+                                    <li>Standard browser notification messages</li>
+                                </ul>
+                                <p class="mt-2 text-sm text-gray-600">
+                                    This ensures the error log contains only meaningful issues that might affect application behavior.
+                                </p>
+                                <div class="flex items-center gap-2 mt-4 bg-blue-50 p-3 rounded">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                    </svg>
+                                    <span class="text-blue-700">Tip: The error log automatically clears when you refresh the page.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Finding Text Section -->
+                    <section id="finding-text" class="section-card bg-white p-6 rounded-xl shadow-sm">
+                        <h2
+                            class="text-2xl font-semibold mb-4 pb-2 border-b border-gray-200 text-gray-900 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            Finding Text
+                        </h2>
+
+                        <p class="text-lg text-gray-600 mb-6">
+                            tracer includes a powerful find-in-page feature to help you locate specific text within the
+                            current webpage.
                         </p>
-                    </div>
+
+                        <div class="space-y-6">
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3">Using Find in Page</h3>
+                                <p class="mb-3">
+                                    To search for text within the current page:
+                                </p>
+                                <ol class="list-decimal ml-6 space-y-2">
+                                    <li>Press <kbd class="kbc-button">Ctrl</kbd> + <kbd class="kbc-button">F</kbd> to
+                                        open the find bar</li>
+                                    <li>Type your search query in the input field</li>
+                                    <li>Results will be highlighted in the page as you type</li>
+                                    <li>Press <kbd class="kbc-button">Esc</kbd> or click the X button to close the find bar</li>
+                                    </ol>
+                            </div>
+
+                            <div class="bg-gray-50 p-5 rounded-lg">
+                                <h3 class="text-xl font-semibold mb-3 flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                        class="text-primary">
+                                        <circle cx="11" cy="11" r="8"></circle>
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                    </svg>
+                                    Find Bar Features
+                                </h3>
+                                <p class="mb-3">
+                                    The find bar provides real-time feedback as you type. Results highlight in the page, the input border turns red
+                                    if no matches are found, and you can click outside the find bar to dismiss it.
+                                </p>
+                                <div class="flex items-center gap-2 mt-4 bg-blue-50 p-3 rounded">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                    </svg>
+                                    <span class="text-blue-700">Tip: You can press Enter to cycle through multiple matches on the page.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Resources Section -->
+                    <section id="additional-resources" class="section-card bg-white p-6 rounded-xl shadow-sm">
+                        <h2
+                            class="text-2xl font-semibold mb-4 pb-2 border-b border-gray-200 text-gray-900 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                            </svg>
+                            Additional Resources
+                        </h2>
+
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="feature-card p-5">
+                                <h3 class="text-xl font-semibold mb-2">Test Elements Page</h3>
+                                <p class="text-gray-600 mb-2">
+                                    tracer includes a test page with all HTML elements for practicing interaction
+                                    tracking.
+                                </p>
+                                <a href="elements.html"
+                                    class="inline-flex items-center text-primary hover:text-primary-hover">
+                                    <span>View Test Elements Page</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" class="ml-1">
+                                        <path d="M5 12h14"></path>
+                                        <path d="m12 5 7 7-7 7"></path>
+                                    </svg>
+                                </a>
+                            </div>
+
+                            <div class="feature-card p-5">
+                                <h3 class="text-xl font-semibold mb-2">Keyboard Shortcuts Reference</h3>
+                                <p class="text-gray-600 mb-2">
+                                    Access the complete keyboard shortcuts reference at any time by pressing
+                                    <kbd class="kbc-button">F1</kbd> while using tracer.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 text-center">
+                            <p class="text-gray-600">
+                                For additional questions or feedback, contact <a href="mailto:willcunningham@shelterinsurance.com">Will Cunningham</a>.
+                            </p>
+                            <p class="text-sm text-gray-500 mt-4">
+                                &copy; 2025 tracer. All rights reserved.
+                            </p>
+                        </div>
+                    </section>
                 </div>
-            </section>
+            </div>
         </main>
     </div>
 
@@ -923,23 +1584,131 @@
             });
 
             // Simple doc search: hide/show sections based on query
+            // Simple doc search: highlight matching content
             const searchInput = document.getElementById('doc-search');
             searchInput.addEventListener('input', () => {
                 const query = searchInput.value.toLowerCase();
                 const sections = document.querySelectorAll('main section');
 
+                // Remove existing highlights
+                document.querySelectorAll('mark.search-highlight').forEach(mark => {
+                    const parent = mark.parentNode;
+                    parent.replaceChild(document.createTextNode(mark.textContent), mark);
+                    parent.normalize();
+                });
+
+                if (!query) {
+                    sections.forEach(section => {
+                        section.style.display = '';
+                    });
+                    return;
+                }
+
                 sections.forEach(section => {
-                    // Grab the entire text content of the section
+                    // First check if the section contains the query
                     const text = section.textContent.toLowerCase();
 
-                    // If query is empty or text includes query, show section; otherwise hide it
-                    if (!query || text.includes(query)) {
+                    if (text.includes(query)) {
                         section.style.display = '';
+
+                        // Highlight matching text
+                        const textNodes = [];
+                        const walker = document.createTreeWalker(
+                            section,
+                            NodeFilter.SHOW_TEXT,
+                            {
+                                acceptNode: function (node) {
+                                    // Skip script and style elements
+                                    if (node.parentNode.nodeName === 'SCRIPT' ||
+                                        node.parentNode.nodeName === 'STYLE' ||
+                                        node.parentNode.nodeName === 'CODE' ||
+                                        node.parentNode.nodeName === 'KBD' ||
+                                        node.parentNode.tagName === 'MARK') {
+                                        return NodeFilter.FILTER_REJECT;
+                                    }
+                                    return NodeFilter.FILTER_ACCEPT;
+                                }
+                            },
+                            false
+                        );
+
+                        while (walker.nextNode()) {
+                            textNodes.push(walker.currentNode);
+                        }
+
+                        textNodes.forEach(textNode => {
+                            const content = textNode.nodeValue.toLowerCase();
+                            const index = content.indexOf(query);
+
+                            if (index >= 0) {
+                                const range = document.createRange();
+                                range.setStart(textNode, index);
+                                range.setEnd(textNode, index + query.length);
+
+                                const highlight = document.createElement('mark');
+                                highlight.className = 'search-highlight';
+                                highlight.style.backgroundColor = '#FBBF24';
+                                highlight.style.padding = '0 2px';
+                                highlight.style.borderRadius = '2px';
+
+                                range.surroundContents(highlight);
+                            }
+                        });
                     } else {
                         section.style.display = 'none';
                     }
                 });
             });
+
+            // Apply active state to sidebar links based on scroll position
+            function highlightCurrentSection() {
+                const scrollPosition = window.scrollY;
+
+                // Get all section elements
+                const sections = document.querySelectorAll('section[id]');
+
+                // Find the current section
+                let currentSection = null;
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop - 100;
+                    const sectionHeight = section.offsetHeight;
+
+                    if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
+                        currentSection = section.id;
+                    }
+                });
+
+                // Remove active class from all links
+                document.querySelectorAll('.toc-card a').forEach(link => {
+                    link.classList.remove('font-bold');
+                });
+
+                // Add active class to the current section link
+                if (currentSection) {
+                    const activeLink = document.querySelector(`.toc-card a[href="#${currentSection}"]`);
+                    if (activeLink) {
+                        activeLink.classList.add('font-bold');
+                    }
+                }
+            }
+
+            // Add scroll event listener
+            window.addEventListener('scroll', highlightCurrentSection);
+
+            // Initialize active section
+            highlightCurrentSection();
+
+            tailwind.config = {
+                theme: {
+                    extend: {
+                         colors: {
+                            primary: '#D35432',
+                            'primary-hover': '#B84326',
+                            'primary-focus': '#D14F36'
+                        }
+                    }
+                }
+            };
         });
     </script>
 </body>
