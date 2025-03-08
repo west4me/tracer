@@ -2660,6 +2660,25 @@ document.addEventListener('DOMContentLoaded', () => {
             const logData = event.args[0];
             console.log('Log event data:', logData);
 
+            // Check for screenshot trigger from webview
+            if (logData.isScreenshotTrigger) {
+                console.log('Screenshot trigger received from webview');
+
+                // Create a proper screenshot event instead of using the keydown event
+                activeScreenshotEvent = {
+                    action: 'screenshot',
+                    timestamp: new Date().toISOString(),
+                    details: logData.details || {}
+                };
+
+                // Add to event log array
+                eventLog.push(activeScreenshotEvent);
+
+                // Now take the screenshot
+                window.electron.ipcRenderer.send('take-screenshot');
+                return;  // Return to prevent normal event processing
+            }
+
             // Always allow screenshots, regardless of logging state
             if (logData.screenshot || logData.elementCapture) {
                 console.log('Processing screenshot/element capture event');
@@ -2753,9 +2772,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.electron.ipcRenderer.on('screenshot-taken', (ipcEvent, base64Data) => {
+        // If no active screenshot event, create one now
         if (!activeScreenshotEvent) {
-            console.warn("No active event to attach screenshot to!");
-            return;
+            activeScreenshotEvent = {
+                action: 'screenshot',
+                timestamp: new Date().toISOString(),
+                details: {} // Basic empty details
+            };
+
+            // Add to event log array
+            eventLog.push(activeScreenshotEvent);
+
+            // Since this is a new event, we need to add it to the UI first
+            updateLogUI(activeScreenshotEvent);
         }
 
         // Attach the screenshot data to the active event object
@@ -2781,55 +2810,76 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (!targetEntry) {
-            console.error("Could not find matching log entry!");
-            return;
+            console.error("Could not find matching log entry - creating one now!");
+            // Create the entry in the UI if it doesn't exist yet
+            targetEntry = document.createElement('div');
+            targetEntry.className = "p-3 rounded bg-gray-100 relative flex flex-col";
+            targetEntry.dataset.timestamp = activeScreenshotEvent.timestamp;
+
+            // Add a basic header
+            targetEntry.innerHTML = `
+            <div class="flex-1">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-gray-500 border border-gray-200 rounded px-1 py-0.5">#${eventLog.length}</span>
+                        <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-semibold">
+                            SCREENSHOT
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end mt-4 pt-2 border-t border-gray-200">
+                <span class="text-gray-400 text-[11px]">${formatTimestamp(activeScreenshotEvent.timestamp)}</span>
+            </div>
+        `;
+
+            logArea.appendChild(targetEntry);
         }
 
         const screenshotRow = document.createElement('div');
+        screenshotRow.className = "grid grid-cols-[120px,1fr] gap-2 w-full screenshot-row";
         screenshotRow.innerHTML = `
-            <div class="grid grid-cols-[120px,1fr] gap-2 w-full">
-                <span class="font-medium">
-                    ${isElementCapture ? 'Element Capture:' : (activeScreenshotEvent.fullPage ? 'FullScreenshot:' : 'Screenshot:')}
-                </span>
-                <div class="flex items-center justify-between w-full">
-                    <button
-                        class="text-blue-600 hover:text-blue-800 underline flex items-center"
-                        title="${isElementCapture
+        <span class="font-medium">
+            ${isElementCapture ? 'Element Capture:' : (activeScreenshotEvent.fullPage ? 'FullScreenshot:' : 'Screenshot:')}
+        </span>
+        <div class="flex items-center justify-between w-full">
+            <button
+                class="text-blue-600 hover:text-blue-800 underline flex items-center"
+                title="${isElementCapture
                 ? 'Element capture - full size'
                 : (activeScreenshotEvent.fullPage
                     ? 'Full-page screenshot - full size'
                     : 'Screenshot - full size')}"
-                    >
-                        <svg
-                            data-lucide="${isElementCapture
+            >
+                <svg
+                    data-lucide="${isElementCapture
                 ? 'scan'
                 : (activeScreenshotEvent.fullPage ? 'camera' : 'image')}"
-                            width="16"
-                            height="16"
-                            class="mr-2"
-                        ></svg>
-                        <span>
-                            ${isElementCapture
+                    width="16"
+                    height="16"
+                    class="mr-2"
+                ></svg>
+                <span>
+                    ${isElementCapture
                 ? 'Capture...png'
                 : (activeScreenshotEvent.fullPage
                     ? 'FullScreenshot...png'
                     : 'Screenshot...png')}
-                        </span>
-                    </button>
-                    <button
-                        class="delete-screenshot-btn text-gray-500 hover:text-red-500 transition-colors"
-                        title="Delete ${isElementCapture
+                </span>
+            </button>
+            <button
+                class="delete-screenshot-btn text-gray-500 hover:text-red-500 transition-colors"
+                title="Delete ${isElementCapture
                 ? 'capture'
                 : (activeScreenshotEvent.fullPage
                     ? 'full-page screenshot'
                     : 'screenshot')
             }"
-                    >
-                        <svg data-lucide="trash" width="16" height="16"></svg>
-                    </button>
-                </div>
-            </div>
-        `;
+            >
+                <svg data-lucide="trash" width="16" height="16"></svg>
+            </button>
+        </div>
+    `;
 
         const screenshotBtn = screenshotRow.querySelector('button.text-blue-600');
         screenshotBtn.dataset.timestamp = activeScreenshotEvent.timestamp;
@@ -2859,7 +2909,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
             });
-
         }
 
         // Find or create details grid
@@ -2901,6 +2950,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Reinitialize Lucide icons
         lucide.createIcons(screenshotRow);
+
+        // Set up comment features for the new entry if it was just created
+        if (targetEntry.querySelector('.comment-area') === null) {
+            setupCommentFeature(targetEntry, activeScreenshotEvent);
+        }
 
         // Clear the active screenshot event
         activeScreenshotEvent = null;
@@ -4458,174 +4512,641 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Calculate report stats
+        const startTime = new Date(eventLog[0].timestamp);
+        const endTime = new Date(eventLog[eventLog.length - 1].timestamp);
+        const timeSpentInMs = endTime - startTime;
+        const hours = Math.floor(timeSpentInMs / (1000 * 60 * 60));
+        const minutes = Math.floor((timeSpentInMs % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeSpentInMs % (1000 * 60)) / 1000);
+        const formattedDuration = `${hours > 0 ? hours + 'h ' : ''}${minutes}m ${seconds}s`;
+        const screenshots = eventLog.filter(e => e.screenshot || e.elementCapture).length;
+        const clicks = eventLog.filter(e => e.action === 'click').length;
+        const inputs = eventLog.filter(e => e.action === 'input-change').length;
+        const pageLoads = eventLog.filter(e => e.action === 'page-loaded').length;
+
         let htmlReport = `
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>tracer Report</title>
-            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-            <style>
-                body {
-                font-family: 'Inter', sans-serif;
-                margin: 20px;
-                background: #ffffff;
-                color: #1a1a1a;
-                }
-                h1 {
-                font-size: 28px;
-                margin-bottom: 5px;
-                }
-                .report-header {
-                border-bottom: 2px solid #1a1a1a;
-                margin-bottom: 20px;
-                padding-bottom: 10px;
-                }
-                .stats {
-                margin-top: 10px;
-                font-size: 14px;
-                }
-                .event {
-                border: 1px solid #ccc;
-                border-radius: 4px;
-                padding: 12px;
-                margin-bottom: 15px;
-                background: #f9f9f9;
-                }
-                .details-grid {
-                display: grid;
-                grid-template-columns: 150px 1fr;
-                row-gap: 6px;
-                column-gap: 10px;
-                font-size: 14px;
-                }
-                .details-grid .label {
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>tracer Report</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <style>
+            :root {
+                --brand-primary: #FF8A65;
+                --brand-primary-dark: #E67E5C;
+                --brand-primary-light: #FFAB91;
+                --brand-primary-bg: #FFF3E0;
+                --brand-secondary: #5D6D7E;
+                --brand-secondary-light: #8796A8;
+                --text-dark: #2D3748;
+                --text-medium: #4A5568;
+                --text-light: #718096;
+                --bg-light: #F7FAFC;
+                --border-light: #E2E8F0;
+                --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+                --success: #48BB78;
+                --warning: #ECC94B;
+                --error: #F56565;
+                --section-radius: 8px;
+                --transition: all 0.2s ease;
+            }
+
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+                color: var(--text-dark);
+                line-height: 1.6;
+                background: var(--bg-light);
+                padding: 0;
+                margin: 0;
+            }
+
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 2rem;
+            }
+
+            header {
+                position: relative;
+                background: #fff;
+                padding: 2.5rem 0;
+                border-bottom: 1px solid var(--border-light);
+                margin-bottom: 2rem;
+            }
+
+            header::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 4px;
+                background: var(--brand-primary);
+            }
+
+            header .container {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .report-title {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+            }
+
+            .report-title h1 {
+                font-size: 2rem;
                 font-weight: 600;
-                }
-                .section {
-                margin-top: 10px;
-                }
-                /* Thumbnail style: fixed max-width; no hover zoom */
-                .static-img {
-                max-width: 200px;
-                height: auto;
-                border: 1px solid #ddd;
+                color: var(--text-dark);
+                margin: 0;
+            }
+
+            .logo {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 40px;
+                height: 40px;
+                background: var(--brand-primary);
+                border-radius: 50%;
+            }
+
+            .logo svg {
+                width: 24px;
+                height: 24px;
+                fill: white;
+            }
+
+            .report-meta {
+                text-align: right;
+                color: var(--text-medium);
+            }
+
+            .report-meta p {
+                margin: 0.25rem 0;
+                font-size: 0.9rem;
+            }
+
+            .stats-bar {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 1rem;
+                background: white;
+                border-radius: var(--section-radius);
+                padding: 1.5rem;
+                margin-bottom: 2rem;
+                box-shadow: var(--box-shadow);
+            }
+
+            .stat-item {
+                flex: 1;
+                min-width: 150px;
+                padding: 1rem;
+                border-radius: calc(var(--section-radius) - 4px);
+                background: var(--bg-light);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+
+            .stat-value {
+                font-size: 2rem;
+                font-weight: 700;
+                color: var(--brand-primary);
+                line-height: 1;
+                margin-bottom: 0.5rem;
+            }
+
+            .stat-label {
+                font-size: 0.85rem;
+                color: var(--text-medium);
+                font-weight: 500;
+            }
+
+            .events-container {
+                margin-bottom: 2rem;
+            }
+
+            .event {
+                background: white;
+                border-radius: var(--section-radius);
+                margin-bottom: 1.5rem;
+                box-shadow: var(--box-shadow);
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .event-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                background: var(--brand-primary-bg);
+                padding: 0.75rem 1.25rem;
+                border-bottom: 1px solid var(--border-light);
+            }
+
+            .event-number {
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .event-number span {
+                display: inline-block;
+                background: var(--brand-primary);
+                color: white;
+                width: 28px;
+                height: 28px;
+                line-height: 28px;
+                text-align: center;
+                border-radius: 50%;
+                font-size: 0.8rem;
+                font-weight: 600;
+            }
+
+            .event-timestamp {
+                color: var(--text-light);
+                font-size: 0.85rem;
+            }
+
+            .event-body {
+                padding: 1.25rem;
+            }
+
+            .event-type {
+                display: inline-block;
+                padding: 0.4rem 0.8rem;
+                border-radius: 50px;
+                font-size: 0.8rem;
+                font-weight: 600;
+                margin-bottom: 1rem;
+            }
+
+            .event-type.click {
+                background: #E3F2FD;
+                color: #1565C0;
+            }
+
+            .event-type.page-loaded {
+                background: #E8F5E9;
+                color: #2E7D32;
+            }
+
+            .event-type.input-change {
+                background: #FFF3E0;
+                color: #E65100;
+            }
+
+            .event-type.keydown {
+                background: #F3E5F5;
+                color: #6A1B9A;
+            }
+
+            .event-type.tab-focus {
+                background: #E0F7FA;
+                color: #00838F;
+            }
+
+            .details-grid {
+                display: grid;
+                grid-template-columns: minmax(120px, auto) 1fr;
+                gap: 0.75rem;
+                font-size: 0.9rem;
+            }
+
+            .details-grid .label {
+                font-weight: 500;
+                color: var(--text-medium);
+            }
+
+            .details-grid .value {
+                color: var(--text-dark);
+                word-break: break-word;
+            }
+
+            .details-grid a {
+                color: var(--brand-primary);
+                text-decoration: none;
+            }
+
+            .details-grid a:hover {
+                text-decoration: underline;
+            }
+
+            .section {
+                margin-top: 1.5rem;
+                background: var(--bg-light);
+                border-radius: calc(var(--section-radius) - 4px);
+                padding: 1.25rem;
+            }
+
+            .section-title {
+                font-size: 1rem;
+                font-weight: 600;
+                color: var(--brand-secondary);
+                margin-bottom: 1rem;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .section-title svg {
+                width: 18px;
+                height: 18px;
+                stroke: var(--brand-primary);
+            }
+
+            .screenshot-container {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+
+            .screenshot-thumbnail {
+                max-width: 300px;
+                border: 1px solid var(--border-light);
                 border-radius: 4px;
-                margin-top: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
                 cursor: pointer;
+                transition: var(--transition);
+            }
+
+            .screenshot-thumbnail:hover {
+                transform: scale(1.02);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            }
+
+            .comment {
+                background: white;
+                border-left: 3px solid var(--brand-primary);
+                padding: 1rem;
+                margin-bottom: 0.75rem;
+                border-radius: 0 4px 4px 0;
+            }
+
+            .comment-meta {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 0.5rem;
+                font-size: 0.75rem;
+                color: var(--text-light);
+            }
+
+            pre, code {
+                font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+                font-size: 0.85rem;
+                background: #F1F5F9;
+                border-radius: 4px;
+            }
+
+            pre {
+                padding: 1rem;
+                overflow-x: auto;
+                margin: 0.75rem 0;
+                border-left: 3px solid var(--brand-primary);
+            }
+
+            code {
+                padding: 0.2rem 0.4rem;
+            }
+
+            .footer {
+                text-align: center;
+                color: var(--text-light);
+                padding: 2rem 0;
+                font-size: 0.85rem;
+            }
+
+            .footer a {
+                color: var(--brand-primary);
+                text-decoration: none;
+            }
+
+            .visual-content {
+                margin-top: 1rem;
+            }
+
+            @media (max-width: 768px) {
+                .container {
+                    padding: 1rem;
                 }
-            </style>
-            </head>
-            <body>
-            <div class="report-header">
-                <h1>tracer Report</h1>
-                <p>Generated: ${new Date().toLocaleString()}</p>
-                <p class="stats">
-                Total Actions: ${eventLog.length} | Duration: ${formatDuration(eventLog)} | Pages Visited: ${countUniquePages(eventLog)} | Visual Captures: ${eventLog.filter(e => e.screenshot || e.elementCapture).length}
-                </p>
-            </div>
-            <div class="events">
-                ${eventLog.map((item, index) => {
-                        return `
-                    <div class="event">
-                    <div class="details-grid">
-                        <div class="label">Event #:</div>
-                        <div>${index + 1}</div>
-                        ${generateDetailedContent(item)}
+
+                header .container {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 1rem;
+                }
+
+                .report-meta {
+                    text-align: left;
+                }
+
+                .stats-bar {
+                    flex-direction: column;
+                    gap: 0.5rem;
+                }
+
+                .stat-item {
+                    flex-direction: row;
+                    justify-content: space-between;
+                    text-align: left;
+                    padding: 0.75rem;
+                }
+
+                .event-header {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 0.5rem;
+                }
+
+                .details-grid {
+                    grid-template-columns: 1fr;
+                }
+
+                .details-grid .label {
+                    font-weight: 600;
+                    margin-top: 0.5rem;
+                }
+
+                .details-grid .label:first-child {
+                    margin-top: 0;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <div class="container">
+                <div class="report-title">
+                    <div class="logo">
+                        <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.2" />
+                            <circle cx="8" cy="8" r="3" fill="currentColor" />
+                            <circle cx="9" cy="7" r="1" fill="white" />
+                        </svg>
                     </div>
-                    ${item.screenshot ? `
-                        <div class="section">
-                        <div class="label">Screenshot:</div>
-                        <a href="#" onclick="openFullImage('data:image/png;base64,${item.screenshot}'); return false;">
-                            <img class="static-img" src="data:image/png;base64,${item.screenshot}" alt="Screenshot">
-                        </a>
-                        </div>
-                    ` : ''}
-                    ${item.elementCapture ? `
-                        <div class="section">
-                        <div class="label">Element Capture:</div>
-                        <a href="#" onclick="openFullImage('data:image/png;base64,${item.elementCapture}'); return false;">
-                            <img class="static-img" src="data:image/png;base64,${item.elementCapture}" alt="Element Capture">
-                        </a>
-                        </div>
-                    ` : ''}
-                    ${item.comments && item.comments.length > 0 ? `
-                        <div class="section">
-                        <div class="label">Comments:</div>
-                        ${item.comments.map(comment => `
-                            <div>
-                            <p>${comment.text}</p>
-                            <p style="font-size:12px; color:#666;">${new Date(comment.timestamp).toLocaleString()}</p>
+                    <h1>tracer Report</h1>
+                </div>
+                <div class="report-meta">
+                    <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+                    <p><strong>Session Duration:</strong> ${formattedDuration}</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="container">
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-value">${eventLog.length}</div>
+                    <div class="stat-label">Total Events</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${pageLoads}</div>
+                    <div class="stat-label">Pages Loaded</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${clicks}</div>
+                    <div class="stat-label">Click Events</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${inputs}</div>
+                    <div class="stat-label">Input Changes</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${screenshots}</div>
+                    <div class="stat-label">Screenshots</div>
+                </div>
+            </div>
+
+            <div class="events-container">
+                ${eventLog.map((item, index) => {
+            // Determine the event type class
+            let typeClass = 'click';
+            if (item.action === 'page-loaded') typeClass = 'page-loaded';
+            if (item.action === 'input-change') typeClass = 'input-change';
+            if (item.action === 'keydown') typeClass = 'keydown';
+            if (item.action === 'tab-focus') typeClass = 'tab-focus';
+
+            return `
+                    <div class="event">
+                        <div class="event-header">
+                            <div class="event-number">
+                                <span>${index + 1}</span>
+                                ${item.action.toUpperCase()}
                             </div>
-                        `).join('')}
+                            <div class="event-timestamp">${formatTimestamp(item.timestamp)}</div>
                         </div>
-                    ` : ''}
+                        <div class="event-body">
+                            <div class="event-type ${typeClass}">${item.action}</div>
+                            
+                            <div class="details-grid">
+                                ${generateEventDetails(item)}
+                            </div>
+
+                            ${item.screenshot ? `
+                                <div class="section">
+                                    <div class="section-title">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                                            <circle cx="12" cy="13" r="4"></circle>
+                                        </svg>
+                                        Screenshot
+                                    </div>
+                                    <div class="screenshot-container">
+                                        <img class="screenshot-thumbnail" src="data:image/png;base64,${item.screenshot}" alt="Screenshot" onclick="openFullImage('data:image/png;base64,${item.screenshot}')">
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            ${item.elementCapture ? `
+                                <div class="section">
+                                    <div class="section-title">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="2" y="2" width="20" height="20" rx="2"></rect>
+                                            <path d="M8 9v6"></path>
+                                            <path d="M16 9v6"></path>
+                                            <path d="M8 9h8"></path>
+                                            <path d="M8 15h8"></path>
+                                        </svg>
+                                        Element Capture
+                                    </div>
+                                    <div class="screenshot-container">
+                                        <img class="screenshot-thumbnail" src="data:image/png;base64,${item.elementCapture}" alt="Element Capture" onclick="openFullImage('data:image/png;base64,${item.elementCapture}')">
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            ${item.comments && item.comments.length > 0 ? `
+                                <div class="section">
+                                    <div class="section-title">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                        </svg>
+                                        Comments
+                                    </div>
+                                    ${item.comments.map(comment => `
+                                        <div class="comment">
+                                            ${comment.text}
+                                            <div class="comment-meta">
+                                                <span>${new Date(comment.timestamp).toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
                     </div>
                 `;
-                    }).join('')}
+        }).join('')}
             </div>
-            <script>
-                function openFullImage(dataUrl) {
+        </div>
+
+        <footer class="footer">
+            <div class="container">
+                <p>Generated by <strong>tracer</strong> &bull; Interactive test logging tool</p>
+            </div>
+        </footer>
+
+        <script>
+            function openFullImage(dataUrl) {
                 var newWin = window.open();
                 if (newWin) {
-                    newWin.document.write('<html><head><title>Full Size Image</title></head><body style="margin:0; display:flex; align-items:center; justify-content:center; background:#000;"><img src="' + dataUrl + '" style="max-width:100%; max-height:100%;"/></body></html>');
+                    newWin.document.write('<html><head><title>Full Size Image</title><style>body{margin:0;padding:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;}img{max-width:95vw;max-height:95vh;}</style></head><body><img src="' + dataUrl + '"/></body></html>');
                 } else {
                     alert('Popup blocked. Please allow popups for this report to view full size images.');
                 }
-                }
-            </script>
-            </body>
-            </html>
-        `;
+            }
+        </script>
+    </body>
+    </html>
+    `;
 
-        // Updated generateDetailedContent() for the HTML export:
-        function generateDetailedContent(item) {
-            let content = `<div class="details-grid">`;
-
-            // Always include the basic event details.
-            content += `<div class="label">Action:</div><div>${item.action}</div>`;
-            content += `<div class="label">Timestamp:</div><div>${formatTimestamp(item.timestamp)}</div>`;
+        function generateEventDetails(item) {
+            let content = '';
 
             if (item.action === 'page-loaded') {
                 if (item.title) {
-                    content += `<div class="label">Page Title:</div><div>${item.title}</div>`;
+                    content += `
+                    <div class="label">Page Title</div>
+                    <div class="value">"${escapeHtml(item.title)}"</div>
+                `;
                 }
                 if (item.url) {
-                    content += `<div class="label">URL:</div><div>${item.url}</div>`;
+                    content += `
+                    <div class="label">URL</div>
+                    <div class="value"><a href="${item.url}" target="_blank">${escapeHtml(item.url)}</a></div>
+                `;
                 }
             }
 
-            if (item.action === 'click' && item.details) {
+            else if (item.action === 'click' && item.details) {
                 const d = item.details;
-                content += `<div class="label">Element:</div><div>&lt;${d.tagName.toLowerCase()}&gt;</div>`;
+
+                content += `
+                <div class="label">Element</div>
+                <div class="value">&lt;${(d.tagName || '').toLowerCase()}&gt;</div>
+            `;
+
                 if (d.text) {
-                    content += `<div class="label">Text Content:</div><div>${d.text}</div>`;
+                    content += `
+                    <div class="label">Text Content</div>
+                    <div class="value">"${escapeHtml(d.text)}"</div>
+                `;
                 }
+
                 if (d.fontInfo) {
-                    content += `<div class="label">Font Family:</div><div style="min-width: 500px;">${d.fontInfo.fontFamily}</div>`;
-                    content += `<div class="label">Font Size:</div><div style="min-width: 500px;">${d.fontInfo.fontSize}</div>`;
-                    content += `<div class="label">Font Weight:</div><div style="min-width: 500px;">${d.fontInfo.fontWeight}</div>`;
-                    content += `<div class="label">Font Style:</div><div style="min-width: 500px;">${d.fontInfo.fontStyle}</div>`;
-                    content += `<div class="label">Line Height:</div><div style="min-width: 500px;">${d.fontInfo.lineHeight}</div>`;
-                    content += `<div class="label">Color:</div><div style="min-width: 500px;">${d.fontInfo.color}</div>`;
+                    content += `
+                    <div class="label">Font Information</div>
+                    <div class="value">
+                        <div>Family: ${d.fontInfo.fontFamily}</div>
+                        <div>Size: ${d.fontInfo.fontSize}</div>
+                        <div>Weight: ${d.fontInfo.fontWeight}</div>
+                        <div>Style: ${d.fontInfo.fontStyle}</div>
+                        <div>Line Height: ${d.fontInfo.lineHeight}</div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem">
+                            Color: ${d.fontInfo.color}
+                            <span style="display: inline-block; width: 16px; height: 16px; border-radius: 2px; background-color: ${d.fontInfo.color}; border: 1px solid #ddd"></span>
+                        </div>
+                    </div>
+                `;
                 }
+
                 if (d.role) {
-                    content += `<div class="label">Role:</div><div>${d.role}</div>`;
+                    content += `
+                    <div class="label">Role</div>
+                    <div class="value">${d.role}</div>
+                `;
                 }
+
                 if (d.ariaLabel) {
-                    content += `<div class="label">ARIA Label:</div><div>${d.ariaLabel}</div>`;
+                    content += `
+                    <div class="label">ARIA Label</div>
+                    <div class="value">"${escapeHtml(d.ariaLabel)}"</div>
+                `;
                 }
+
                 if (d.parentContainer) {
                     const pc = d.parentContainer;
                     let containerDesc = '[No container details]';
 
-                    // If there's a snippet, display that first
                     if (pc.snippet && pc.snippet.trim()) {
                         containerDesc = pc.snippet.trim();
-                    }
-                    // Otherwise, build an HTML-like tag description
-                    else if (pc.tagName && pc.tagName.trim()) {
+                    } else if (pc.tagName && pc.tagName.trim()) {
                         const pcTag = pc.tagName.trim().toLowerCase();
                         containerDesc = `<${pcTag}`;
 
@@ -4645,70 +5166,156 @@ document.addEventListener('DOMContentLoaded', () => {
                         containerDesc += `></${pcTag}>`;
                     }
 
-                    // Escape in case it's HTML, then wrap in <pre>
                     content += `
-        <div class="label">Parent Container:</div>
-        <div>
-            <pre style="background: #f0f0f0; padding: 8px;">
-${escapeHtml(containerDesc)}
-            </pre>
-        </div>
-    `;
-                } else {
-                    content += `
-        <div class="label">Parent Container:</div>
-        <div>[No container information]</div>
-    `;
+                    <div class="label">Parent Container</div>
+                    <div class="value"><pre>${escapeHtml(containerDesc)}</pre></div>
+                `;
                 }
-                if (d.tagName.toUpperCase() === 'IMG') {
-                    content += `<div class="label">Alt Text:</div><div>${d.alt}</div>`;
-                    content += `<div class="label">Dimensions:</div><div>${d.width} x ${d.height}px</div>`;
+
+                if (d.tagName && d.tagName.toUpperCase() === 'IMG') {
+                    content += `
+                    <div class="label">Alt Text</div>
+                    <div class="value">${escapeHtml(d.alt || '[No Alt Text]')}</div>
+                    
+                    <div class="label">Dimensions</div>
+                    <div class="value">${d.width || 0} × ${d.height || 0}px</div>
+                `;
+
                     if (d.caption) {
-                        content += `<div class="label">Caption:</div><div>${d.caption}</div>`;
+                        content += `
+                        <div class="label">Caption</div>
+                        <div class="value">${escapeHtml(d.caption)}</div>
+                    `;
                     }
+
                     if (d.src) {
-                        content += `<div class="label">Image Source:</div><div>${d.src}</div>`;
+                        content += `
+                        <div class="label">Image Source</div>
+                        <div class="value"><a href="${d.src}" target="_blank">${escapeHtml(d.src)}</a></div>
+                    `;
                     }
                 }
-                if (d.tagName.toUpperCase() === 'A') {
+
+                else if (d.tagName && d.tagName.toUpperCase() === 'A') {
                     if (d.href) {
-                        content += `<div class="label">Href:</div><div>${d.href}</div>`;
+                        content += `
+                        <div class="label">Href</div>
+                        <div class="value"><a href="${d.href}" target="_blank">${escapeHtml(d.href)}</a></div>
+                    `;
                     }
+
                     if (d.target) {
-                        content += `<div class="label">Target:</div><div>${d.target}</div>`;
+                        content += `
+                        <div class="label">Target</div>
+                        <div class="value">${d.target}</div>
+                    `;
                     }
                 }
             }
 
-            if (item.action === 'input-change' && item.details) {
+            else if (item.action === 'input-change' && item.details) {
                 const d = item.details;
-                content += `<div class="label">Element:</div><div>&lt;${d.tagName}&gt;</div>`;
-                content += `<div class="label">Input Type:</div><div>${d.inputType}</div>`;
-                if (d.name) content += `<div class="label">Name:</div><div>${d.name}</div>`;
-                if (d.placeholder) content += `<div class="label">Placeholder:</div><div>${d.placeholder}</div>`;
+
+                content += `
+                <div class="label">Element</div>
+                <div class="value">&lt;${d.tagName || 'INPUT'}&gt;</div>
+                
+                <div class="label">Input Type</div>
+                <div class="value">${d.inputType || 'text'}</div>
+            `;
+
+                if (d.name) {
+                    content += `
+                    <div class="label">Name</div>
+                    <div class="value">${escapeHtml(d.name)}</div>
+                `;
+                }
+
+                if (d.placeholder) {
+                    content += `
+                    <div class="label">Placeholder</div>
+                    <div class="value">${escapeHtml(d.placeholder)}</div>
+                `;
+                }
+
                 if (d.inputType !== 'password' && d.value) {
-                    content += `<div class="label">Value:</div><div>${d.value}</div>`;
+                    content += `
+                    <div class="label">Value</div>
+                    <div class="value">${escapeHtml(d.value)}</div>
+                `;
+                } else if (d.inputType === 'password') {
+                    content += `
+                    <div class="label">Value</div>
+                    <div class="value">[REDACTED]</div>
+                `;
+                }
+
+                if (d.required) {
+                    content += `
+                    <div class="label">Required</div>
+                    <div class="value">Yes</div>
+                `;
                 }
             }
 
-            if (item.action === 'keydown' && item.details) {
-                const d = item.details;
-                content += `<div class="label">Key:</div><div>${item.key}</div>`;
+            else if (item.action === 'keydown') {
+                content += `
+                <div class="label">Key</div>
+                <div class="value">${item.key || ''}</div>
+            `;
+
                 let modifiers = "";
                 if (item.ctrlKey) modifiers += "Ctrl+";
                 if (item.shiftKey) modifiers += "Shift+";
                 if (item.altKey) modifiers += "Alt+";
-                content += `<div class="label">Modifiers:</div><div>${modifiers}</div>`;
-                content += `<div class="label">Target Element:</div><div>&lt;${d.tagName.toLowerCase()}&gt;</div>`;
-                if (d.context) {
-                    content += `<div class="label">Context:</div><div>${d.context}</div>`;
+
+                if (modifiers) {
+                    content += `
+                    <div class="label">Modifiers</div>
+                    <div class="value">${modifiers}</div>
+                `;
+                }
+
+                if (item.details && item.details.tagName) {
+                    content += `
+                    <div class="label">Target Element</div>
+                    <div class="value">&lt;${(item.details.tagName || '').toLowerCase()}&gt;</div>
+                `;
+
+                    if (item.details.context) {
+                        content += `
+                        <div class="label">Context</div>
+                        <div class="value">${escapeHtml(item.details.context)}</div>
+                    `;
+                    }
                 }
             }
 
-            content += `</div>`;
+            else if (item.action === 'tab-focus') {
+                const from = item.previous || {};
+                const to = item.newElement || {};
+
+                content += `
+                <div class="label">From</div>
+                <div class="value">
+                    ${from.tagName || '[Unknown]'}
+                    ${from.id ? ' (#' + from.id + ')' : ''}
+                    ${from.ariaLabel ? ' - ' + from.ariaLabel : ''}
+                    ${from.text ? ' - ' + from.text : ''}
+                </div>
+                
+                <div class="label">To</div>
+                <div class="value">
+                    ${to.tagName || '[Unknown]'}
+                    ${to.id ? ' (#' + to.id + ')' : ''}
+                    ${to.ariaLabel ? ' - ' + to.ariaLabel : ''}
+                    ${to.text ? ' - ' + to.text : ''}
+                </div>
+            `;
+            }
+
             return content;
         }
-
 
         const blob = new Blob([htmlReport], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
@@ -4720,6 +5327,7 @@ ${escapeHtml(containerDesc)}
         document.body.removeChild(a);
         showToast('HTML report exported!');
     }
+
 
     // Helper functions for generating content sections
 
@@ -5599,7 +6207,50 @@ ${escapeHtml(containerDesc)}
             event.preventDefault(); // Prevent default browser help
             showModal('keyboard-shortcuts-modal');
         }
-    });    
+    }); 
+    
+    webview.addEventListener('ipc-message', (event) => {
+        if (event.channel === 'shortcut-triggered') {
+            if (event.args[0] === 'F1') {
+                openKeyboardShortcutsModal();
+            } else if (event.args[0] === 'screenshot') {
+                console.log('Received screenshot shortcut from webview');
+
+                // Find the most recent keydown event with Ctrl+S
+                let foundEvent = null;
+                for (let i = eventLog.length - 1; i >= 0; i--) {
+                    const e = eventLog[i];
+                    if (e.action === 'keydown' &&
+                        e.key === 's' &&
+                        e.ctrlKey) {
+                        foundEvent = e;
+                        break;
+                    }
+                }
+
+                // If we found the matching keydown event, use it
+                if (foundEvent) {
+                    activeScreenshotEvent = foundEvent;
+                    console.log('Found matching keydown event:', activeScreenshotEvent.timestamp);
+                }
+                // Otherwise create a new event as fallback
+                else {
+                    console.log('No matching keydown event found, creating new event');
+                    activeScreenshotEvent = {
+                        action: 'screenshot',
+                        timestamp: new Date().toISOString(),
+                        details: {}
+                    };
+                    eventLog.push(activeScreenshotEvent);
+                }
+
+                // Take the actual screenshot
+                window.electron.ipcRenderer.send('take-screenshot');
+            }
+        }
+
+        // Handle other message types...
+    });
 
     // Reset log content with confirmation
     if (resetLogButton && logArea) {
@@ -6055,10 +6706,12 @@ ${escapeHtml(containerDesc)}
                         e.currentTarget.classList.remove('active');
                         currentTool = null;
                         annotationCanvas.style.pointerEvents = 'none';
+                        console.log('Tool deactivated, canvas pointer events disabled');
                     } else {
                         e.currentTarget.classList.add('active');
                         currentTool = toolType;
                         annotationCanvas.style.pointerEvents = 'auto';
+                        console.log('Tool activated:', toolType, 'canvas pointer events enabled');
                     }
                     // Always hide stamp selector when switching to other tools
                     document.getElementById('stamp-selector').classList.add('hidden');
@@ -6194,10 +6847,10 @@ ${escapeHtml(containerDesc)}
                     screenshotLink.href = 'data:image/png;base64,' + base64Data;
                 }
 
-                // Close modal & toast
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
+                // Only show toast without closing modal
                 showToast('Annotations saved!');
+
+                // Modal will stay open until user explicitly closes it
             }
         });
 
@@ -6239,6 +6892,16 @@ ${escapeHtml(containerDesc)}
         });
 
         // When the pointer is released or cancelled, stop drawing and disable pointer events.
+        canvas.addEventListener('pointerup', () => {
+            console.log('Canvas pointerup event fired');
+            stopDrawing();
+        });
+        canvas.addEventListener('pointercancel', () => {
+            console.log('Canvas pointercancel event fired');
+            stopDrawing();
+        });
+
+        // When the pointer is released or cancelled, stop drawing and disable pointer events.
         canvas.addEventListener('pointerup', () => { stopDrawing(); });
         canvas.addEventListener('pointercancel', () => { stopDrawing(); });
     }
@@ -6270,14 +6933,16 @@ ${escapeHtml(containerDesc)}
     // ----- Drawing Functions -----
 
     function startDrawing(e) {
+        console.log('⭐️ startDrawing called with tool:', currentTool);
         if (!currentTool) return;
 
         const rect = annotationCanvas.getBoundingClientRect();
         startX = e.clientX - rect.left;
         startY = e.clientY - rect.top;
 
-        // Save the CURRENT state of the canvas
+        // Save the CURRENT state of the canvas - make sure this is working
         initialCanvasState = annotationCtx.getImageData(0, 0, annotationCanvas.width, annotationCanvas.height);
+        console.log('⭐️ initialCanvasState saved:', initialCanvasState !== null);
 
         if (currentTool === 'stamp' && currentStamp) {
             // For stamps, draw immediately on click
@@ -6287,7 +6952,12 @@ ${escapeHtml(containerDesc)}
             document.getElementById('annotation-undo').disabled = false;
             document.getElementById('annotation-redo').disabled = true;
         } else {
+            // THIS IS KEY - set isDrawing to true
             isDrawing = true;
+
+            // Add a console log to debug
+            console.log('Started drawing with tool:', currentTool, 'at position:', startX, startY);
+
             // Save current state for undo
             undoStack.push(initialCanvasState);
             redoStack = [];
@@ -6297,16 +6967,25 @@ ${escapeHtml(containerDesc)}
     }
 
     function draw(e) {
+        // Add debug log to see if this is being called
+        console.log('⭐️ draw called, isDrawing:', isDrawing, 'currentTool:', currentTool);
+
         if (!isDrawing || !currentTool) return;
+
         const rect = annotationCanvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
+
+        // Add more logging
+        console.log('Drawing at coordinates:', x, y);
 
         // Create temporary canvas for preview
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = annotationCanvas.width;
         tempCanvas.height = annotationCanvas.height;
         const tempCtx = tempCanvas.getContext('2d');
+
+        console.log('⭐️ tempCtx valid:', tempCtx && typeof tempCtx.beginPath === 'function');
 
         // Draw the current state first
         tempCtx.putImageData(initialCanvasState, 0, 0);
@@ -6318,18 +6997,24 @@ ${escapeHtml(containerDesc)}
                 drawArrow(tempCtx, startX, startY, x, y);
                 break;
             case 'rectangle':
+                // Log before drawing rectangle
+                console.log('⭐️ Before drawRectangle with exact params:',
+                    { tempCtx, startX, startY, x, y });
                 drawRectangle(tempCtx, startX, startY, x, y);
+                console.log('⭐️ After drawRectangle call');
                 break;
             case 'circle':
                 drawCircle(tempCtx, startX, startY, x, y);
                 break;
         }
-
+        console.log('⭐️ About to draw temp canvas to annotation canvas');
         annotationCtx.clearRect(0, 0, annotationCanvas.width, annotationCanvas.height);
         annotationCtx.drawImage(tempCanvas, 0, 0);
     }
 
     function stopDrawing() {
+        console.log('Stop drawing called, isDrawing was:', isDrawing);
+
         if (isDrawing) {
             isDrawing = false;
             // Save the final state AFTER completing the draw
@@ -6367,13 +7052,16 @@ ${escapeHtml(containerDesc)}
         ctx.fill();
     }
 
-    function drawRectangle(ctx, startX, startY, endX, endY) {
-        const width = endX - startX;
-        const height = endY - startY;
-        ctx.beginPath();
-        ctx.rect(startX, startY, width, height);
-        ctx.stroke();
-    }
+    // function drawRectangle(ctx, startX, startY, endX, endY) {
+    //     console.log('⭐️ Inside drawRectangle with:', { startX, startY, endX, endY });
+
+    //     // Basic rectangle drawing
+    //     ctx.beginPath();
+    //     ctx.rect(startX, startY, endX - startX, endY - startY);
+    //     ctx.stroke();
+
+    //     console.log('⭐️ Rectangle drawn!');
+    // }
 
     function drawCircle(ctx, startX, startY, endX, endY) {
         const radiusX = (endX - startX) / 2;
@@ -6770,6 +7458,8 @@ ${escapeHtml(containerDesc)}
     window.addEventListener('resize', updateViewportSize);
     showEmptyState();
 
+    
+
     // Helper function to show color formats popup
     function showColorFormatsPopup(e) {
         e.stopPropagation(); // Prevent bubbling up to parent elements
@@ -6953,12 +7643,37 @@ ${escapeHtml(containerDesc)}
     }
 
     document.addEventListener('keydown', (event) => {
-  const isCtrlF = event.ctrlKey && event.key.toLowerCase() === 'f';
+        const isCtrlF = event.ctrlKey && event.key.toLowerCase() === 'f';
 
-  if (isCtrlF) {
-    event.preventDefault();
-    createTracerFindBar();
-  }
-});
+        if (isCtrlF) {
+            event.preventDefault();
+            createTracerFindBar();
+        }
+    });
+
+  
+    function drawRectangle(ctx, startX, startY, endX, endY) {
+        console.log('⭐️ Inside drawRectangle with:', { startX, startY, endX, endY });
+
+        // Ensure all values are numbers
+        startX = Number(startX);
+        startY = Number(startY);
+        endX = Number(endX);
+        endY = Number(endY);
+
+        // Calculate dimensions
+        const width = endX - startX;
+        const height = endY - startY;
+
+        console.log('⭐️ Drawing rectangle with dimensions:', { width, height });
+
+        // Basic rectangle drawing
+        ctx.beginPath();
+        ctx.rect(startX, startY, width, height);
+        ctx.stroke();
+
+        console.log('⭐️ Rectangle drawn!');
+    }
+
 
 });

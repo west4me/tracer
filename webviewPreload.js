@@ -584,7 +584,8 @@ document.addEventListener('keydown', (event) => {
 
     // Record special keys and non-text input
     if (!['Shift', 'Control', 'Alt', 'Meta'].includes(event.key)) {
-        if (!isTextInput || ['Enter', 'Tab', 'Escape', 'Backspace'].includes(event.key)) {
+        // Exclude Ctrl+S combination
+        if (!(event.ctrlKey && event.key === 's') && (!isTextInput || ['Enter', 'Tab', 'Escape', 'Backspace'].includes(event.key))) {
             recordEvent('keydown', target, {
                 key: event.key,
                 code: event.code,
@@ -803,6 +804,26 @@ document.addEventListener('keydown', (event) => {
     }
 });
 
+document.addEventListener('keydown', (event) => {
+    if (event.ctrlKey && !event.shiftKey && event.key === 's') {
+        event.preventDefault();
+        console.log('Ctrl+S pressed in webview');
+
+        // Instead of sending a separate shortcut message,
+        // send a keydown event with a special flag
+        ipcRenderer.sendToHost('log-event', {
+            action: 'keydown',
+            timestamp: new Date().toISOString(),
+            details: getElementDetails(event.target),
+            key: 's',
+            code: event.code,
+            ctrlKey: true,
+            shiftKey: false,
+            altKey: event.altKey,
+            isScreenshotTrigger: true  // This is the key flag
+        });
+    }
+});
 
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
