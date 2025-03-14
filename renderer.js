@@ -1560,7 +1560,7 @@ function generateJiraCommentText() {
                 break;
         }
 
-        // Comments section
+        // Handle lists properly for JIRA comments as well
         if (log.comments && log.comments.length > 0) {
             let comContent = '';
             log.comments.forEach((comment, idx) => {
@@ -1568,8 +1568,12 @@ function generateJiraCommentText() {
                     comContent += '{color:#7E57C2}' + '─'.repeat(30) + '{color}\n\n';
                 }
                 comContent += `{color:#5E35B1}Comment ${idx + 1}:{color}\n`;
-                const wikiComment = window.convertHtmlToWiki ? window.convertHtmlToWiki(comment.text) : comment.text;
+
+                // Use our improved HTML to Wiki converter
+                const rawComment = comment.text || '';
+                const wikiComment = window.convertHtmlToWiki(rawComment);
                 comContent += `${wikiComment}\n\n`;
+
                 comContent += `{color:#666666}_Posted: ${new Date(comment.timestamp).toLocaleString()}_\n{color}\n`;
             });
             text += createPanel('Comments', comContent);
@@ -3133,15 +3137,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     const truncatedHref = truncateUrl(details.href, 25);
                     html += `
                     <span class="font-medium">Href:</span>
-                    <div class="flex items-center gap-2">
-                        <a href="${details.href}" class="text-blue-600 hover:text-blue-800 underline break-all"
-                        target="_blank" 
+                    <div class="flex items-center justify-between w-full">
+                        <a href="${details.href}" 
+                        class="text-blue-600 hover:text-blue-800 underline truncate flex-1 min-w-0" 
+                        target="_blank"
                         title="${details.href}">
-                            ${truncatedHref}
+                            ${details.href}
                         </a>
-                        <button
-                            class="copy-url-btn p-1 hover:bg-gray-100 rounded"
-                            title="Copy link URL"
+                        <button class="copy-url-btn p-1 hover:bg-gray-100 rounded flex-shrink-0 ml-2" 
+                            title="Copy URL to clipboard" 
                             data-url="${details.href}">
                             <svg data-lucide="clipboard" width="14" height="14"></svg>
                         </button>
@@ -3189,8 +3193,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-
-
             // If it's an <svg>, show its title, desc, dimensions, etc.
             else if ((details.tagName || '').toUpperCase() === 'SVG') {
                 // Title/desc if present:
@@ -3236,8 +3238,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            else if (details.tagName === 'METER') {
+                html += `
+                <span class="font-medium">Meter Properties:</span>
+                <span class="break-words text-left">
+                    Value: ${details.value || '0'} (${details.max ? Math.round((details.value / details.max) * 100) : 0}%), 
+                    Min: ${details.min || '0'}, 
+                    Max: ${details.max || '100'}
+                    ${details.low ? `, Low: ${details.low}` : ''}
+                    ${details.high ? `, High: ${details.high}` : ''}
+                    ${details.optimum ? `, Optimum: ${details.optimum}` : ''}
+                </span>`;
+            }
 
-
+            else if (details.tagName === 'PROGRESS') {
+                html += `
+                <span class="font-medium">Progress Properties:</span>
+                <span class="break-words text-left">
+                    Value: ${details.value || '0'}, 
+                    Max: ${details.max || '100'}, 
+                    Completion: ${details.max ? Math.round((details.value / details.max) * 100) : 0}%
+                </span>`;
+            }
 
             // If the clicked element is a <div> or something else that has role="progressbar", show relevant info
             if (details.role && details.role.toLowerCase() === 'progressbar') {
@@ -3626,44 +3648,150 @@ document.addEventListener('DOMContentLoaded', () => {
             delete logData.isElementCapture;
             delete activeScreenshotEvent.fullPage;
 
-            // Determine which screenshot mode to use:
-            // If Ctrl+Shift, we do a "full page" capture in chunks
             if (e.ctrlKey && e.shiftKey) {
                 const wv = document.querySelector("#my-webview");
                 const dimensions = await wv.executeJavaScript(`
-                    (function() {
-                        const doc = document.documentElement;
-                        return {
-                            scrollHeight: doc.scrollHeight,
-                            offsetHeight: doc.offsetHeight,
-                            clientHeight: doc.clientHeight
-                        };
-                    })();
-                `);
+        (function() {
+            const doc = document.documentElement;
+            const body = document.body;
+            
+            // Calculate the maximum height of all elements
+            const allElements = Array.from(document.querySelectorAll('*'));
+            let maxBottom = 0;
+            
+            for (const el of allElements) {
+                const rect = el.getBoundingClientRect();
+                maxBottom = Math.max(maxBottom, rect.bottom + window.scrollY);
+            }
+            
+            // Get various height measurements
+            const scrollHeight = Math.max(doc.scrollHeight, body.scrollHeight);
+            const offsetHeight = Math.max(doc.offsetHeight, body.offsetHeight);
+            const clientHeight = Math.max(doc.clientHeight, body.clientHeight);
+            
+            return {
+                scrollHeight: scrollHeight,
+                offsetHeight: offsetHeight,
+                clientHeight: clientHeight,
+                maxElementBottom: maxBottom
+            };
+        })();
+    `);
                 console.log("Inside webview => documentElement.scrollHeight:", dimensions.scrollHeight);
                 console.log("Inside webview => documentElement.offsetHeight:", dimensions.offsetHeight);
-                // Decide which dimension to use for full page height
-                const fullHeight = Math.max(dimensions.scrollHeight, dimensions.offsetHeight, dimensions.clientHeight);
-                console.log("Full page height to capture:", fullHeight);
+                console.log("Inside webview => maxElementBottom:", dimensions.maxElementBottom);
+
+                // Use the maximum value from all measurements for the full height
+                const pageHeight = Math.max(
+                    dimensions.scrollHeight,
+                    dimensions.offsetHeight,
+                    dimensions.clientHeight,
+                    dimensions.maxElementBottom
+                );
+                console.log("Full page height to capture:", pageHeight);
 
                 activeScreenshotEvent.fullPage = true;
 
-                // Send correct full height to the main process
-                const totalHeight = fullHeight; // Explicitly define totalHeight
-
-                console.log("Sending totalHeight to main process:", totalHeight);
-
-                window.electron.ipcRenderer.send('take-fullpage-screenshot', {
-                    totalHeight, // <-- Correctly passing the full page height
-                    chunkHeight: 1000 // Adjust as needed
+                // Send the correct height variable!
+                window.electron.ipcRenderer.send('take-fullpage-screenshot-cdp', {
+                    totalHeight: pageHeight,
+                    chunkHeight: 1000
                 });
 
-                // Then wait for the main process to send us back the stitched image
-                window.electron.ipcRenderer.once('fullpage-screenshot-result', (event, base64) => {
-                    console.log('Full-page screenshot base64 length:', base64.length);
-                    // Do whatever you like: store in logData, display in UI, etc.
-                });
+                // Replace the existing 'once' handler with a complete implementation
+                window.electron.ipcRenderer.once('fullpage-screenshot-result', (_, base64) => {
+                    console.log('Full-page screenshot base64 length:', base64 ? base64.length : 0);
 
+                    if (!base64 || base64.length === 0) {
+                        console.error('Empty screenshot data received');
+                        showToast('Error capturing full screenshot');
+                        return;
+                    }
+
+                    // Store the screenshot data in the active event
+                    activeScreenshotEvent.screenshot = base64;
+
+                    // Find the log entry element for this event
+                    const logArea = document.getElementById('log-area');
+                    if (!logArea) return;
+
+                    const entries = logArea.children;
+                    let targetEntry = null;
+
+                    for (let entry of entries) {
+                        if (entry.dataset.timestamp === activeScreenshotEvent.timestamp) {
+                            targetEntry = entry;
+                            break;
+                        }
+                    }
+
+                    if (!targetEntry) {
+                        console.error("Could not find matching log entry");
+                        return;
+                    }
+
+                    // Create screenshot row
+                    const screenshotRow = document.createElement('div');
+                    screenshotRow.className = "grid grid-cols-[120px,1fr] gap-2 w-full screenshot-row";
+                    screenshotRow.innerHTML = `
+            <span class="font-medium">Full Screenshot:</span>
+            <div class="flex items-center justify-between w-full">
+                <button class="text-blue-600 hover:text-blue-800 underline flex items-center"
+                    title="Full page screenshot">
+                    <svg data-lucide="camera" width="16" height="16" class="mr-2"></svg>
+                    <span>FullScreenshot...png</span>
+                </button>
+                <button class="delete-screenshot-btn text-gray-500 hover:text-red-500 transition-colors"
+                    title="Delete full-page screenshot">
+                    <svg data-lucide="trash" width="16" height="16"></svg>
+                </button>
+            </div>
+        `;
+
+                    // Add click handlers
+                    const viewBtn = screenshotRow.querySelector('button.text-blue-600');
+                    viewBtn.addEventListener('click', () => {
+                        showModalImage('data:image/png;base64,' + base64, activeScreenshotEvent.timestamp);
+                    });
+
+                    const deleteBtn = screenshotRow.querySelector('.delete-screenshot-btn');
+                    deleteBtn.addEventListener('click', () => {
+                        showModal('delete-screenshot-modal', {
+                            message: 'Are you sure you want to delete this full-page screenshot?',
+                            title: 'Delete Full-Page Screenshot?',
+                            onConfirm: () => {
+                                delete activeScreenshotEvent.screenshot;
+                                screenshotRow.remove();
+                                showToast('Full-page screenshot deleted!');
+                            }
+                        });
+                    });
+
+                    // Find or create details grid
+                    let detailsGrid = targetEntry.querySelector('.details-grid');
+                    if (!detailsGrid) {
+                        detailsGrid = document.createElement('div');
+                        detailsGrid.className = 'details-grid mt-2';
+                        const contentContainer = targetEntry.querySelector('.flex-1');
+                        if (contentContainer) {
+                            contentContainer.appendChild(detailsGrid);
+                        }
+                    }
+
+                    // Remove any existing screenshot row
+                    const existingRow = detailsGrid.querySelector('.screenshot-row');
+                    if (existingRow) {
+                        existingRow.remove();
+                    }
+
+                    // Add the screenshot row
+                    detailsGrid.appendChild(screenshotRow);
+
+                    // Initialize icons
+                    lucide.createIcons(screenshotRow);
+
+                    showToast('Full-page screenshot captured!');
+                });
             } else if (e.ctrlKey) {
                 activeScreenshotEvent.isElementCapture = true;
                 window.electron.ipcRenderer.send('take-element-screenshot', {
@@ -4292,6 +4420,26 @@ document.addEventListener('DOMContentLoaded', () => {
         let markdown = '# tracer Action Log\n\n';
         markdown += `Generated: ${new Date().toLocaleString()}\n\n`;
 
+        function formatUrl(url) {
+            if (!url) return '';
+
+            // Clean up file:// URLs to make them more readable
+            if (url.startsWith('file://')) {
+                return url.replace(/^file:\/\/\//, '');
+            } else if (url.startsWith('https://') || url.startsWith('http://')) {
+                // For web URLs, keep as clickable link
+                return `[${url}](${url})`;
+            }
+
+            // Handle anchor links and other formats
+            if (url.startsWith('#')) {
+                return url;
+            }
+
+            // For other formats, just return as is
+            return url;
+        }
+
         eventLog.forEach((item, index) => {
             const timeStr = formatTimestamp(item.timestamp);
             let section = `## ${index + 1}. ${timeStr} - ${item.action.toUpperCase()}\n\n`;
@@ -4299,7 +4447,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (item.action === 'page-loaded') {
                 section += `- **Page Title:** "${item.title}"\n`;
                 if (item.url) {
-                    section += `- **URL:** [${item.url}](${item.url})\n`;
+                    // Clean up file:// URLs to make them more readable
+                    let displayUrl = item.url;
+                    if (displayUrl.startsWith('file://')) {
+                        // Extract the file path portion for better display
+                        displayUrl = displayUrl.replace(/^file:\/\/\//, '');
+                        section += `- **URL:** ${displayUrl}\n`;
+                    } else {
+                        // For web URLs, keep as clickable link
+                        section += `- **URL:** [${item.url}](${item.url})\n`;
+                    }
                 }
             } else if (item.action === 'click' && item.details) {
                 const details = item.details;
@@ -4329,15 +4486,28 @@ document.addEventListener('DOMContentLoaded', () => {
                         section += `- **Image Source:** [View Image](${details.src})\n`;
                     }
                     section += `- **XPath:** \`${details.xpath}\`\n`;
-                } else if ((details.tagName || '').toUpperCase() === 'A') {
+                }     // Handle URLs properly in various attributes
+                if ((details.tagName || '').toUpperCase() === 'A') {
                     if (details.text) {
                         section += `- **Link Text:** "${details.text}"\n`;
                     }
                     if (details.href) {
-                        section += `- **URL:** [${details.href}](${details.href})\n`;
+                        section += `- **URL:** ${formatUrl(details.href)}\n`;
                     }
                     if (details.target) {
                         section += `- **Target:** \`${details.target}\`\n`;
+                    }
+                } else if ((details.tagName || '').toUpperCase() === 'IMG') {
+                    section += `- **Alt Text:** ${details.alt || '[No Alt Text]'}\n`;
+                    section += `- **Dimensions:** ${details.width && details.height ? details.width + '×' + details.height + 'px' : 'Unknown'}\n`;
+                    if (details.loading) {
+                        section += `- **Loading:** ${details.loading}\n`;
+                    }
+                    if (details.caption) {
+                        section += `- **Caption:** ${details.caption}\n`;
+                    }
+                    if (details.src) {
+                        section += `- **Image Source:** ${formatUrl(details.src)}\n`;
                     }
                 } else if ((details.tagName || '').toUpperCase() === 'BUTTON') {
                     section += `- **Button Text:** "${details.text || '[No Text]'}"\n`;
@@ -4362,6 +4532,39 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     if (details.form) {
                         section += `- **Form:** ${details.form}\n`;
+                    }
+                } else if (details.tagName === 'METER') {
+                    section += `- **Meter Properties:**\n`;
+                    section += `  - Value: ${details.value || '0'} (${details.max ? Math.round((details.value / details.max) * 100) : 0}%)\n`;
+                    section += `  - Min: ${details.min || '0'}\n`;
+                    section += `  - Max: ${details.max || '100'}\n`;
+                    if (details.low) section += `  - Low threshold: ${details.low}\n`;
+                    if (details.high) section += `  - High threshold: ${details.high}\n`;
+                    if (details.optimum) section += `  - Optimum value: ${details.optimum}\n`;
+                }
+                else if (details.tagName === 'PROGRESS') {
+                    section += `- **Progress Properties:**\n`;
+                    section += `  - Value: ${details.value || '0'}\n`;
+                    section += `  - Max: ${details.max || '100'}\n`;
+                    section += `  - Completion: ${details.max ? Math.round((details.value / details.max) * 100) : 0}%\n`;
+                }
+                else if (details.tagName === 'SELECT') {
+                    section += `- **Select Options:**\n`;
+                    section += `  - Selected Value: ${details.selectedValue || '[None]'}\n`;
+                    section += `  - Selected Text: "${details.selectedText || '[None]'}"\n`;
+
+                    if (details.multiple && details.selectedOptions) {
+                        section += `  - **All Selected Options:**\n`;
+                        details.selectedOptions.forEach(opt => {
+                            section += `    - "${opt.text}" (${opt.value})\n`;
+                        });
+                    }
+
+                    if (details.options && details.options.length > 0) {
+                        section += `  - **Available Options:**\n`;
+                        details.options.forEach(opt => {
+                            section += `    - "${opt.text}" (${opt.value})${opt.selected ? ' (Selected)' : ''}\n`;
+                        });
                     }
                 }
                 if (details.ariaLabel) {
@@ -4435,7 +4638,57 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     }
                 }
-            } else if (item.action === 'keydown') {
+            }
+            else if (item.action === 'video-play') {
+                section += `- **Video Started Playing**\n`;
+                if (item.details) {
+                    const d = item.details;
+                    if (d.src) {
+                        section += `- **Video Source:** [${d.src}](${d.src})\n`;
+                    }
+                    if (d.currentTime !== undefined) {
+                        section += `- **Starting Time:** ${d.currentTime}s\n`;
+                    }
+                    if (d.duration) {
+                        section += `- **Duration:** ${d.duration}s\n`;
+                    }
+                    if (d.volume !== undefined) {
+                        section += `- **Volume:** ${d.volume}\n`;
+                    }
+                }
+            } 
+            else if (item.action === 'video-volumechange') {
+                section += `- **Volume Change:** From ${item.from || 'unknown'} to ${item.to || item.volume || 'unknown'}\n`;
+                if (item.details) {
+                    const d = item.details;
+                    if (d.src) {
+                        section += `- **Video Source:** [${d.src}](${d.src})\n`;
+                    }
+                    if (d.currentTime) {
+                        section += `- **Current Time:** ${d.currentTime}s\n`;
+                    }
+                    if (d.duration) {
+                        section += `- **Duration:** ${d.duration}s\n`;
+                    }
+                }
+            }
+            else if (item.action === 'video-pause') {
+                section += `- **Video Paused**\n`;
+                if (item.details) {
+                    const d = item.details;
+                    if (d.src) {
+                        section += `- **Video Source:** [${d.src}](${d.src})\n`;
+                    }
+                    if (d.currentTime) {
+                        section += `- **Current Time:** ${d.currentTime}s\n`;
+                    }
+                    if (d.duration) {
+                        section += `- **Duration:** ${d.duration}s\n`;
+                    }
+                }
+            }
+            
+            else if (item.action === 'keydown') {
                 const modifiers = `${item.ctrlKey ? 'Ctrl+' : ''}${item.shiftKey ? 'Shift+' : ''}${item.altKey ? 'Alt+' : ''}`;
                 section += `- **Key:** ${modifiers}${item.key}\n`;
                 if (item.details) {
@@ -4501,17 +4754,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 .replace(/'/g, '&#039;');
         }
 
-        const shouldDisplay = (value) => value !== null && value !== undefined && String(value).trim() !== "";
-
-        function isUrl(str) {
-            try {
-                new URL(str);
-                return true;
-            } catch (e) {
-                return false;
-            }
-        }
-
         // Calculate report stats
         const startTime = new Date(eventLog[0].timestamp);
         const endTime = new Date(eventLog[eventLog.length - 1].timestamp);
@@ -4526,555 +4768,557 @@ document.addEventListener('DOMContentLoaded', () => {
         const pageLoads = eventLog.filter(e => e.action === 'page-loaded').length;
 
         let htmlReport = `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>tracer Report</title>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-        <style>
-            :root {
-                --brand-primary: #FF8A65;
-                --brand-primary-dark: #E67E5C;
-                --brand-primary-light: #FFAB91;
-                --brand-primary-bg: #FFF3E0;
-                --brand-secondary: #5D6D7E;
-                --brand-secondary-light: #8796A8;
-                --text-dark: #2D3748;
-                --text-medium: #4A5568;
-                --text-light: #718096;
-                --bg-light: #F7FAFC;
-                --border-light: #E2E8F0;
-                --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
-                --success: #48BB78;
-                --warning: #ECC94B;
-                --error: #F56565;
-                --section-radius: 8px;
-                --transition: all 0.2s ease;
-            }
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>tracer Report</title>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+            <style>
+                :root {
+                    --brand-primary: #3B82F6;        /* Changed to blue */
+                    --brand-primary-dark: #2563EB;   /* Darker blue */
+                    --brand-primary-light: #60A5FA;  /* Lighter blue */
+                    --brand-primary-bg: #EFF6FF;     /* Very light blue background */
+                    --brand-secondary: #4B5563;      /* Dark gray */
+                    --brand-secondary-light: #6B7280; /* Medium gray */
+                    --text-dark: #1F2937;            /* Very dark gray/almost black for text */
+                    --text-medium: #374151;          /* Dark gray for text */
+                    --text-light: #6B7280;           /* Medium gray for less important text */
+                    --bg-light: #F9FAFB;             /* Very light gray background */
+                    --border-light: #E5E7EB;         /* Light gray for borders */
+                    --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+                    --success: #10B981;              /* Green */
+                    --warning: #F59E0B;              /* Amber/yellow */
+                    --error: #EF4444;                /* Red */
+                    --section-radius: 8px;
+                    --transition: all 0.2s ease;
+                }
 
-            * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-            }
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
 
-            body {
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-                color: var(--text-dark);
-                line-height: 1.6;
-                background: var(--bg-light);
-                padding: 0;
-                margin: 0;
-            }
+                body {
+                    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+                    color: var(--text-dark);
+                    line-height: 1.6;
+                    background: var(--bg-light);
+                    padding: 0;
+                    margin: 0;
+                }
 
-            .container {
-                max-width: 1200px;
-                margin: 0 auto;
-                padding: 2rem;
-            }
-
-            header {
-                position: relative;
-                background: #fff;
-                padding: 2.5rem 0;
-                border-bottom: 1px solid var(--border-light);
-                margin-bottom: 2rem;
-            }
-
-            header::before {
-                content: "";
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                height: 4px;
-                background: var(--brand-primary);
-            }
-
-            header .container {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-            .report-title {
-                display: flex;
-                align-items: center;
-                gap: 0.75rem;
-            }
-
-            .report-title h1 {
-                font-size: 2rem;
-                font-weight: 600;
-                color: var(--text-dark);
-                margin: 0;
-            }
-
-            .logo {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                width: 40px;
-                height: 40px;
-                background: var(--brand-primary);
-                border-radius: 50%;
-            }
-
-            .logo svg {
-                width: 24px;
-                height: 24px;
-                fill: white;
-            }
-
-            .report-meta {
-                text-align: right;
-                color: var(--text-medium);
-            }
-
-            .report-meta p {
-                margin: 0.25rem 0;
-                font-size: 0.9rem;
-            }
-
-            .stats-bar {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 1rem;
-                background: white;
-                border-radius: var(--section-radius);
-                padding: 1.5rem;
-                margin-bottom: 2rem;
-                box-shadow: var(--box-shadow);
-            }
-
-            .stat-item {
-                flex: 1;
-                min-width: 150px;
-                padding: 1rem;
-                border-radius: calc(var(--section-radius) - 4px);
-                background: var(--bg-light);
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                text-align: center;
-            }
-
-            .stat-value {
-                font-size: 2rem;
-                font-weight: 700;
-                color: var(--brand-primary);
-                line-height: 1;
-                margin-bottom: 0.5rem;
-            }
-
-            .stat-label {
-                font-size: 0.85rem;
-                color: var(--text-medium);
-                font-weight: 500;
-            }
-
-            .events-container {
-                margin-bottom: 2rem;
-            }
-
-            .event {
-                background: white;
-                border-radius: var(--section-radius);
-                margin-bottom: 1.5rem;
-                box-shadow: var(--box-shadow);
-                overflow: hidden;
-                display: flex;
-                flex-direction: column;
-            }
-
-            .event-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                background: var(--brand-primary-bg);
-                padding: 0.75rem 1.25rem;
-                border-bottom: 1px solid var(--border-light);
-            }
-
-            .event-number {
-                font-weight: 500;
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-            }
-
-            .event-number span {
-                display: inline-block;
-                background: var(--brand-primary);
-                color: white;
-                width: 28px;
-                height: 28px;
-                line-height: 28px;
-                text-align: center;
-                border-radius: 50%;
-                font-size: 0.8rem;
-                font-weight: 600;
-            }
-
-            .event-timestamp {
-                color: var(--text-light);
-                font-size: 0.85rem;
-            }
-
-            .event-body {
-                padding: 1.25rem;
-            }
-
-            .event-type {
-                display: inline-block;
-                padding: 0.4rem 0.8rem;
-                border-radius: 50px;
-                font-size: 0.8rem;
-                font-weight: 600;
-                margin-bottom: 1rem;
-            }
-
-            .event-type.click {
-                background: #E3F2FD;
-                color: #1565C0;
-            }
-
-            .event-type.page-loaded {
-                background: #E8F5E9;
-                color: #2E7D32;
-            }
-
-            .event-type.input-change {
-                background: #FFF3E0;
-                color: #E65100;
-            }
-
-            .event-type.keydown {
-                background: #F3E5F5;
-                color: #6A1B9A;
-            }
-
-            .event-type.tab-focus {
-                background: #E0F7FA;
-                color: #00838F;
-            }
-
-            .details-grid {
-                display: grid;
-                grid-template-columns: minmax(120px, auto) 1fr;
-                gap: 0.75rem;
-                font-size: 0.9rem;
-            }
-
-            .details-grid .label {
-                font-weight: 500;
-                color: var(--text-medium);
-            }
-
-            .details-grid .value {
-                color: var(--text-dark);
-                word-break: break-word;
-            }
-
-            .details-grid a {
-                color: var(--brand-primary);
-                text-decoration: none;
-            }
-
-            .details-grid a:hover {
-                text-decoration: underline;
-            }
-
-            .section {
-                margin-top: 1.5rem;
-                background: var(--bg-light);
-                border-radius: calc(var(--section-radius) - 4px);
-                padding: 1.25rem;
-            }
-
-            .section-title {
-                font-size: 1rem;
-                font-weight: 600;
-                color: var(--brand-secondary);
-                margin-bottom: 1rem;
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-            }
-
-            .section-title svg {
-                width: 18px;
-                height: 18px;
-                stroke: var(--brand-primary);
-            }
-
-            .screenshot-container {
-                display: flex;
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 0.75rem;
-            }
-
-            .screenshot-thumbnail {
-                max-width: 300px;
-                border: 1px solid var(--border-light);
-                border-radius: 4px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                cursor: pointer;
-                transition: var(--transition);
-            }
-
-            .screenshot-thumbnail:hover {
-                transform: scale(1.02);
-                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            }
-
-            .comment {
-                background: white;
-                border-left: 3px solid var(--brand-primary);
-                padding: 1rem;
-                margin-bottom: 0.75rem;
-                border-radius: 0 4px 4px 0;
-            }
-
-            .comment-meta {
-                display: flex;
-                justify-content: space-between;
-                margin-top: 0.5rem;
-                font-size: 0.75rem;
-                color: var(--text-light);
-            }
-
-            pre, code {
-                font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
-                font-size: 0.85rem;
-                background: #F1F5F9;
-                border-radius: 4px;
-            }
-
-            pre {
-                padding: 1rem;
-                overflow-x: auto;
-                margin: 0.75rem 0;
-                border-left: 3px solid var(--brand-primary);
-            }
-
-            code {
-                padding: 0.2rem 0.4rem;
-            }
-
-            .footer {
-                text-align: center;
-                color: var(--text-light);
-                padding: 2rem 0;
-                font-size: 0.85rem;
-            }
-
-            .footer a {
-                color: var(--brand-primary);
-                text-decoration: none;
-            }
-
-            .visual-content {
-                margin-top: 1rem;
-            }
-
-            @media (max-width: 768px) {
                 .container {
-                    padding: 1rem;
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    padding: 2rem;
+                }
+
+                header {
+                    position: relative;
+                    background: #fff;
+                    padding: 2.5rem 0;
+                    border-bottom: 1px solid var(--border-light);
+                    margin-bottom: 2rem;
+                }
+
+                header::before {
+                    content: "";
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    height: 4px;
+                    background: var(--brand-primary);
                 }
 
                 header .container {
-                    flex-direction: column;
-                    align-items: flex-start;
-                    gap: 1rem;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+
+                .report-title {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                }
+
+                .report-title h1 {
+                    font-size: 2rem;
+                    font-weight: 600;
+                    color: var(--text-dark);
+                    margin: 0;
+                }
+
+                .logo {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                }
+
+                .logo svg {
+                    width: 24px;
+                    height: 24px;
+                    fill: white;
                 }
 
                 .report-meta {
-                    text-align: left;
+                    text-align: right;
+                    color: var(--text-medium);
+                }
+
+                .report-meta p {
+                    margin: 0.25rem 0;
+                    font-size: 0.9rem;
                 }
 
                 .stats-bar {
-                    flex-direction: column;
-                    gap: 0.5rem;
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 1rem;
+                    background: white;
+                    border-radius: var(--section-radius);
+                    padding: 1.5rem;
+                    margin-bottom: 2rem;
+                    box-shadow: var(--box-shadow);
                 }
 
                 .stat-item {
-                    flex-direction: row;
-                    justify-content: space-between;
-                    text-align: left;
-                    padding: 0.75rem;
+                    flex: 1;
+                    min-width: 150px;
+                    padding: 1rem;
+                    border-radius: calc(var(--section-radius) - 4px);
+                    background: var(--bg-light);
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    text-align: center;
+                }
+
+                .stat-value {
+                    font-size: 2rem;
+                    font-weight: 700;
+                    color: var(--brand-primary);
+                    line-height: 1;
+                    margin-bottom: 0.5rem;
+                }
+
+                .stat-label {
+                    font-size: 0.85rem;
+                    color: var(--text-medium);
+                    font-weight: 500;
+                }
+
+                .events-container {
+                    margin-bottom: 2rem;
+                }
+
+                .event {
+                    background: white;
+                    border-radius: var(--section-radius);
+                    margin-bottom: 1.5rem;
+                    box-shadow: var(--box-shadow);
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
                 }
 
                 .event-header {
-                    flex-direction: column;
-                    align-items: flex-start;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    background: var(--brand-primary-bg);
+                    padding: 0.75rem 1.25rem;
+                    border-bottom: 1px solid var(--border-light);
+                }
+
+                .event-number {
+                    font-weight: 500;
+                    display: flex;
+                    align-items: center;
                     gap: 0.5rem;
                 }
 
+                .event-number span {
+                    display: inline-block;
+                    background: var(--brand-primary);
+                    color: white;
+                    width: 28px;
+                    height: 28px;
+                    line-height: 28px;
+                    text-align: center;
+                    border-radius: 50%;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                }
+
+                .event-timestamp {
+                    color: var(--text-light);
+                    font-size: 0.85rem;
+                }
+
+                .event-body {
+                    padding: 1.25rem;
+                }
+
+                .event-type {
+                    display: inline-block;
+                    padding: 0.4rem 0.8rem;
+                    border-radius: 50px;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    margin-bottom: 1rem;
+                }
+
+                .event-type.click {
+                    background: #DBEAFE;
+                    color: #2563EB;
+                }
+
+                .event-type.page-loaded {
+                    background: #ECFDF5;
+                    color: #047857;
+                }
+
+                .event-type.input-change {
+                    background: #FEF3C7;
+                    color: #D97706;
+                }
+
+                .event-type.keydown {
+                    background: #F3F4F6;
+                    color: #4B5563;
+                }
+
+                .event-type.tab-focus {
+                    background: #E0F2FE;
+                    color: #0369A1;
+                }
+
                 .details-grid {
-                    grid-template-columns: 1fr;
+                    display: grid;
+                    grid-template-columns: minmax(120px, auto) 1fr;
+                    gap: 0.75rem;
+                    font-size: 0.9rem;
                 }
 
                 .details-grid .label {
+                    font-weight: 500;
+                    color: var(--text-medium);
+                }
+
+                .details-grid .value {
+                    color: var(--text-dark);
+                    word-break: break-word;
+                }
+
+                .details-grid a {
+                    color: var(--brand-primary);
+                    text-decoration: none;
+                }
+
+                .details-grid a:hover {
+                    text-decoration: underline;
+                }
+
+                .section {
+                    margin-top: 1.5rem;
+                    background: var(--bg-light);
+                    border-radius: calc(var(--section-radius) - 4px);
+                    padding: 1.25rem;
+                }
+
+                .section-title {
+                    font-size: 1rem;
                     font-weight: 600;
+                    color: var(--brand-secondary);
+                    margin-bottom: 1rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+
+                .section-title svg {
+                    width: 18px;
+                    height: 18px;
+                    stroke: var(--brand-primary);
+                }
+
+                .screenshot-container {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 0.75rem;
+                }
+
+                .screenshot-thumbnail {
+                    max-width: 300px;
+                    border: 1px solid var(--border-light);
+                    border-radius: 4px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                    cursor: pointer;
+                    transition: var(--transition);
+                }
+
+                .screenshot-thumbnail:hover {
+                    transform: scale(1.02);
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                }
+
+                .comment {
+                    background: white;
+                    border-left: 3px solid var(--brand-primary);
+                    padding: 1rem;
+                    margin-bottom: 0.75rem;
+                    border-radius: 0 4px 4px 0;
+                }
+
+                .comment ol {
+                    padding-left: 1.2rem;
+                }
+
+                .comment-meta {
+                    display: flex;
+                    justify-content: space-between;
                     margin-top: 0.5rem;
+                    font-size: 0.75rem;
+                    color: var(--text-light);
                 }
 
-                .details-grid .label:first-child {
-                    margin-top: 0;
+                pre, code {
+                    font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+                    font-size: 0.85rem;
+                    background: #F1F5F9;
+                    border-radius: 4px;
                 }
-            }
-        </style>
-    </head>
-    <body>
-        <header>
-            <div class="container">
-                <div class="report-title">
-                    <div class="logo">
-                        <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.2" />
-                            <circle cx="8" cy="8" r="3" fill="currentColor" />
-                            <circle cx="9" cy="7" r="1" fill="white" />
-                        </svg>
-                    </div>
-                    <h1>tracer Report</h1>
-                </div>
-                <div class="report-meta">
-                    <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
-                    <p><strong>Session Duration:</strong> ${formattedDuration}</p>
-                </div>
-            </div>
-        </header>
 
-        <div class="container">
-            <div class="stats-bar">
-                <div class="stat-item">
-                    <div class="stat-value">${eventLog.length}</div>
-                    <div class="stat-label">Total Events</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">${pageLoads}</div>
-                    <div class="stat-label">Pages Loaded</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">${clicks}</div>
-                    <div class="stat-label">Click Events</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">${inputs}</div>
-                    <div class="stat-label">Input Changes</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">${screenshots}</div>
-                    <div class="stat-label">Screenshots</div>
-                </div>
-            </div>
+                pre {
+                    padding: 1rem;
+                    overflow-x: auto;
+                    margin: 0.75rem 0;
+                    border-left: 3px solid var(--brand-primary);
+                }
 
-            <div class="events-container">
-                ${eventLog.map((item, index) => {
-            // Determine the event type class
-            let typeClass = 'click';
-            if (item.action === 'page-loaded') typeClass = 'page-loaded';
-            if (item.action === 'input-change') typeClass = 'input-change';
-            if (item.action === 'keydown') typeClass = 'keydown';
-            if (item.action === 'tab-focus') typeClass = 'tab-focus';
+                code {
+                    padding: 0.2rem 0.4rem;
+                }
 
-            return `
-                    <div class="event">
-                        <div class="event-header">
-                            <div class="event-number">
-                                <span>${index + 1}</span>
-                                ${item.action.toUpperCase()}
-                            </div>
-                            <div class="event-timestamp">${formatTimestamp(item.timestamp)}</div>
+                .footer {
+                    text-align: center;
+                    color: var(--text-light);
+                    padding: 2rem 0;
+                    font-size: 0.85rem;
+                }
+
+                .footer a {
+                    color: var(--brand-primary);
+                    text-decoration: none;
+                }
+
+                .visual-content {
+                    margin-top: 1rem;
+                }
+
+                @media (max-width: 768px) {
+                    .container {
+                        padding: 1rem;
+                    }
+
+                    header .container {
+                        flex-direction: column;
+                        align-items: flex-start;
+                        gap: 1rem;
+                    }
+
+                    .report-meta {
+                        text-align: left;
+                    }
+
+                    .stats-bar {
+                        flex-direction: column;
+                        gap: 0.5rem;
+                    }
+
+                    .stat-item {
+                        flex-direction: row;
+                        justify-content: space-between;
+                        text-align: left;
+                        padding: 0.75rem;
+                    }
+
+                    .event-header {
+                        flex-direction: column;
+                        align-items: flex-start;
+                        gap: 0.5rem;
+                    }
+
+                    .details-grid {
+                        grid-template-columns: 1fr;
+                    }
+
+                    .details-grid .label {
+                        font-weight: 600;
+                        margin-top: 0.5rem;
+                    }
+
+                    .details-grid .label:first-child {
+                        margin-top: 0;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <header>
+                <div class="container">
+                    <div class="report-title">
+                        <div class="logo">
+                            <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" stroke-width="1.2" />
+                                <circle cx="8" cy="8" r="3" fill="currentColor" />
+                                <circle cx="9" cy="7" r="1" fill="white" />
+                            </svg>
                         </div>
-                        <div class="event-body">
-                            <div class="event-type ${typeClass}">${item.action}</div>
-                            
-                            <div class="details-grid">
-                                ${generateEventDetails(item)}
+                        <h1>tracer Report</h1>
+                    </div>
+                    <div class="report-meta">
+                        <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+                        <p><strong>Session Duration:</strong> ${formattedDuration}</p>
+                    </div>
+                </div>
+            </header>
+
+            <div class="container">
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <div class="stat-value">${eventLog.length}</div>
+                        <div class="stat-label">Total Events</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${pageLoads}</div>
+                        <div class="stat-label">Pages Loaded</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${clicks}</div>
+                        <div class="stat-label">Click Events</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${inputs}</div>
+                        <div class="stat-label">Input Changes</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${screenshots}</div>
+                        <div class="stat-label">Screenshots</div>
+                    </div>
+                </div>
+
+                <div class="events-container">
+                    ${eventLog.map((item, index) => {
+                // Determine the event type class
+                let typeClass = 'click';
+                if (item.action === 'page-loaded') typeClass = 'page-loaded';
+                if (item.action === 'input-change') typeClass = 'input-change';
+                if (item.action === 'keydown') typeClass = 'keydown';
+                if (item.action === 'tab-focus') typeClass = 'tab-focus';
+
+                return `
+                        <div class="event">
+                            <div class="event-header">
+                                <div class="event-number">
+                                    <span>${index + 1}</span>
+                                    ${item.action.toUpperCase()}
+                                </div>
+                                <div class="event-timestamp">${formatTimestamp(item.timestamp)}</div>
                             </div>
-
-                            ${item.screenshot ? `
-                                <div class="section">
-                                    <div class="section-title">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                                            <circle cx="12" cy="13" r="4"></circle>
-                                        </svg>
-                                        Screenshot
-                                    </div>
-                                    <div class="screenshot-container">
-                                        <img class="screenshot-thumbnail" src="data:image/png;base64,${item.screenshot}" alt="Screenshot" onclick="openFullImage('data:image/png;base64,${item.screenshot}')">
-                                    </div>
+                            <div class="event-body">
+                                
+                                <div class="details-grid">
+                                    ${generateEventDetails(item)}
                                 </div>
-                            ` : ''}
 
-                            ${item.elementCapture ? `
-                                <div class="section">
-                                    <div class="section-title">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <rect x="2" y="2" width="20" height="20" rx="2"></rect>
-                                            <path d="M8 9v6"></path>
-                                            <path d="M16 9v6"></path>
-                                            <path d="M8 9h8"></path>
-                                            <path d="M8 15h8"></path>
-                                        </svg>
-                                        Element Capture
-                                    </div>
-                                    <div class="screenshot-container">
-                                        <img class="screenshot-thumbnail" src="data:image/png;base64,${item.elementCapture}" alt="Element Capture" onclick="openFullImage('data:image/png;base64,${item.elementCapture}')">
-                                    </div>
-                                </div>
-                            ` : ''}
-
-                            ${item.comments && item.comments.length > 0 ? `
-                                <div class="section">
-                                    <div class="section-title">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                                        </svg>
-                                        Comments
-                                    </div>
-                                    ${item.comments.map(comment => `
-                                        <div class="comment">
-                                            ${comment.text}
-                                            <div class="comment-meta">
-                                                <span>${new Date(comment.timestamp).toLocaleString()}</span>
-                                            </div>
+                                ${item.screenshot ? `
+                                    <div class="section">
+                                        <div class="section-title">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                                                <circle cx="12" cy="13" r="4"></circle>
+                                            </svg>
+                                            Screenshot
                                         </div>
-                                    `).join('')}
-                                </div>
-                            ` : ''}
+                                        <div class="screenshot-container">
+                                            <img class="screenshot-thumbnail" src="data:image/png;base64,${item.screenshot}" alt="Screenshot" onclick="openFullImage('data:image/png;base64,${item.screenshot}')">
+                                        </div>
+                                    </div>
+                                ` : ''}
+
+                                ${item.elementCapture ? `
+                                    <div class="section">
+                                        <div class="section-title">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <rect x="2" y="2" width="20" height="20" rx="2"></rect>
+                                                <path d="M8 9v6"></path>
+                                                <path d="M16 9v6"></path>
+                                                <path d="M8 9h8"></path>
+                                                <path d="M8 15h8"></path>
+                                            </svg>
+                                            Element Capture
+                                        </div>
+                                        <div class="screenshot-container">
+                                            <img class="screenshot-thumbnail" src="data:image/png;base64,${item.elementCapture}" alt="Element Capture" onclick="openFullImage('data:image/png;base64,${item.elementCapture}')">
+                                        </div>
+                                    </div>
+                                ` : ''}
+
+                                ${item.comments && item.comments.length > 0 ? `
+                                    <div class="section">
+                                        <div class="section-title">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary">
+                                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                            </svg>
+                                            Comments
+                                        </div>
+                                        ${item.comments.map(comment => `
+                                            <div class="comment">
+                                                ${comment.text}
+                                                <div class="comment-meta">
+                                                    <span>${new Date(comment.timestamp).toLocaleString()}</span>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
                         </div>
-                    </div>
-                `;
-        }).join('')}
+                    `;
+            }).join('')}
+                </div>
             </div>
-        </div>
 
-        <footer class="footer">
-            <div class="container">
-                <p>Generated by <strong>tracer</strong> &bull; Interactive test logging tool</p>
-            </div>
-        </footer>
+            <footer class="footer">
+                <div class="container">
+                    <p>Generated by <strong>tracer</strong> &bull; Interactive test logging tool</p>
+                </div>
+            </footer>
 
-        <script>
-            function openFullImage(dataUrl) {
-                var newWin = window.open();
-                if (newWin) {
-                    newWin.document.write('<html><head><title>Full Size Image</title><style>body{margin:0;padding:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;}img{max-width:95vw;max-height:95vh;}</style></head><body><img src="' + dataUrl + '"/></body></html>');
-                } else {
-                    alert('Popup blocked. Please allow popups for this report to view full size images.');
+            <script>
+                function openFullImage(dataUrl) {
+                    var newWin = window.open();
+                    if (newWin) {
+                        newWin.document.write('<html><head><title>Full Size Image</title><style>body{margin:0;padding:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;}img{max-width:95vw;max-height:95vh;}</style></head><body><img src="' + dataUrl + '"/></body></html>');
+                    } else {
+                        alert('Popup blocked. Please allow popups for this report to view full size images.');
+                    }
                 }
-            }
-        </script>
-    </body>
-    </html>
-    `;
+            </script>
+        </body>
+        </html>
+        `;
 
         function generateEventDetails(item) {
             let content = '';
@@ -5258,6 +5502,55 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            else if (item.details && item.details.tagName === 'SELECT') {
+                content += `
+                <div class="label">Select Options</div>
+                <div class="value">
+                    <div>Selected Value: ${escapeHtml(item.details.selectedValue || '[None]')}</div>
+                    <div>Selected Text: "${escapeHtml(item.details.selectedText || '[None]')}"</div>
+                    ${item.details.multiple && item.details.selectedOptions ? `
+                    <div class="mt-2">All Selected Options:</div>
+                    <ul class="list-disc ml-4 mt-1">
+                        ${item.details.selectedOptions.map(opt =>
+                                `<li>"${escapeHtml(opt.text)}" (${escapeHtml(opt.value)})</li>`
+                            ).join('')}
+                    </ul>` : ''}
+                    ${item.details.options && item.details.options.length > 0 ? `
+                    <div class="mt-2">Available Options:</div>
+                    <ul class="list-disc ml-4 mt-1">
+                        ${item.details.options.map(opt =>
+                                `<li>"${escapeHtml(opt.text)}" (${escapeHtml(opt.value)})${opt.selected ? ' (Selected)' : ''}</li>`
+                            ).join('')}
+                    </ul>` : ''}
+                </div>
+                `;
+            }
+
+            else if (item.details && item.details.tagName === 'METER') {
+                content += `
+                <div class="label">Meter Properties</div>
+                <div class="value">
+                    <div>Value: ${item.details.value || '0'} (${item.details.max ? Math.round((item.details.value / item.details.max) * 100) : 0}%)</div>
+                    <div>Min: ${item.details.min || '0'}</div>
+                    <div>Max: ${item.details.max || '100'}</div>
+                    ${item.details.low ? `<div>Low threshold: ${item.details.low}</div>` : ''}
+                    ${item.details.high ? `<div>High threshold: ${item.details.high}</div>` : ''}
+                    ${item.details.optimum ? `<div>Optimum value: ${item.details.optimum}</div>` : ''}
+                </div>
+                `;
+            }
+
+            else if (item.details && item.details.tagName === 'PROGRESS') {
+                content += `
+                <div class="label">Progress Properties</div>
+                <div class="value">
+                    <div>Value: ${details.value || '0'}</div>
+                    <div>Max: ${details.max || '100'}</div>
+                    <div>Completion: ${details.max ? Math.round((details.value / details.max) * 100) : 0}%</div>
+                </div>
+                `;
+            }
+
             else if (item.action === 'keydown') {
                 content += `
                 <div class="label">Key</div>
@@ -5328,30 +5621,6 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('HTML report exported!');
     }
 
-
-    // Helper functions for generating content sections
-
-    // Helper function to calculate duration between first and last event
-    function formatDuration(events) {
-        if (events.length < 2) return 'N/A';
-        const start = new Date(events[0].timestamp);
-        const end = new Date(events[events.length - 1].timestamp);
-        const diff = Math.abs(end - start);
-        const minutes = Math.floor(diff / 60000);
-        const seconds = Math.floor((diff % 60000) / 1000);
-        return `${minutes}m ${seconds}s`;
-    }
-
-    // Helper function to count unique pages visited
-    function countUniquePages(events) {
-        const uniqueUrls = new Set(
-            events
-                .filter(e => e.action === 'page-loaded' && e.url)
-                .map(e => e.url)
-        );
-        return uniqueUrls.size;
-    }
-
     // Attach export HTML functionality to both buttons (if they exist)
     if (exportHtmlButton) { exportHtmlButton.addEventListener('click', exportHtmlReport); }
     if (exportHtmlLogButton) { exportHtmlLogButton.addEventListener('click', exportHtmlReport); }
@@ -5405,89 +5674,85 @@ document.addEventListener('DOMContentLoaded', () => {
         showExportJiraSettingsModal();
     });
 
-    // -- Utility function to convert simple HTML tags to Atlassian wiki markup
     window.convertHtmlToWiki = function (html) {
         if (!html) return '';
 
-        // First, normalize newlines
+        // First, normalize newlines and ensure proper HTML tag spacing
         html = html.replace(/\r\n/g, '\n');
 
-        // Handle special cases: replace {{}} with monospace formatting (unchanged)
-        html = html.replace(/{{(.*?)}}/g, '{{$1}}');
+        // Add spaces between closing and opening tags to prevent run-together elements
+        html = html.replace(/<\/([^>]+)><([^>\/]+)>/g, '</$1> <$2>');
 
-        // Clean up common patterns in the logs (unchanged)
-        html = html.replace(/<(context|element|parent container|accessibility information):?>(.*?)</gi, '*$1:* $2<');
+        // Fix potential issues with nested formatting
+        html = html.replace(/<(b|strong)>(.*?)<\/(b|strong)>/gi, function (match, tag1, content, tag2) {
+            return '*' + content.replace(/\*/g, '') + '*';
+        });
 
-        /*
-          IMPORTANT: Remove or modify the line that replaced *...* with _..._.
-          That line was overriding your bold formatting. Let's comment it out:
-        */
-        // html = html.replace(/\*([^*]+)\*/g, '_$1_');
+        html = html.replace(/<u>(.*?)<\/u>/gi, function (match, content) {
+            return '+' + content.replace(/\+/g, '') + '+';
+        });
 
         // Headers
-        html = html.replace(/<h1>(.*?)<\/h1>/gi, 'h1. $1\n');
-        html = html.replace(/<h2>(.*?)<\/h2>/gi, 'h2. $1\n');
-        html = html.replace(/<h3>(.*?)<\/h3>/gi, 'h3. $1\n');
+        html = html.replace(/<h1>(.*?)<\/h1>/gi, 'h1. $1\n\n');
+        html = html.replace(/<h2>(.*?)<\/h2>/gi, 'h2. $1\n\n');
+        html = html.replace(/<h3>(.*?)<\/h3>/gi, 'h3. $1\n\n');
 
-        // Preserve formatting on their own lines (unchanged)
-        html = html.replace(/(<(strong|b|em|i|u)>.*?<\/\2>)/gi, '\n$1\n');
-
-        // Basic formatting
-        // 1) Bold: <strong> or <b>
-        html = html.replace(/<(strong|b)>([\s\S]*?)<\/\1>/gi, '*$2*');
-        // 2) Italic: <em> or <i>
-        //    Fix the regex to capture the tag pair properly
-        html = html.replace(/<(em|i)>([\s\S]*?)<\/\1>/gi, '_$2_');
-        // 3) Underline: <u> -> +...+
-        html = html.replace(/<u>([\s\S]*?)<\/u>/gi, '+$1+');
-        // 4) Code: <code> -> {{...}}
-        html = html.replace(/<code>([\s\S]*?)<\/code>/gi, '{{$1}}');
-
-        // Lists (unchanged, but tested)
-        html = html.replace(/<ul>([\s\S]*?)<\/ul>/gi, function (match, content) {
-            return content.replace(/<li>([\s\S]*?)<\/li>/gi, item => {
-                const itemContent = item.replace(/<li>([\s\S]*?)<\/li>/gi, '$1').trim();
-                return `* ${itemContent}\n`;
-            });
-        });
-        html = html.replace(/<ol>([\s\S]*?)<\/ol>/gi, function (match, content) {
-            return content.replace(/<li>([\s\S]*?)<\/li>/gi, item => {
-                const itemContent = item.replace(/<li>([\s\S]*?)<\/li>/gi, '$1').trim();
-                return `# ${itemContent}\n`;
-            });
-        });
+        // Basic text formatting
+        html = html.replace(/<(strong|b)>(.*?)<\/(strong|b)>/gi, '*$2*');
+        html = html.replace(/<(em|i)>(.*?)<\/(em|i)>/gi, '_$2_');
+        html = html.replace(/<u>(.*?)<\/u>/gi, '+$1+');
+        html = html.replace(/<code>(.*?)<\/code>/gi, '{{$1}}');
 
         // Links: <a href="...">Text</a> -> [Text|URL]
-        html = html.replace(/<a\s+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, '[$2|$1]');
+        html = html.replace(/<a\s+href="([^"]+)"[^>]*>(.*?)<\/a>/gi, '[$2|$1]');
 
-        // Tables (unchanged)
-        html = html.replace(/<table>/gi, '{table}\n');
-        html = html.replace(/<\/table>/gi, '{table}\n');
-        html = html.replace(/<tr>/gi, '|');
-        html = html.replace(/<\/tr>/gi, '|\n');
-        html = html.replace(/<t[dh]>/gi, '|');
-        html = html.replace(/<\/t[dh]>/gi, '');
+        // Handle unordered lists - completely restructured
+        html = html.replace(/<ul>([\s\S]*?)<\/ul>/gi, function (match, content) {
+            let result = '\n';
+            // Find all list items
+            const items = content.match(/<li>([\s\S]*?)<\/li>/gi);
+            if (items) {
+                items.forEach(item => {
+                    // Extract the content from the li tag
+                    const itemText = item.replace(/<li>([\s\S]*?)<\/li>/gi, '$1').trim();
+                    result += '* ' + itemText + '\n';
+                });
+            }
+            return result + '\n';
+        });
 
-        // Blockquotes
-        html = html.replace(/<blockquote>([\s\S]*?)<\/blockquote>/gi, '{quote}$1{quote}');
+        // Handle ordered lists - completely restructured
+        html = html.replace(/<ol>([\s\S]*?)<\/ol>/gi, function (match, content) {
+            let result = '\n';
+            // Find all list items
+            const items = content.match(/<li>([\s\S]*?)<\/li>/gi);
+            if (items) {
+                items.forEach((item, index) => {
+                    // Extract the content from the li tag
+                    const itemText = item.replace(/<li>([\s\S]*?)<\/li>/gi, '$1').trim();
+                    result += '# ' + itemText + '\n';  // JIRA uses # for numbered lists
+                });
+            }
+            return result + '\n';
+        });
 
-        // Paragraphs / line breaks
+        // Paragraphs - ensure proper spacing
         html = html.replace(/<p>([\s\S]*?)<\/p>/gi, '$1\n\n');
+
+        // Line breaks
         html = html.replace(/<br\s*\/?>/gi, '\n');
 
-        // Remove any remaining HTML tags that weren't handled
-        html = html.replace(/<[^>]+>/g, '');
+        // Remove any remaining HTML tags
+        html = html.replace(/<[^>]+>/g, ' ');
+
+        // Fix consecutive spaces
+        html = html.replace(/\s{2,}/g, ' ');
 
         // Clean up extra blank lines
-        html = html.replace(/\n{3,}/g, '\n\n')
-            .replace(/^\s+|\s+$/gm, '')
-            .split('\n')
-            .map(line => line.trimEnd()) // trim trailing space
-            .join('\n');
+        html = html.replace(/\n{3,}/g, '\n\n');
 
         return html.trim();
     };
-
 
     function exportJiraLogSingleDefectWithCustomFields(customFields, issueType, summary, imageMap = null) {
         if (eventLog.length === 0) {
@@ -5598,6 +5863,44 @@ document.addEventListener('DOMContentLoaded', () => {
                         description += createPanel('Link Details', linkContent);
                     }
 
+                    if (d.tagName === 'METER') {
+                        let meterContent = '';
+                        meterContent += `* Value: ${d.value || '0'} (${d.max ? Math.round((d.value / d.max) * 100) : 0}%)\n`;
+                        meterContent += `* Min: ${d.min || '0'}\n`;
+                        meterContent += `* Max: ${d.max || '100'}\n`;
+                        if (d.low) meterContent += `* Low threshold: ${d.low}\n`;
+                        if (d.high) meterContent += `* High threshold: ${d.high}\n`;
+                        if (d.optimum) meterContent += `* Optimum value: ${d.optimum}\n`;
+                        description += createPanel('Meter Properties', meterContent);
+                    }
+                    else if (d.tagName === 'PROGRESS') {
+                        let progressContent = '';
+                        progressContent += `* Value: ${d.value || '0'}\n`;
+                        progressContent += `* Max: ${d.max || '100'}\n`;
+                        progressContent += `* Completion: ${d.max ? Math.round((d.value / d.max) * 100) : 0}%\n`;
+                        description += createPanel('Progress Properties', progressContent);
+                    }
+                    else if (d.tagName === 'SELECT') {
+                        let selectContent = '';
+                        selectContent += `* Selected Value: ${d.selectedValue || '[None]'}\n`;
+                        selectContent += `* Selected Text: "${d.selectedText || '[None]'}"\n`;
+
+                        if (d.multiple && d.selectedOptions) {
+                            selectContent += '*All Selected Options:*\n';
+                            d.selectedOptions.forEach(opt => {
+                                selectContent += `** "${opt.text}" (${opt.value})\n`;
+                            });
+                        }
+
+                        if (d.options && d.options.length > 0) {
+                            selectContent += '*Available Options:*\n';
+                            d.options.forEach(opt => {
+                                selectContent += `** "${opt.text}" (${opt.value})${opt.selected ? ' (Selected)' : ''}\n`;
+                            });
+                        }
+                        description += createPanel('Select Options', selectContent);
+                    }
+
                     // Only include accessibility info for interactive elements or when ARIA label exists
                     if (d.ariaLabel || (d.tagName && interactiveTags.has(d.tagName.toUpperCase()))) {
                         let accContent = '';
@@ -5609,6 +5912,25 @@ document.addEventListener('DOMContentLoaded', () => {
                             description += createPanel('Accessibility Info', accContent);
                         }
                     }
+                    break;
+                }
+
+                case 'select': {
+                    let selContent = `* Selected Value: ${log.selectedValue || '[None]'}\n`;
+                    selContent += `* Selected Text: "${log.selectedText || '[None]'}"\n`;
+                    if (log.details?.multiple && log.details?.selectedOptions) {
+                        selContent += '*All Selected Options:*\n';
+                        log.details.selectedOptions.forEach(opt => {
+                            selContent += `** "${opt.text}" (${opt.value})\n`;
+                        });
+                    }
+                    if (log.details?.options && log.details?.options.length > 0) {
+                        selContent += '*Available Options:*\n';
+                        log.details.options.forEach(opt => {
+                            selContent += `** "${opt.text}" (${opt.value})${opt.selected ? ' (Selected)' : ''}\n`;
+                        });
+                    }
+                    description += createPanel('Selection Details', selContent);
                     break;
                 }
 
@@ -5699,7 +6021,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     break;
-                }
+                }                
 
                 case 'keydown': {
                     const pressed = [
@@ -6347,10 +6669,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Adjust the webview height to match its container
     function adjustWebviewHeight() {
         const container = webview.parentElement;
+        const viewportBar = document.querySelector('.top-bar');
+
         if (container && webview) {
-            webview.style.height = container.clientHeight + 'px';
+            const viewportBarHeight = viewportBar ? viewportBar.offsetHeight : 0;
+            webview.style.height = `${container.clientHeight - viewportBarHeight}px`;
         }
     }
+
     adjustWebviewHeight();
     window.addEventListener('resize', adjustWebviewHeight);
 

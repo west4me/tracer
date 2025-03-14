@@ -468,10 +468,32 @@ function getElementDetails(target) {
             ariaLabel: parentLink.getAttribute('aria-label') || null
         };
     }
-    if (target.tagName === 'PROGRESS') {
+    if (target.tagName === 'METER') {
         details.min = target.getAttribute('min') || target.min || '0';
         details.max = target.getAttribute('max') || target.max || '100';
         details.value = target.getAttribute('value') || target.value || '0';
+        details.low = target.getAttribute('low') || target.low || null;
+        details.high = target.getAttribute('high') || target.high || null;
+        details.optimum = target.getAttribute('optimum') || target.optimum || null;
+        details.meterProperties = {
+            min: target.min,
+            max: target.max,
+            value: target.value,
+            low: target.low,
+            high: target.high,
+            optimum: target.optimum
+        };
+    }
+    if (target.tagName === 'PROGRESS') {
+        details.min = 0; // Progress elements always start at 0
+        details.max = target.getAttribute('max') || target.max || '100';
+        details.value = target.getAttribute('value') || target.value || '0';
+        details.progressProperties = {
+            max: target.max,
+            value: target.value,
+            position: target.position,
+            percent: target.max ? Math.round((target.value / target.max) * 100) : 0
+        };
     }
     if (target.getAttribute('role') === 'progressbar') {
         details.role = 'progressbar';

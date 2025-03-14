@@ -10,9 +10,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./node_modules/keyboard-css/dist/css/main.min.css" />
 
     <!-- Updated Tailwind Config -->
@@ -21,10 +19,9 @@
             theme: {
                 extend: {
                     colors: {
-                        /* WCAG-compliant palette */
-                        primary: '#D35432',         /* New primary color */
-                        'primary-hover': '#B84326', /* Slightly darker hover color */
-                        'primary-focus': '#D14F36'  /* Accessible focus color */
+                        primary: '#D35432',         
+                        'primary-hover': '#B84326', 
+                        'primary-focus': '#D14F36'  
                     }
                 }
             }
@@ -94,7 +91,7 @@
     <div class="content-wrapper">
         <main class="container mx-auto px-6 py-8 max-w-6xl flex-1 flex flex-col">
             <!-- Header -->
-            <div class="text-left mb-16">
+            <div class="text-left mb-16 mt-8">
                 <h1 class="text-4xl font-bold mb-3 text-gray-900">
                     Bugs? Yeah, well, you know, that's just, like, your opinion, man.</br> We have proof.
                 </h1>
@@ -108,7 +105,6 @@
                         class="p-6 bg-white/50 backdrop-blur-sm rounded-lg hover:bg-white/80 transition-colors duration-200">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-2xl font-semibold mb-4 flex items-center gap-2 text-gray-900">
-                                <!-- Changed stroke from #FF8A65 to #D35432 -->
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
                                     fill="none" stroke="#D35432" stroke-width="2" stroke-linecap="round"
                                     stroke-linejoin="round">
@@ -128,13 +124,12 @@
                     </div>
                 </div>
 
-                <!-- Right Column - Additional Information -->
+                <!-- Right Column -->
                 <div class="space-y-6">
                     <!-- Capturing Evidence Section -->
                     <div
                         class="p-6 bg-white/50 backdrop-blur-sm rounded-lg hover:bg-white/80 transition-colors duration-200">
                         <h2 class="text-2xl font-semibold mb-4 flex items-center gap-2 text-gray-900">
-                            <!-- Changed stroke from #FF8A65 to #D35432 -->
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
                                 fill="none" stroke="#D35432" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round">
@@ -144,7 +139,6 @@
                             </svg>
                             Capturing evidence
                         </h2>
-                        <!-- Restored the original UL for capturing evidence -->
                         <ul class="space-y-3 text-gray-600">
                             <li class="flex items-center gap-2">
                                 <kbd class="kbc-button">Ctrl</kbd> +
@@ -157,7 +151,7 @@
                                 for viewport capture
                             </li>
                             <li class="flex items-center gap-2">
-                                Hold <kbd class="kbc-button">Ctrl</kbd> +
+                                <kbd class="kbc-button">Ctrl</kbd> +
                                 <svg class="inline" data-lucide="camera" width="24" height="24"></svg> +
                                 <svg class="inline" data-lucide="mouse" width="24" height="24"></svg>
                                 for element capture
@@ -167,46 +161,11 @@
                             </li>
                         </ul>
                     </div>
-
-                    <!-- JIRA Integration Section -->
-                    <div
-                        class="p-6 bg-white/50 backdrop-blur-sm rounded-lg hover:bg-white/80 transition-colors duration-200">
-                        <h2 class="text-2xl font-semibold mb-4 flex items-center gap-2 text-gray-900">
-                            <!-- Changed stroke from #FF8A65 to #D35432 -->
-                            <svg fill="none" stroke="#D35432" stroke-width="1.5" stroke-linecap="round"
-                                stroke-linejoin="round" width="20" height="20" viewBox="0 0 24 24"
-                                xmlns="http://www.w3.org/2000/svg">
-                                <path
-                                    d="M0.086,12L12,23.914L23.914,12L12,0.086L0.086,12z M14.598,18.488c-0.091-1.03-0.507-2.014-1.23-2.941L16.914,12
-                                        l-4.207-4.207c-0.894-0.894-1.339-1.826-1.325-2.771c0.012-0.817,0.359-1.531,0.691-2.034L21.086,12L14.598,18.488z M12,9.914
-                                        L14.086,12L12,14.086L9.914,12L12,9.914z M9.402,5.512c0.091,1.03,0.507,2.014,1.23,2.941L7.086,12l4.207,4.207
-                                        c0.894,0.894,1.339,1.826,1.325,2.771c-0.012,0.817-0.359,1.531-0.691,2.034L2.914,12L9.402,5.512z" />
-                            </svg>
-                            JIRA integration
-                        </h2>
-                        <p class="text-gray-600 mb-4">
-                            Export your test sessions directly to JIRA with custom fields, formatted descriptions, and
-                            automatic screenshot attachments.
-                        </p>
-                        <!-- Changed text-[#FF8A65] and hover:text-[#ff7043] to text-primary and hover:text-primary-hover -->
-                        <!-- Added focus:ring-primary-focus focus:border-primary-focus for focus states -->
-                        <button onclick="window.location.href='docs.html#jira-integration'"
-                            class="text-primary hover:text-primary-hover font-medium flex items-center gap-1 focus:ring-1 focus:ring-primary-focus focus:border-primary-focus">
-                            Learn how to configure JIRA exports
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round">
-                                <path d="M5 12h14" />
-                                <path d="m12 5 7 7-7 7" />
-                            </svg>
-                        </button>
-                    </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- All original scripts preserved below -->
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             function updateRecentSitesList() {
@@ -271,7 +230,6 @@
                         </div>
                     `).join('');
 
-                    // Add event listeners to new buttons
                     listContainer.querySelectorAll('.load-url-btn').forEach(btn => {
                         btn.addEventListener('click', () => {
                             const url = btn.dataset.url;

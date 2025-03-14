@@ -100,9 +100,6 @@ app.on('activate', () => {
     }
 });
 
-// ---- IPC Handlers ----
-
-// Provide a handleable folder dialog (if you do invoke('show-folder-dialog', ...))
 ipcMain.handle('show-folder-dialog', async (event, options) => {
     return await dialog.showOpenDialog(mainWindow, options);
 });
@@ -189,9 +186,6 @@ ipcMain.on('save-screenshot-file', (event, payload) => {
         fs.writeFileSync(fullPath, buffer);
 
         // Verify file was created and has content
-        // In main.js, update the reply part of the save-screenshot-base64 handler:
-
-        // After successful file save
         if (fs.existsSync(fullPath)) {
             const stats = fs.statSync(fullPath);
             console.log(`File saved at: ${fullPath} (${stats.size} bytes)`);
@@ -279,66 +273,136 @@ ipcMain.on('webview-error', (event, errorData) => {
     mainWindow.webContents.send('update-error', errorData);
 });
 
-// Full-page screenshot with Sharp (chunked capture)
-ipcMain.on('take-fullpage-screenshot', async (event, { totalHeight, chunkHeight = 1000 }) => {
-    console.log('take-fullpage-screenshot => totalHeight:', totalHeight);
+//
+// RENAMED LEGACY FULL-PAGE SCREENSHOT HANDLER
+//
+ipcMain.on('take-fullpage-screenshot-legacy', async (event, { totalHeight }) => {
+    console.log('LEGACY Full-page screenshot requested, totalHeight =', totalHeight);
+
     try {
+        // Get the webContents for the <webview>
         const allWCs = webContents.getAllWebContents();
         const targetWC = allWCs.find(wc => wc.getType() === 'webview');
         if (!targetWC) throw new Error('No webview found for full-page screenshot');
 
-        if (!targetWC.debugger.isAttached()) {
-            targetWC.debugger.attach('1.3');
+        // This is the old captureStream + <video> approach that often returns empty
+        //  ...
+        //  (Keeping it intact so nothing is removed)
+        const script = `
+            (async function() {
+                try {
+                    // Create a canvas the size of the entire page
+                    const canvas = document.createElement('canvas');
+                    canvas.width = document.documentElement.scrollWidth;
+                    canvas.height = ${totalHeight};   // Insert totalHeight here
+
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Example: scroll in chunks
+                    const viewportHeight = window.innerHeight;
+                    const wait = ms => new Promise(r => setTimeout(r, ms));
+                    const originalScrollY = window.scrollY;
+
+                    for (let scrollTop = 0; scrollTop < ${totalHeight}; scrollTop += viewportHeight) {
+                        window.scrollTo(0, scrollTop);
+                        await wait(150);
+
+                        const blob = await new Promise(async (resolve) => {
+                            const video = document.createElement('video');
+                            video.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;opacity:0;';
+                            video.autoplay = true;
+
+                            const stream = document.documentElement.captureStream();
+                            video.srcObject = stream;
+
+                            video.muted = true;
+                            video.setAttribute('playsinline', '');
+                            try { await video.play(); } catch (e) { console.error('video.play() error:', e); }
+
+                            video.onplaying = () => {
+                                const offscreen = document.createElement('canvas');
+                                offscreen.width = video.videoWidth;
+                                offscreen.height = video.videoHeight;
+                                offscreen.getContext('2d').drawImage(video, 0, 0);
+
+                                stream.getTracks().forEach(track => track.stop());
+                                video.remove();
+                                offscreen.toBlob(resolve, 'image/png');
+                            };
+
+                            video.onerror = (err) => {
+                                console.error('video.onerror:', err);
+                                resolve(null);
+                            };
+                        });
+
+                        if (blob) {
+                            const img = await createImageBitmap(blob);
+                            ctx.drawImage(img, 0, scrollTop, img.width, img.height);
+                        }
+                    }
+
+                    window.scrollTo(0, originalScrollY);
+
+                    // Return final PNG as base64
+                    return canvas.toDataURL('image/png').split(',')[1];
+                } catch (err) {
+                    console.error('Screenshot error:', err);
+                    return '';
+                }
+            })();
+        `;
+
+        const base64Data = await targetWC.executeJavaScript(script);
+        console.log('full-page screenshot base64 length:', base64Data ? base64Data.length : 0);
+
+        if (!base64Data) {
+            event.reply('fullpage-screenshot-result', '');
+        } else {
+            event.reply('fullpage-screenshot-result', base64Data);
         }
-        await targetWC.debugger.sendCommand('Page.enable');
-
-        const totalWidth = 1280;
-        const partialPNGs = [];
-        let currentY = 0;
-
-        while (currentY < totalHeight) {
-            const chunk = Math.min(chunkHeight, totalHeight - currentY);
-            await targetWC.debugger.sendCommand('Emulation.setScrollAndPageScaleFactor', {
-                pageScaleFactor: 1,
-                scrollX: 0,
-                scrollY: currentY
-            });
-            await targetWC.debugger.sendCommand('Emulation.setDeviceMetricsOverride', {
-                width: totalWidth,
-                height: chunk,
-                deviceScaleFactor: 1,
-                mobile: false
-            });
-            await new Promise(r => setTimeout(r, 200));
-
-            const { data } = await targetWC.debugger.sendCommand('Page.captureScreenshot', {
-                format: 'png',
-                captureBeyondViewport: false
-            });
-            partialPNGs.push({ buffer: Buffer.from(data, 'base64'), offsetY: currentY });
-            currentY += chunk;
-        }
-
-        let composite = sharp({
-            create: {
-                width: totalWidth,
-                height: totalHeight,
-                channels: 4,
-                background: { r: 255, g: 255, b: 255, alpha: 0 }
-            }
-        }).composite(
-            partialPNGs.map(part => ({
-                input: part.buffer,
-                left: 0,
-                top: part.offsetY
-            }))
-        );
-
-        const finalBuffer = await composite.png().toBuffer();
-        event.reply('fullpage-screenshot-result', finalBuffer.toString('base64'));
 
     } catch (err) {
         console.error('Full-page screenshot error:', err);
+        event.reply('fullpage-screenshot-result', '');
+    }
+});
+
+//
+// BRAND-NEW CDP-BASED FULL-PAGE SCREENSHOT HANDLER
+//
+ipcMain.on('take-fullpage-screenshot-cdp', async (event, { totalWidth, totalHeight }) => {
+    console.log('[CDP] Full-page screenshot requested:', { totalWidth, totalHeight });
+    try {
+        // 1) Get the webContents for the <webview>
+        const allWCs = webContents.getAllWebContents();
+        const targetWC = allWCs.find(wc => wc.getType() === 'webview');
+        if (!targetWC) throw new Error('No webview found for full-page screenshot');
+
+        // 2) Attach the debugger
+        await targetWC.debugger.attach('1.3');
+
+        // 3) Override device metrics so capture can see the entire height
+        await targetWC.debugger.sendCommand('Emulation.setDeviceMetricsOverride', {
+            width: totalWidth || 1200,  // default if not provided
+            height: totalHeight || 2000,
+            deviceScaleFactor: 1,
+            mobile: false
+        });
+
+        // 4) Use the CDP command to capture a PNG
+        const { data } = await targetWC.debugger.sendCommand('Page.captureScreenshot', {
+            format: 'png',
+            fromSurface: true
+        });
+
+        // 5) Detach
+        await targetWC.debugger.detach();
+
+        console.log('[CDP] Full-page screenshot captured. Data length:', data.length);
+        event.reply('fullpage-screenshot-result', data);
+    } catch (err) {
+        console.error('[CDP] Full-page screenshot error:', err);
         event.reply('fullpage-screenshot-result', '');
     }
 });
